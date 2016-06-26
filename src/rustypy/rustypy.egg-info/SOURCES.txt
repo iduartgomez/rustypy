@@ -1,0 +1,6 @@
+src/rustypy/rustypy.egg-info/PKG-INFO
+src/rustypy/rustypy.egg-info/SOURCES.txt
+src/rustypy/rustypy.egg-info/dependency_links.txt
+src/rustypy/rustypy.egg-info/entry_points.txt
+src/rustypy/rustypy.egg-info/requires.txt
+src/rustypy/rustypy.egg-info/top_level.txt
