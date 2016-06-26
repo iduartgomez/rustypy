@@ -40,5 +40,6 @@ This function will generate the bindings for the package from which is
 called from (so the package must be initiated placing an  \__init__.py file in
 one of the parents folders).
 
-* [Python to Rust examples](https://github.com/iduartgomez/rustypy/wiki/Python-in-Rust)
+### Documentation
+* [Python to Rust](https://github.com/iduartgomez/rustypy/wiki/Python-in-Rust)
 * [Type conversions](https://github.com/iduartgomez/rustypy/wiki/Type-conversions)
