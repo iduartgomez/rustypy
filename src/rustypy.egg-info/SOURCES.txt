@@ -1,0 +1,12 @@
+setup.py
+src/rustypy/__init__.py
+src/rustypy/__main__.py
+src/rustypy/pywrapper.py
+src/rustypy/rswrapper.py
+src/rustypy/scripts.py
+src/rustypy.egg-info/PKG-INFO
+src/rustypy.egg-info/SOURCES.txt
+src/rustypy.egg-info/dependency_links.txt
+src/rustypy.egg-info/entry_points.txt
+src/rustypy.egg-info/requires.txt
+src/rustypy.egg-info/top_level.txt

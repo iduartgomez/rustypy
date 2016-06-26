@@ -1,5 +1,7 @@
 **/__pycache__
 Cargo.lock
 target
-src/rustypy/rustypy.egg-info
 src/rustypy/rustypy_pybind.rs
+.pypirc
+dist
+build

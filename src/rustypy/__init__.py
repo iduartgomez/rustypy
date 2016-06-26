@@ -1,3 +1,3 @@
 from rustypy.pywrapper import rust_bind
 
-__version__ = 'alpha'
+__version__ = '0.1.0'

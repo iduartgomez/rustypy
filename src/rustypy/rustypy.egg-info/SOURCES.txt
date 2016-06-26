@@ -1,3 +1,10 @@
+setup.py
+/home/nacho/dev/workspace/rustypy/src/rustypy/rustypy.egg-info/PKG-INFO
+/home/nacho/dev/workspace/rustypy/src/rustypy/rustypy.egg-info/SOURCES.txt
+/home/nacho/dev/workspace/rustypy/src/rustypy/rustypy.egg-info/dependency_links.txt
+/home/nacho/dev/workspace/rustypy/src/rustypy/rustypy.egg-info/entry_points.txt
+/home/nacho/dev/workspace/rustypy/src/rustypy/rustypy.egg-info/requires.txt
+/home/nacho/dev/workspace/rustypy/src/rustypy/rustypy.egg-info/top_level.txt
 src/rustypy/rustypy.egg-info/PKG-INFO
 src/rustypy/rustypy.egg-info/SOURCES.txt
 src/rustypy/rustypy.egg-info/dependency_links.txt
