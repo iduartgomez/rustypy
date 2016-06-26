@@ -1,2 +1,2 @@
 pub mod basics;
-pub mod pyrust_pybind;
+pub mod rustypy_pybind;

@@ -11,16 +11,11 @@ use std::collections::HashMap;
 
 use libc::c_long;
 use cpython::{
-	Python,
-	ToPyObject,
-	PythonObject,
-	PyObject,
-	PyLong,
-	PyString
+	Python
 };
 
 mod test_package;
-use test_package::pyrust_pybind::PyModules;
+use test_package::rustypy_pybind::PyModules;
 
 use rustypy::setup_python;
 

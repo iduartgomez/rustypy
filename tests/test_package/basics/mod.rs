@@ -1,3 +1,3 @@
-pub mod pyrust_pybind;
+pub mod rustypy_pybind;
 
-pub use self::pyrust_pybind::PyModules;
+pub use self::rustypy_pybind::PyModules;

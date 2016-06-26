@@ -367,6 +367,7 @@ for (key, value) in {var_name}_d.items(py) {{
 
 
 class RustFuncGen(object):
+
     ERR_NO_PACKAGE = "no package root found, add an __init__.py file " \
         + "to the root of your package"
     ERR_RETURN_TYPE = "function `{}` of module `{}` does not have " \
@@ -826,7 +827,7 @@ $build
             pckg_struct = self.PckgStruct(name=ori, origin=True)
             for mod, data in self.m_dict.items():
                 ModuleStruct(mod, data, pckg_struct)
-        file = os.path.join(dir_, 'pyrust_pybind.rs')
+        file = os.path.join(dir_, 'rustypy_pybind.rs')
         file_header = "".join(
             [self._file_header_info, self._file_header_funcs])
         with open(file, 'w', encoding="UTF-8") as f:
@@ -859,3 +860,10 @@ def rnd_var_name(self=None, cmp=[]):
             var_name = var_name.join(random.choice(ascii_letters)
                                      for _ in range(6))
     return var_name
+
+def bind_py_pckg_funcs():
+    caller = inspect.stack()[1]
+    info = dict(inspect.getmembers(caller.frame))
+    path = info["f_globals"]["__file__"]
+    path = os.path.abspath(path)
+    RustFuncGen(with_path=path)

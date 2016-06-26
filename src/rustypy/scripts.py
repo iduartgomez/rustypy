@@ -1,13 +1,3 @@
-def bind_python_package_funcs():
-    from rustypy.pywrapper import RustFuncGen
-    import os
-    import inspect
-    caller = inspect.stack()[1]
-    info = dict(inspect.getmembers(caller.frame))
-    path = info["f_globals"]["__file__"]
-    path = os.path.abspath(path)
-    RustFuncGen(with_path=path)
-
 def _compile_API():
     from cffi import FFI
     ffi = FFI()

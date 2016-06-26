@@ -8,7 +8,7 @@ extern crate cpython;
 extern crate rustypy;
 
 use cpython::{
-	Python,
+	Python
 };
 
 mod test_package;
