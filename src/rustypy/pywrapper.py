@@ -834,6 +834,7 @@ $build
             f.write(dedent(self._file_header_info))
             f.write(dedent(self._file_header_funcs))
             pckg_struct.write_structs(f)
+        return
 
 # ==================== #
 #   Helper Functions   #

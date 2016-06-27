@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: rustypy
-Version: 0.1.0
+Version: 0.1.1
 Summary: Automatic FFI generation for Python <-> Rust interfacing.
 Home-page: https://github.com/iduartgomez/rustypy
 Author: The Python Packaging Authority

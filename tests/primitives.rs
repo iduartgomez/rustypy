@@ -12,7 +12,7 @@ use cpython::{
 };
 
 mod test_package;
-use test_package::basics::PyModules;
+use test_package::basics::rustypy_pybind::PyModules;
 
 use rustypy::setup_python;
 
