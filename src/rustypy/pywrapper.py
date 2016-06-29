@@ -3,7 +3,6 @@
 
 import os
 import sys
-import re
 import inspect
 import typing as typ
 import collections.abc as abc
@@ -17,14 +16,8 @@ from types import FunctionType
 from collections import namedtuple
 from string import Template
 
-p = os.path.join(os.path.dirname(__file__), '__init__.py')
-rustypy_ver = re.compile(r"^__version__ = '(.*)'")
-with open(p) as f:
-    for l in f:
-        ver = re.match(rustypy_ver, l)
-        if ver:
-            rustypy_ver = ver.group(1)
-            break
+from .scripts import get_version
+rustypy_ver = get_version()
 
 tab = "    "  # for formatting output
 CONTAINERS = (
@@ -457,7 +450,7 @@ class RustFuncGen(object):
             # find out functions and classes for the module
             for name, obj in module.items():
                 if inspect.isfunction(obj) and (name[:pl] == self.prefix
-                or hasattr(obj, '_bind_to_rust')):
+                                                or hasattr(obj, '_bind_to_rust')):
                     functions.append(name)
                     self.__no_funcs = False
             if self.__no_funcs:
@@ -726,7 +719,9 @@ $build
             return x
 
         def walk(self, path, mod):
-            if len(path) == 1:
+            if len(path) == 0:
+                self.add_mod(mod)
+            elif len(path) == 1:
                 self.add_mod(mod)
             else:
                 next_f, done = path[0], False
@@ -800,8 +795,11 @@ $build
                 f.write(code)
 
         def write_single_module(self, f):
-            folder = self._subfolders[0]
-            mod = folder._submods[0].mod
+            if len(self._subfolders) == 0:
+                mod = self._submods[0].mod
+            else:
+                folder = self._subfolders[0]
+                mod = folder._submods[0].mod
             mod_name = mod.name[-1]
             code = dedent(RustFuncGen._mod_struct.substitute(
                 m_name=mod_name,
@@ -861,6 +859,7 @@ def rnd_var_name(self=None, cmp=[]):
             var_name = var_name.join(random.choice(ascii_letters)
                                      for _ in range(6))
     return var_name
+
 
 def bind_py_pckg_funcs():
     caller = inspect.stack()[1]

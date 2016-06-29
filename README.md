@@ -4,7 +4,7 @@ Python files.
 
 ## Features
 - Generate bindings in Rust targetting Python functions.
-- ~~Generate bindings in Python targetting Rust functions.~~ (TODO)
+- (TODO) ~~Generate bindings in Python targetting Rust functions.~~ 
 
 ## Installation
 To install RustyPy just use pip:
@@ -14,6 +14,10 @@ pip install rustypy
 RustyPy requires Python 3.5 or more and works with Rust stable.
 
 In Rust the package **cpython** is required.
+
+## Documentation
+* [Python to Rust](https://github.com/iduartgomez/rustypy/wiki/Python-in-Rust)
+* [Type conversions](https://github.com/iduartgomez/rustypy/wiki/Type-conversions)
 
 ## Usage
 RustyPy includes a command line interface to generate the code, which you can
@@ -39,7 +43,3 @@ bind_py_pckg_funcs()
 This function will generate the bindings for the package from which is
 called from (so the package must be initiated placing an  \__init__.py file in
 one of the parents folders).
-
-### Documentation
-* [Python to Rust](https://github.com/iduartgomez/rustypy/wiki/Python-in-Rust)
-* [Type conversions](https://github.com/iduartgomez/rustypy/wiki/Type-conversions)

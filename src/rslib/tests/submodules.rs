@@ -1,29 +1,17 @@
-#![allow(
-	unused_imports,
-	dead_code
-)]
+#![allow(dead_code)]
 
 extern crate libc;
 extern crate cpython;
 extern crate rustypy;
 
-use std::collections::HashMap;
-
-use libc::c_long;
-use cpython::{
-	Python
-};
-
 mod test_package;
 use test_package::rustypy_pybind::PyModules;
-
-use rustypy::setup_python;
+use cpython::{Python};
 
 #[test]
 fn submodules() {
 	let gil = Python::acquire_gil();
 	let py = gil.python();
-	setup_python(py, vec!["tests"]);
 	let test_package: PyModules = PyModules::new(py);
 	test_package.root_module_1.root_module_1(py);
 	test_package.root_module_2.root_module_2(py);

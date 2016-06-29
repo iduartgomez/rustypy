@@ -1,8 +1,3 @@
-#![allow(
-	unused_imports,
-	dead_code
-)]
-
 extern crate libc;
 extern crate cpython;
 extern crate rustypy;
@@ -22,13 +17,10 @@ use cpython::{
 mod test_package;
 use test_package::basics::rustypy_pybind::PyModules;
 
-use rustypy::setup_python;
-
 #[test]
 fn basics_nested_types() {
 	let gil = Python::acquire_gil();
 	let py = gil.python();
-	setup_python(py, vec!["tests", "test_package", "basics"]);
 	let module: PyModules = PyModules::new(py);
 	let basics = module.nested_types;
 

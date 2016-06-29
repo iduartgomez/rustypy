@@ -1,16 +1,17 @@
 [package]
 name = "rustypy"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["IDG <iduartgomez@gmail.com>"]
 
 [dependencies]
 cpython = { git = "https://github.com/dgrunwald/rust-cpython.git", features = ["python-3-5"] }
 libc = "*"
+syntex_syntax = "*"
 
 [features]
 python-3-5 = ["cpython/python3-sys/python-3-5"]
 
 [lib]
 name = "rustypy"
-crate-type = ["rlib"]
 path = "src/lib.rs"
+crate-type = ["dylib", "rlib"]
