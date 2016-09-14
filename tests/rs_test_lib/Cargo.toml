@@ -1,0 +1,11 @@
+[package]
+name = "test_lib"
+version = "0.1.0"
+authors = ["IDG <iduartgomez@gmail.com>"]
+
+[dependencies]
+libc = "*"
+
+[lib]
+name = "test_lib"
+path  =  'src/lib.rs'

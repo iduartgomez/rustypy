@@ -21,8 +21,7 @@ rustypy_ver = get_version()
 
 tab = "    "  # for formatting output
 CONTAINERS = (
-    "PyList", "PyDict", "PySet", "PyTuple",
-    "Vec", "HashMap", "Set", "tuple",
+    "PyList", "PyDict", "PySet", "PyTuple", "Vec", "HashMap", "Set", "tuple",
 )
 PRIMITIVES = (
     "String", "c_long", "c_double", "bool",
@@ -360,22 +359,21 @@ for (key, value) in {var_name}_d.items(py) {{
 
 
 class RustFuncGen(object):
-
     ERR_NO_PACKAGE = "no package root found, add an __init__.py file " \
-        + "to the root of your package"
+        "to the root of your package"
     ERR_RETURN_TYPE = "function `{}` of module `{}` does not have " \
-        + "a return type"
+        "a return type"
     ERR_PARAM_TYPE = "function `{}` of module `{}` lacks type hint for " \
-        + "one or more parameters"
+        "one or more parameters"
     ERR_VARORKWARG = "function `{}` of module `{}` cannot take keyword " \
-        + "or variable arguments"
+        "or variable arguments"
     ERR_HAS_DEFAULT = "function `{}` of module `{}` cannot define " \
-        + "default parameter values"
+        "default parameter values"
     ERR_INVALID_PARAM = "type of parameter `{}` in function `{}`\n" \
-        + "of module `{}` is not supported by rustypy,\n" \
-        + "check the documentation for supported types"
+        "of module `{}` is not supported by rustypy,\n" \
+        "check the documentation for supported types"
     ERR_NO_MODULE = "the specified python module cannot be found in the" \
-        + "PYTHONPATH"
+        "PYTHONPATH"
 
     class InvalidType(TypeError):
 
@@ -542,14 +540,14 @@ class RustFuncGen(object):
                     curr.append("PyList")
                 else:
                     curr.append("Vec")
-                for type_ in t.__parameters__:
+                for type_ in t.__args__:
                     inner_types(type_, add)
             elif issubclass(t, (dict, abc.MutableMapping)):
                 if pytypes:
                     curr.append("PyDict")
                 else:
                     curr.append("HashMap")
-                for type_ in t.__parameters__:
+                for type_ in t.__args__:
                     inner_types(type_, add)
             elif issubclass(t, (set, abc.MutableSet)):
                 raise NotImplementedError("support for sets not added yet")
@@ -557,7 +555,7 @@ class RustFuncGen(object):
                     curr.append("PySet")
                 else:
                     curr.append("Set")
-                for type_ in t.__parameters__:
+                for type_ in t.__args__:
                     inner_types(type_, add)
             else:
                 if t is int:
@@ -843,7 +841,7 @@ def rust_bind(fn: FunctionType) -> FunctionType:
     if hasattr(fn, '_bind_to_rust'):
         raise AttributeError(
             "the attribute name `_bind_to_rust` is reserved for binding "
-            + "functions of RustyPy")
+            "functions of RustyPy")
     fn._bind_to_rust = True
     return fn
 

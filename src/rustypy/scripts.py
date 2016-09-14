@@ -85,46 +85,6 @@ def cli():
         print("rustypy: binds for package `{}` generated".format(path))
 
 
-def load_rust_lib(recmpl=False):
-    if '_rustypy_rs_lib' in globals().keys() or not recmpl:
-        return
-
-    import os
-    import sys
-    import pkg_resources
-
-    if sys.platform.startswith("win"):
-        ext = ".dll"
-    elif sys.platform == "darwin":
-        ext = ".dylib"
-    else:
-        ext = ".so"
-    lib = pkg_resources.resource_filename(
-        'rslib', "librustypy{}".format(ext))
-    if not os.path.exists(lib) or recmpl:
-        print("   compiled library not found at: {}".format(lib))
-        print("   compiling with Cargo")
-        import subprocess
-        path = os.path.dirname(lib)
-        subprocess.run(['cargo', 'build', '--release'], cwd=path)
-        import shutil
-        cp = os.path.join(path, 'target', 'release', "librustypy{}".format(ext))
-        shutil.copy(cp, path)
-    else:
-        print("   library already exists")
-        from .__init__ import __version__ as curr_ver
-        # check that is the same version
-        lib_ver = curr_ver
-        # load the library
-        if lib_ver != curr_ver:
-            compile_rust_lib(recompile=True)
-        else:
-            global _rustypy_rs_lib
-            from cffi import FFI
-            ffi = FFI()
-            _rustypy_rs_lib = ffi.dlopen(lib)
-            return _rustypy_rs_lib
-
 def get_version():
     import pkg_resources
     try:

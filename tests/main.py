@@ -2,30 +2,25 @@ import unittest
 import subprocess
 import sys
 import os
+from importlib import import_module
 
 from rustypy.pywrapper import RustFuncGen
-
+from rustypy.rswrapper import load_rust_lib
 
 def setUpModule():
-    from importlib import import_module
     global _py_test_dir
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     global _rs_lib_dir
-    _rs_lib_dir = os.path.join(
-        os.path.dirname(_py_test_dir), 'src', 'rslib')
+    _rs_lib_dir = os.path.join(os.path.dirname(_py_test_dir), 'src', 'rslib')
+    # compile rust lib
+    load_rust_lib(recmpl=True)
 
 class GenerateRustToPythonBinds(unittest.TestCase):
 
-    def setUp(self):
-        pass
-
-    def test_rmv(self):
-        pass
-
-    @unittest.skip
-    def test_compile_lib(self):
-        from rustypy.scripts import load_rust_lib
-        load_rust_lib(recmpl=True)
+    #@unittest.skip
+    def test_basics_primitives(self):
+        from rustypy.rswrapper import bind_rs_crate_funcs
+        bind_rs_crate_funcs(os.path.join(_py_test_dir, 'rs_test_lib'))
 
 @unittest.skip
 class GeneratePythonToRustBinds(unittest.TestCase):

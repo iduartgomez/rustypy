@@ -18,22 +18,3 @@ fn submodules() {
 	test_package.firstdir.call_from_first.first_module(py);
 	test_package.firstdir.subfirstdir.call_from_subfirst.subfirst_module(py);
 }
-
-/*#[no_mangle]
-pub extern fn callback_func(fname: *const c_char) {
-	let fname = unsafe {
-        assert!(!fname.is_null());
-        CStr::from_ptr(fname)
-    };
-	let fname = fname.to_str();
-	match fname {
-		Ok(s) => {
-			match s {
-				"check_recs" => check_recs(),
-				_ => {},
-			};
-		},
-		Err(e) => panic!("{}, call from Python is invalid: \
-						  not valid string", e),
-	};
-}*/
