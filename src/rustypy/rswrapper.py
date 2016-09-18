@@ -5,7 +5,10 @@ import os
 import sys
 import pkg_resources
 import re
+import types
+import typing
 
+from string import Template
 from cffi import FFI
 
 ffi = FFI()
@@ -13,7 +16,7 @@ ffi.cdef("""
     typedef struct KrateData *KrateData;
     typedef struct {
         char* ptr;
-        int len;
+        unsigned long len;
     } PyString;
 
     KrateData* krate_data_new();
@@ -23,8 +26,39 @@ ffi.cdef("""
 
     int parse_src(char *mod_, KrateData *krate_data);
 """)
-# long krate_data_len(KrateData *ptr);
-
+RS_TYPE_CONVERSION = {
+    'c_char': 'str',
+    'c_double': 'float',
+    'c_float': 'float',
+    'c_int': 'int',
+    'c_long': 'int',
+    'c_longlong': 'int',
+    'c_schar': 'str',
+    'c_short': 'int',
+    'c_uint': 'int',
+    'c_ulong': 'int',
+    'c_ulonglong': 'int',
+    'c_ushort': 'int',
+    'size_t': 'int',
+    'ssize_t': 'int',
+    'u64': 'int',
+    'u32': 'int',
+    'u16': 'int',
+    'u8': 'int',
+    'i64': 'int',
+    'i32': 'int',
+    'i16': 'int',
+    'i8': 'int',
+    'f32': 'float',
+    'f64': 'float',
+    'bool': 'bool',
+    'Vec': 'list',
+    'HashMap': 'dict',
+    'tuple': 'tuple',
+    'void': 'None'
+}
+FIND_TYPE = re.compile("type\((.*)\)")
+NESTED_TYPE = re.compile("(?P<parent>\w*)<(?P<child>.*)>$|\((?P<tuple>.*)\)$")
 
 global rslib
 rslib = None
@@ -65,6 +99,104 @@ if not rslib:
     load_rust_lib()
 
 # ==================== #
+#   Helper Functions   #
+# ==================== #
+
+from collections import namedtuple
+RustType = namedtuple('RustType', ['equiv', 'ref', 'mutref'])
+
+
+def _get_signature_types(params):
+    def inner_types(t):
+        t = t.strip()
+        match = re.search(NESTED_TYPE, t)
+        mutref, ref = False, False
+        if match:
+            if match.group('parent'):
+                type_ = match.group('parent')
+            else:
+                type_ = 'tuple'
+        else:
+            if "&mut" in t or "*mut" in t:
+                type_ = t.replace("&mut", '').replace("*mut", '').strip()
+                mutref = True
+            elif "&" in t or "*const" in t:
+                type_ = t.replace('&', '').replace("*const", '').strip()
+                ref = True
+            else:
+                type_ = t
+        try:
+            equiv = RS_TYPE_CONVERSION[type_]
+        except:
+            raise TypeError('type not supported: {}'.format(type_))
+        else:
+            if equiv == 'int':
+                return RustType(equiv=int, ref=ref, mutref=mutref)
+            elif equiv == 'float':
+                return float
+            elif equiv == 'str':
+                return RustType(equiv=str, ref=True, mutref=mutref)
+            elif equiv == 'None':
+                return RustType(equiv=None, ref=ref, mutref=mutref)
+            elif equiv == 'bool':
+                return bool
+            elif equiv == 'list':
+                inner = match.group('child')
+                inner_t = inner_types(inner)
+                return typing.List[inner_t]
+            elif equiv == 'dict':
+                inner = match.group('child')
+                k, v = inner.split(',')
+                return typing.Dict[inner_types(k), inner_types(v)]
+            elif equiv == 'tuple':
+                inner = match.group('tuple')
+
+    params = [x for x in params.split(';') if x != '']
+    param_types = []
+    for p in params:
+        param_types.append(re.search(FIND_TYPE, p).group(1))
+        param_types[-1] = inner_types(param_types[-1])
+    return param_types
+
+
+def get_memref_to_obj(obj):
+    if isinstance(obj, int):
+        return ffi.new('long *', obj)
+    if isinstance(obj, str):
+        return ffi.new("char[]", obj.encode())
+
+
+def _get_crate_entry(mod, manifest):
+    rgx_lib = re.compile(r'\[lib\]')
+    rgx_path = re.compile(r'path(\W+|)=(\W+|)[\'\"](?P<entry>.*)[\'\"]')
+    inlibsection, entry = False, None
+    with open(manifest, 'r') as f:
+        for l in f:
+            if inlibsection:
+                entry = re.match(rgx_path, l)
+                if entry:
+                    entry = entry.group('entry')
+                    entry = os.path.join(*entry.split('/'))
+                    break
+            elif not inlibsection and re.search(rgx_lib, l):
+                inlibsection = True
+    if not entry:
+        entry = os.path.join('src', 'lib.rs')
+    return os.path.join(mod, entry)
+
+
+def bind_rs_crate_funcs(mod, lib, cargo=False, ismodule=False, prefix=None):
+    if not isinstance(mod, str):
+        # type checking is necessary as it will be passed to Rust
+        raise TypeError('`mod` parameter must be a valid string')
+    if not cargo:
+        manifest = os.path.join(mod, 'Cargo.toml')
+        if not os.path.exists(manifest):
+            raise OSError("no Cargo(.toml) manifest found")
+        entry_point = _get_crate_entry(mod, manifest)
+    return RustBinds(entry_point, lib, prefix=prefix)
+
+# ==================== #
 #   Support classes    #
 # ==================== #
 
@@ -92,18 +224,6 @@ class KrateData(object):
         val = rslib.krate_data_iter(self.obj, self._idx)
         self._idx += 1
         return val
-
-
-def get_signature_types(types):
-    pass
-
-
-class RsTypes(object):
-    # std_vec
-    # std_hashmap
-    c_long = "int"
-    c_double = "float"
-    c_char = "char"
 
 
 class RsStruct(object):
@@ -150,7 +270,7 @@ class RsStruct(object):
             __add_method(m)
 
     def __add_method(self, method):
-        types = get_signature_types(method)
+        params = get_signature_types(method)
         # new_method is a staticmethod
         setattr(self, method.name, new_method)
 
@@ -180,6 +300,9 @@ class ModuleKlass(object):
     def __init__(self):
         pass
 
+    def parse_struct(self, module):
+        pass
+
     def add_child_mod(self, mod):
         setattr(self, mod.name, mod)
 
@@ -192,45 +315,95 @@ class ModuleKlass(object):
 
 class RustBinds(object):
 
-    def __init__(self, entry_point, prefix=None):
-        self._krate = KrateData()
-        rslib.parse_src(entry_point.encode(), self._krate.obj)
-        with self._krate as krate:
+    def __init__(self, entry_point, compiled_lib, prefix=None):
+        self._FFI = FFI()
+        self.lib = self._FFI.dlopen(compiled_lib)
+        self._krate_data = KrateData()
+        rslib.parse_src(entry_point.encode(), self._krate_data.obj)
+        if prefix is None:
+            prefix = "python_bind_"
+        prepared_funcs = {}
+        with self._krate_data as krate:
             for e in krate:
-                s = ffi.unpack(e.ptr, e.len).decode("utf-8")
-                print(s)
+                decl = ffi.unpack(e.ptr, e.len).decode("utf-8")
+                path, decl = decl.split(prefix)
+                name, params = decl.split('::', maxsplit=1)
+                name = prefix + name
+                params = _get_signature_types(params)
+                self.decl_C_def(name, params)
+                prepared_funcs[name] = self.FnCall(self.lib, name, params)
+        for name, fn in prepared_funcs.items():
+            setattr(self, name, fn)
 
-# ==================== #
-#   Helper Functions   #
-# ==================== #
+    def decl_C_def(self, name, params):
+        print(name, params)
+        params_str = ""
+        for x, p in enumerate(params, 1):
+            add_p = ""
+            if p.equiv is None:
+                add_p = "void"
+            elif issubclass(p.equiv, int):
+                if not p.mutref and not p.ref:
+                    add_p = "long"
+                else:
+                    add_p = "long *"
+            elif issubclass(p.equiv, str):
+                add_p = "char *"
+            if x < (len(params) - 2) and x != len(params):
+                params_str += (add_p + ',')
+            elif x == (len(params) - 1):
+                params_str += add_p
+            else:
+                return_str = add_p
+        cdef = """
+            {return_type} {name}({params});
+        """.format(
+            return_type=return_str,
+            name=name,
+            params=params_str)
+        print(cdef)
+        self._FFI.cdef(cdef)
 
+    class FnCall(object):
 
-def _get_crate_entry(mod, manifest):
-    rgx_lib = re.compile(r'\[lib\]')
-    rgx_path = re.compile(r'path(\W+|)=(\W+|)[\'\"](?P<entry>.*)[\'\"]')
-    inlibsection, entry = False, None
-    with open(manifest, 'r') as f:
-        for l in f:
-            if inlibsection:
-                entry = re.match(rgx_path, l)
-                if entry:
-                    entry = entry.group('entry')
-                    entry = os.path.join(*entry.split('/'))
-                    break
-            elif not inlibsection and re.search(rgx_lib, l):
-                inlibsection = True
-    if not entry:
-        entry = os.path.join('src', 'lib.rs')
-    return os.path.join(mod, entry)
+        def __init__(self, lib, name, params, type_checking=False):
+            self._rs_fn = getattr(lib, name)
+            self._fn_name = name
+            self._return_type = params.pop()
+            self._params = params
+            self._type_checking = type_checking
 
-
-def bind_rs_crate_funcs(mod, cargo=False, ismodule=False):
-    if not isinstance(mod, str):
-        # type checking is necessary as it will be passed to Rust
-        raise TypeError('`mod` parameter must be a valid string')
-    if not cargo:
-        manifest = os.path.join(mod, 'Cargo.toml')
-        if not os.path.exists(manifest):
-            raise OSError("no Cargo(.toml) manifest found")
-        entry_point = _get_crate_entry(mod, manifest)
-    return RustBinds(entry_point)
+        def __call__(self, *args):
+            n_args = len(self._params)
+            g_args = len(args)
+            if g_args != n_args:
+                raise TypeError("{}() takes exactly {} "
+                                "arguments ({} given)".format(
+                                    self._fn_name, n_args, g_args))
+            prep_args = []
+            for x, a in enumerate(args):
+                p = self._params[x]
+                if p.ref or p.mutref:
+                    ref = get_memref_to_obj(a)
+                    prep_args.append(ref)
+                else:
+                    prep_args.append(a)
+            if self._type_checking:
+                raise NotImplemented("optional type checking not implemented")
+            result = self._rs_fn(*prep_args)
+            arg_refs = []
+            for x, r in enumerate(prep_args):
+                if isinstance(r, ffi.CData):
+                    if ffi.typeof(r) is ffi.typeof("char[]"):
+                        arg_refs.append(ffi.string(r))
+                    else:
+                        arg_refs.append(r[0])
+                else:
+                    arg_refs.append(r)
+            # connversion of result to Python objects
+            if isinstance(result, ffi.CData):
+                if ffi.typeof(result) is ffi.typeof("long *"):
+                    result = result[0]
+                if ffi.typeof(result) is ffi.typeof("char *"):
+                    result = ffi.string(result).decode()
+            return result, arg_refs

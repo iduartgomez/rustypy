@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::ffi::{CStr};
 use std::path::Path;
 
-use libc::{c_char, c_int, c_long};
+use libc::{c_char, c_uint, c_long, c_ulong};
 
 use syntex_errors::DiagnosticBuilder;
 use syntax::ast;
@@ -19,26 +19,22 @@ use syntax::parse::token::InternedString;
 use syntax::visit::{FnKind, Visitor};
 
 #[no_mangle]
-pub extern "C" fn parse_src(mod_: *const c_char, krate_data: &mut KrateData) -> c_int {
+pub extern "C" fn parse_src(mod_: *const c_char, krate_data: &mut KrateData) -> c_uint {
     let path = unsafe {
         assert!(!mod_.is_null());
         CStr::from_ptr(mod_)
     };
-    let path = match path.to_str() {
-        Ok(s) => s,
-        Err(e) => panic!("{}, call from Python is invalid: not valid string", e),
-    };
     // parse and walk
     let parse_session = ParseSess::new();
-    let krate = match parse(path, &parse_session) {
+    let krate = match parse(path.to_str().unwrap(), &parse_session) {
         Ok(krate) => krate,
-        Err(None) => return 1 as c_int, // return value to Python to raise error from there
+        Err(None) => return 1 as c_uint, // return value to Python to raise error from there
         Err(Some(_)) => panic!(),
     };
     // prepare data for Python
     krate_data.visit_mod(&krate.module, krate.span, 0);
     krate_data.collect_values();
-    return 0 as c_int;
+    return 0 as c_uint;
 }
 
 fn parse<'a, T: ?Sized + AsRef<Path>>(path: &T,
@@ -93,18 +89,22 @@ impl KrateData {
             let type_str = format!("{:?}", &arg.ty);
             work_fn.add_type(type_str);
         }
+        let return_type = match &fndecl.output {
+            &ast::FunctionRetTy::Ty(ref s) => format!("{:?}", s),
+            &ast::FunctionRetTy::Default(_) => String::from("type(void)"),
+        };
+        work_fn.add_type(return_type);
     }
     fn collect_values(&mut self) {
         for (_, v) in self.functions.drain() {
             let mut fndef = String::from(v.name.as_str());
             if v.args.len() > 0 {
-                fndef.push_str("::arg_list::");
+                fndef.push_str("::");
                 v.args.iter().fold(&mut fndef, |mut acc, x| {
-                    acc.push_str("arg:");
                     acc.push_str(&x);
+                    acc.push(';');
                     acc
                 });
-                fndef.push_str(";")
             }
             self.collected.push(fndef);
         };
@@ -146,7 +146,7 @@ pub extern "C" fn krate_data_len(ptr: *const KrateData) -> c_long {
 #[repr(C)]
 pub struct PyString {
     ptr: *const c_char,
-    len: c_int,
+    len: c_ulong,
 }
 
 #[no_mangle]
@@ -159,12 +159,12 @@ pub extern "C" fn krate_data_iter(ptr: *const KrateData, idx: c_long) -> PyStrin
         Some(v) => {
             PyString {
                 ptr: v.as_ptr() as *const c_char,
-                len: v.len() as c_int,
+                len: v.len() as c_ulong,
             }
         },
         None => PyString {
             ptr:"NO_IDX_ERROR".as_ptr() as *const c_char,
-            len: "NO_IDX_ERROR".len() as c_int,
+            len: "NO_IDX_ERROR".len() as c_ulong,
         },
     }
 }

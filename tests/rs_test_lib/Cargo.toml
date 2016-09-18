@@ -9,3 +9,4 @@ libc = "*"
 [lib]
 name = "test_lib"
 path  =  'src/lib.rs'
+crate-type = ["cdylib", "rlib"]

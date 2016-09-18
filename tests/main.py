@@ -6,6 +6,7 @@ from importlib import import_module
 
 from rustypy.pywrapper import RustFuncGen
 from rustypy.rswrapper import load_rust_lib
+from rustypy.rswrapper import bind_rs_crate_funcs
 
 def setUpModule():
     global _py_test_dir
@@ -17,10 +18,31 @@ def setUpModule():
 
 class GenerateRustToPythonBinds(unittest.TestCase):
 
+    def setUp(self):
+        if sys.platform.startswith("win"):
+            ext = ".dll"
+        elif sys.platform == "darwin":
+            ext = ".dylib"
+        else:
+            ext = ".so"
+        self.source = os.path.join(_py_test_dir, 'rs_test_lib')
+        self.lib_test = os.path.join(
+            self.source, 'target', 'debug', 'libtest_lib' + ext)
+
     #@unittest.skip
     def test_basics_primitives(self):
-        from rustypy.rswrapper import bind_rs_crate_funcs
-        bind_rs_crate_funcs(os.path.join(_py_test_dir, 'rs_test_lib'))
+        bindings = bind_rs_crate_funcs(self.source, self.lib_test)
+        # non ref
+        return_val, refs = bindings.python_bind_int(1)
+        self.assertIsInstance(return_val, int)
+        self.assertEqual(return_val, 2)
+        # ref
+        _, refs = bindings.python_bind_ref_int(1)
+        self.assertEqual(refs[0], 2)
+        # string
+        return_val, _ = bindings.python_bind_str("From Python.")
+        self.assertEqual(return_val, "From Python. Added in Rust.")
+
 
 @unittest.skip
 class GeneratePythonToRustBinds(unittest.TestCase):
