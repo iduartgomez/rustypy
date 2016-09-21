@@ -6,10 +6,10 @@ extern crate syntex_errors;
 extern crate libc;
 
 use std::collections::HashMap;
-use std::ffi::{CStr};
+use std::ffi::CStr;
 use std::path::Path;
 
-use libc::{c_char, c_uint, c_long, c_ulong};
+use libc::{c_char, c_uint, size_t};
 
 use syntex_errors::DiagnosticBuilder;
 use syntax::ast;
@@ -17,6 +17,11 @@ use syntax::codemap;
 use syntax::parse::{self, ParseSess};
 use syntax::parse::token::InternedString;
 use syntax::visit::{FnKind, Visitor};
+
+pub mod pytypes;
+
+// re-export
+pub use self::pytypes::{PyTuple, PyString, PyBool};
 
 #[no_mangle]
 pub extern "C" fn parse_src(mod_: *const c_char, krate_data: &mut KrateData) -> c_uint {
@@ -107,7 +112,7 @@ impl KrateData {
                 });
             }
             self.collected.push(fndef);
-        };
+        }
     }
     fn iter_krate(&self, idx: usize) -> Option<&str> {
         if self.collected.len() >= (idx + 1) {
@@ -135,22 +140,16 @@ pub extern "C" fn krate_data_free(ptr: *mut KrateData) {
 }
 
 #[no_mangle]
-pub extern "C" fn krate_data_len(ptr: *const KrateData) -> c_long {
+pub extern "C" fn krate_data_len(ptr: *const KrateData) -> size_t {
     let krate = unsafe {
         assert!(!ptr.is_null());
         &*ptr
     };
-    krate.collected.len() as c_long
-}
-
-#[repr(C)]
-pub struct PyString {
-    ptr: *const c_char,
-    len: c_ulong,
+    krate.collected.len()
 }
 
 #[no_mangle]
-pub extern "C" fn krate_data_iter(ptr: *const KrateData, idx: c_long) -> PyString {
+pub extern "C" fn krate_data_iter(ptr: *const KrateData, idx: size_t) -> PyString {
     let krate = unsafe {
         assert!(!ptr.is_null());
         &*ptr
@@ -159,13 +158,15 @@ pub extern "C" fn krate_data_iter(ptr: *const KrateData, idx: c_long) -> PyStrin
         Some(v) => {
             PyString {
                 ptr: v.as_ptr() as *const c_char,
-                len: v.len() as c_ulong,
+                length: v.len()
             }
-        },
-        None => PyString {
-            ptr:"NO_IDX_ERROR".as_ptr() as *const c_char,
-            len: "NO_IDX_ERROR".len() as c_ulong,
-        },
+        }
+        None => {
+            PyString {
+                ptr: "NO_IDX_ERROR".as_ptr() as *const c_char,
+                length: "NO_IDX_ERROR".len()
+            }
+        }
     }
 }
 

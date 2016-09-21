@@ -2,13 +2,12 @@
 
 extern crate libc;
 
-use libc::{c_double, c_char};
-use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+#[macro_use]
+extern crate rustypy;
 
-// fn python_bind_fail() {
-// println!("Hello from Rust!");
-// }
+use libc::size_t;
+use std::collections::HashMap;
+use rustypy::{PyTuple, PyString, PyBool};
 
 #[no_mangle]
 pub extern "C" fn python_bind_int(num: u32) -> u32 {
@@ -20,12 +19,20 @@ pub extern "C" fn python_bind_ref_int(num: &mut u32) {
     *num += 1;
 }
 
+/*#[no_mangle]
+pub extern "C" fn python_bind_str(pystr: *mut PyString) -> PyString {
+    let mut s: String = pystr.into_string();
+    s.push_str(" Added in Rust.");
+    PyString::from(s)
+}*/
+
 #[no_mangle]
-pub extern "C" fn python_bind_str(pystr: *mut c_char) -> *mut c_char {
-    let string = unsafe { CStr::from_ptr(pystr) };
-    let mut modified = String::from_utf8_lossy(string.to_bytes()).into_owned();
-    modified.push_str(" Added in Rust.");
-    unsafe { CString::from_vec_unchecked(modified.into_bytes()).into_raw() }
+pub extern "C" fn python_bind_tuple(e1: u32,
+                                    e2: f32,
+                                    e3: PyBool,
+                                    e4: *mut PyString)
+                                    -> *mut PyTuple {
+    pytuple!(e1, e2, e3, e4)
 }
 
 #[no_mangle]
@@ -45,12 +52,7 @@ pub extern "C" fn ython_bind_dict(dict: HashMap<&str, u32>) -> HashMap<&str, u32
 }
 
 #[no_mangle]
-pub extern "C" fn ython_bind_tuple(tup: (u32, u32)) -> (u32, u32) {
-    return tup;
-}
-
-#[no_mangle]
-pub extern "C" fn ython_bind_list2(_: Vec<(c_double, bool)>) -> Vec<String> {
+pub extern "C" fn ython_bind_list2(_: Vec<(f64, bool)>) -> Vec<String> {
     let returnval = vec![String::from("Rust")];
     returnval
 }

@@ -2,11 +2,13 @@ import unittest
 import subprocess
 import sys
 import os
+import typing
 from importlib import import_module
 
 from rustypy.pywrapper import RustFuncGen
-from rustypy.rswrapper import load_rust_lib
+from rustypy.rswrapper import load_rust_lib, Float, Double
 from rustypy.rswrapper import bind_rs_crate_funcs
+
 
 def setUpModule():
     global _py_test_dir
@@ -16,32 +18,40 @@ def setUpModule():
     # compile rust lib
     load_rust_lib(recmpl=True)
 
+
 class GenerateRustToPythonBinds(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         if sys.platform.startswith("win"):
             ext = ".dll"
         elif sys.platform == "darwin":
             ext = ".dylib"
         else:
             ext = ".so"
-        self.source = os.path.join(_py_test_dir, 'rs_test_lib')
-        self.lib_test = os.path.join(
-            self.source, 'target', 'debug', 'libtest_lib' + ext)
+        source = os.path.join(_py_test_dir, 'rs_test_lib')
+        lib_test = os.path.join(source, 'target', 'debug', 'libtest_lib' + ext)
+        cls.bindings = bind_rs_crate_funcs(source, lib_test)
 
     #@unittest.skip
     def test_basics_primitives(self):
-        bindings = bind_rs_crate_funcs(self.source, self.lib_test)
         # non ref
-        return_val, refs = bindings.python_bind_int(1)
+        return_val = self.bindings.python_bind_int(1)
         self.assertIsInstance(return_val, int)
         self.assertEqual(return_val, 2)
         # ref
-        _, refs = bindings.python_bind_ref_int(1)
+        _, refs = self.bindings.python_bind_ref_int(1, return_ref=True)
         self.assertEqual(refs[0], 2)
         # string
-        return_val, _ = bindings.python_bind_str("From Python.")
-        self.assertEqual(return_val, "From Python. Added in Rust.")
+        #return_val = self.bindings.python_bind_str("From Python.")
+        #self.assertEqual(return_val, "From Python. Added in Rust.")
+
+    def test_compounded_types(self):
+        # tuple
+        T = typing.Tuple[int, Float, bool, str]
+        self.bindings.python_bind_tuple.add_return_type(T)
+        return_val = self.bindings.python_bind_tuple(1, 2.5, True, "Python")
+        self.assertEqual(return_val, (1, 2.5, True, "Python"))
 
 
 @unittest.skip
@@ -49,9 +59,9 @@ class GeneratePythonToRustBinds(unittest.TestCase):
 
     def setUp(self):
         self._basics = os.path.join(_rs_lib_dir, 'tests',
-            'test_package', 'basics', 'rustypy_pybind.rs')
+                                    'test_package', 'basics', 'rustypy_pybind.rs')
         self._mod = os.path.join(_rs_lib_dir, 'tests',
-            'test_package', 'rustypy_pybind.rs')
+                                 'test_package', 'rustypy_pybind.rs')
         f = open(self._basics, 'w')
         f.close()
         f = open(self._mod, 'w')
@@ -78,7 +88,7 @@ class GeneratePythonToRustBinds(unittest.TestCase):
     def test_nested_modules(self):
         self.set_python_path()
         init_package = os.path.join(_rs_lib_dir, 'tests',
-            'test_package', '__init__.py')
+                                    'test_package', '__init__.py')
         subprocess.run('python {}'.format(init_package), shell=True)
         p = subprocess.run(['cargo', 'test', '--test', 'submodules'],
                            cwd=_rs_lib_dir)

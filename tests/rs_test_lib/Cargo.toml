@@ -5,6 +5,7 @@ authors = ["IDG <iduartgomez@gmail.com>"]
 
 [dependencies]
 libc = "*"
+rustypy = {path="../../src/rslib"}
 
 [lib]
 name = "test_lib"
