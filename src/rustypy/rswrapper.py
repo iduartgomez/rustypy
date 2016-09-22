@@ -26,7 +26,7 @@ PY_TYPES = """
     float PyTuple_extractPyFloat(PyTuple* ptr, size_t elem);
     double PyTuple_extractPyDouble(PyTuple* ptr, size_t elem);
     PyBool PyTuple_extractPyBool(PyTuple* ptr, size_t elem);
-    PyString* PyTuple_extractPyString(PyTuple* ptr, size_t elem);
+    PyString PyTuple_extractPyString(PyTuple* ptr, size_t elem);
 """
 ffi = FFI()
 ffi.cdef(PY_TYPES)
@@ -41,7 +41,6 @@ ffi.cdef("""
     int parse_src(char* mod_, KrateData* krate_data);
 """)
 RS_TYPE_CONVERSION = {
-    'c_char': 'str',
     'c_float': 'float',
     'c_double': 'double',
     'c_short': 'int',
@@ -118,6 +117,7 @@ RustType = namedtuple('RustType', ['equiv', 'ref', 'mutref'])
 Float = type('Float', (float,), {'_definition': 'float'})
 Double = type('Double', (float,), {'_definition': 'double'})
 
+
 def _get_signature_types(params):
     def inner_types(t):
         t = t.strip()
@@ -146,13 +146,13 @@ def _get_signature_types(params):
             elif equiv == 'double':
                 return RustType(equiv=Double, ref=ref, mutref=mutref)
             elif equiv == 'str':
-                return RustType(equiv=str, ref=True, mutref=False)
+                return RustType(equiv=str, ref=ref, mutref=mutref)
             elif equiv == 'None':
-                return RustType(equiv=None, ref=ref, mutref=mutref)
+                return RustType(equiv=None, ref=False, mutref=False)
             elif equiv == 'bool':
                 return RustType(equiv=bool, ref=ref, mutref=mutref)
             elif equiv == 'tuple':
-                return RustType(equiv=tuple, ref=ref, mutref=mutref)
+                return RustType(equiv=tuple, ref=ref, mutref=True)
             elif equiv == 'list':
                 inner = match.group('child')
                 inner_t = inner_types(inner)
@@ -198,49 +198,50 @@ class MissingTypeHint(TypeError):
 
 
 def _extract_pytypes(libffi, ref, downcast=False, elem_num=None, call_fn=None):
-    print(ref, downcast)
     if downcast:
-        if issubclass(downcast, int):
+        if issubclass(downcast, bool):
+            pybool = rslib.PyTuple_extractPyBool(ref, elem_num)
+            return _extract_pytypes(ffi, pybool)
+        elif issubclass(downcast, int):
             return rslib.PyTuple_extractPyInt(ref, elem_num)
         elif issubclass(downcast, float):
             if downcast is Float:
                 return rslib.PyTuple_extractPyFloat(ref, elem_num)
             else:
                 return rslib.PyTuple_extractPyDouble(ref, elem_num)
-        elif issubclass(downcast, bool):
-            pybool = rslib.PyTuple_extractPyBool(ref, elem_num)
-            return _extract_pytypes(ffi, pybool)
         elif issubclass(downcast, str):
             pystr = rslib.PyTuple_extractPyString(ref, elem_num)
             return _extract_pytypes(ffi, pystr)
-    if libffi.typeof(ref) is libffi.typeof("long long*"):
+    ref_t = libffi.typeof(ref)
+    if ref_t is libffi.typeof("long long*"):
         return ref[0]
-    if libffi.typeof(ref) is libffi.typeof("float*"):
+    if ref_t is libffi.typeof("float*"):
         return ref[0]
-    if libffi.typeof(ref) is libffi.typeof("double*"):
+    if ref_t is libffi.typeof("double*"):
         return ref[0]
-    elif libffi.typeof(ref) is libffi.typeof("PyTuple*"):
+    elif ref_t is libffi.typeof("PyTuple*"):
         array = ffi.cast("PyTuple*", ref)
         arity = rslib.PyTuple_len(array)
         types = typing.get_type_hints(call_fn.__call__).get('return')
         if not types:
             raise MissingTypeHint
         if arity != len(types.__tuple_params__):
-            raise TypeError("the return type signature and the return tuple "
-                            "are not of the same length")
+            raise TypeError("the type hint for returning tuple of fn `{}` "
+                            "and the return tuple value are not of "
+                            "the same length".format(call_fn._fn_name))
         tuple_elems = []
         for i, t in enumerate(types.__tuple_params__):
             pytype = _extract_pytypes(
                 ffi, array, downcast=t, elem_num=i, call_fn=call_fn)
             tuple_elems.append(pytype)
         return tuple(tuple_elems)
-    elif libffi.typeof(ref) is libffi.typeof("PyString*"):
-        pystr = ffi.cast("PyString*", ref)
-        return ffi.string(pystr.ptr)
-        # return ffi.unpack(pystr.ptr, pystr.length).decode()
-    elif libffi.typeof(ref) is libffi.typeof("PyBool*"):
-        pystr = ffi.cast("PyString*", ref)
-        if pystr.val == 0:
+    elif (ref_t is libffi.typeof("PyString*")) \
+            or (ref_t is libffi.typeof("PyString")):
+        pystr = ffi.unpack(ref.ptr, ref.length).decode()
+        return pystr
+    elif (ref_t is libffi.typeof("PyBool*")) \
+            or (ref_t is libffi.typeof("PyBool")):
+        if ref.val == 0:
             return False
         else:
             return True
@@ -466,8 +467,12 @@ class RustBinds(object):
                     if isinstance(r, ffi.CData):
                         if ffi.typeof(r) is ffi.typeof("PyString*"):
                             arg_refs.append(ffi.unpack(r.ptr, r.length))
-                        elif ffi.typeof(r) is ffi.typeof("PyTuple"):
-                            pass
+                        elif ffi.typeof(r) is ffi.typeof("PyTuple*"):
+                            arg_refs.append(_extract_pytypes(
+                                self._libffi, r, call_fn=self))
+                        elif ffi.typeof(r) is ffi.typeof("PyBool*"):
+                            arg_refs.append(_extract_pytypes(
+                                self._libffi, r, call_fn=self))
                         else:
                             arg_refs.append(r[0])
                     else:
@@ -484,21 +489,17 @@ class RustBinds(object):
             if p.equiv is None:
                 add_p = "void"
             elif issubclass(p.equiv, bool):
-                add_p = "PyBool*"
+                add_p = "PyBool"
             elif issubclass(p.equiv, int):
-                if not p.mutref and not p.ref:
-                    add_p = "long long"
-                else:
-                    add_p = "long long*"
+                add_p = "long long"
             elif issubclass(p.equiv, float):
                 add_p = p.equiv._definition
-                if p.mutref or p.ref:
-                    add_p = add_p + "*"
             elif issubclass(p.equiv, str):
-                add_p = "PyString*"
+                add_p = "PyString"
             elif issubclass(p.equiv, tuple):
-                add_p = "PyTuple*"
-
+                add_p = "PyTuple"
+            if p.mutref or p.ref:
+                add_p = add_p + "*"
             if x <= (len(params) - 2) and x != len(params):
                 params_str += (add_p + ", ")
             elif x == (len(params) - 1):
@@ -511,5 +512,5 @@ class RustBinds(object):
             return_type=return_str,
             name=name,
             params=params_str)
-        print(cdef)
+        # print(cdef)
         self._FFI.cdef(cdef)

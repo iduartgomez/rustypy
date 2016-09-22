@@ -19,25 +19,32 @@ pub extern "C" fn python_bind_ref_int(num: &mut u32) {
     *num += 1;
 }
 
-/*#[no_mangle]
-pub extern "C" fn python_bind_str(pystr: *mut PyString) -> PyString {
-    let mut s: String = pystr.into_string();
-    s.push_str(" Added in Rust.");
-    PyString::from(s)
-}*/
-
 #[no_mangle]
-pub extern "C" fn python_bind_tuple(e1: u32,
-                                    e2: f32,
-                                    e3: PyBool,
-                                    e4: *mut PyString)
-                                    -> *mut PyTuple {
-    pytuple!(e1, e2, e3, e4)
+pub extern "C" fn python_bind_str_by_ref(pystr: *mut PyString) -> *mut PyString {
+    let mut string: String = unsafe { PyString::from_ptr_into_string(pystr) };
+    string.push_str(" Added in Rust.");
+    PyString::from(string).as_ptr()
 }
 
 #[no_mangle]
-pub extern "C" fn ython_bind_two_ints(num1: u32, num2: u32) -> (u32, u32) {
-    return (num1, num2);
+pub extern "C" fn python_bind_str(pystr: *mut PyString) -> PyString {
+    let mut string: String = unsafe { PyString::from_ptr_into_string(pystr) };
+    string.push_str(" Added in Rust.");
+    PyString::from(string)
+}
+
+#[no_mangle]
+pub extern "C" fn python_bind_tuple(e1: i32, e2: i32) -> *mut PyTuple {
+    pytuple!(e1, e2)
+}
+
+#[no_mangle]
+pub extern "C" fn python_bind_tuple_mixed(e1: i32,
+                                          e2: *mut PyBool,
+                                          e3: f32,
+                                          e4: *mut PyString)
+                                          -> *mut PyTuple {
+    pytuple!(e1, e2, e3, e4)
 }
 
 #[no_mangle]
