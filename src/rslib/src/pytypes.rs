@@ -14,6 +14,9 @@ pub struct PyString {
 }
 
 impl PyString {
+    pub unsafe fn from_ptr(ptr: *mut PyString) -> &'static PyString {
+        &*ptr
+    }
     pub unsafe fn into_string(&self) -> String {
         let c_str = CStr::from_ptr(self.ptr);
         String::from_utf8_lossy(c_str.to_bytes()).into_owned()
@@ -65,6 +68,9 @@ pub struct PyBool {
 }
 
 impl PyBool {
+    pub unsafe fn from_ptr(ptr: *mut PyBool) -> &'static PyBool {
+        &*ptr
+    }
     pub unsafe fn from_ptr_into_bool(ptr: *mut PyBool) -> bool {
         let ptr: &PyBool = &*ptr;
         match ptr.val {
@@ -104,6 +110,18 @@ impl<'a> From<&'a bool> for PyBool {
 }
 
 impl PartialEq<bool> for PyBool {
+    fn eq(&self, other: &bool) -> bool {
+        if self.val == 0 && *other == false {
+            true
+        } else if self.val == 1 && *other == true {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl<'a> PartialEq<bool> for &'a PyBool {
     fn eq(&self, other: &bool) -> bool {
         if self.val == 0 && *other == false {
             true
@@ -213,17 +231,26 @@ impl<'a, 'b> BitOr<&'a bool> for &'b PyBool {
     }
 }
 
-    #[derive(Debug)]
-    pub struct PyTuple {
-        pub elem: usize,
-        pub idx: usize,
-        pub next: Option<Box<PyTuple>>,
-    }
+#[derive(Debug)]
+pub struct PyTuple {
+    pub elem: PyArg,
+    pub idx: usize,
+    pub next: Option<Box<PyTuple>>,
+}
 
-impl PyTuple {
-    fn get_element(&self, idx: usize) -> Result<usize, &str> {
+#[derive(Debug)]
+pub enum PyArg {
+    I64(i64),
+    F32(f32),
+    F64(f64),
+    PyBool(PyBool),
+    PyString(PyString),
+}
+
+impl<'a> PyTuple {
+    fn get_element(&self, idx: usize) -> Result<&PyTuple, &str> {
         if idx == self.idx {
-            Ok(self.elem)
+            Ok(&self)
         } else {
             match self.next {
                 Some(ref e) => e.get_element(idx),
@@ -247,7 +274,30 @@ macro_rules! pytuple {
         cnt = 0usize;
         $(
             let tuple_e = PyTuple {
-                elem: Box::into_raw(Box::new($elem)) as usize,
+                elem: $elem,
+                idx: cnt,
+                next: None,
+            };
+            tuple.push(tuple_e);
+            cnt += 1;
+        )*;
+        if cnt == tuple.len() {}; // stub to remove warning...
+        let t_len = tuple.len() - 1;
+        for i in 1..(t_len + 1) {
+            let idx = t_len - i;
+            let last = tuple.pop().unwrap();
+            let prev = tuple.get_mut(idx).unwrap();
+            prev.next = Some(Box::new(last));
+        }
+        Box::into_raw(Box::new(tuple.pop().unwrap()))
+    }};
+    ( $( $elem:expr ),+ ) => {{
+        let mut cnt;
+        let mut tuple = Vec::new();
+        cnt = 0usize;
+        $(
+            let tuple_e = PyTuple {
+                elem: $elem,
                 idx: cnt,
                 next: None,
             };
@@ -277,17 +327,22 @@ pub unsafe extern "C" fn PyTuple_len(ptr: *mut PyTuple) -> usize {
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyInt(ptr: *mut PyTuple, index: usize) -> i64 {
     let tuple = &*ptr;
-    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut i64);
-    *elem
+    let elem = PyTuple::get_element(tuple, index).unwrap();
+    match elem.elem {
+        PyArg::I64(val) => val,
+        _ => panic!("expected i64, found other type"),
+    }
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_extractPyBool(ptr: *mut PyTuple, index: usize) -> PyBool {
+pub unsafe extern "C" fn PyTuple_extractPyBool(ptr: *mut PyTuple, index: usize) -> &'static PyBool {
     let tuple = &*ptr;
-    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut PyBool);
-    println!("value in Rust: {:?}", elem.val);
-    *elem
+    let elem = PyTuple::get_element(tuple, index).unwrap();
+    match elem.elem {
+        PyArg::PyBool(ref val) => val,
+        _ => panic!("expected PyBool, found other type"),
+    }
 }
 
 
@@ -295,24 +350,35 @@ pub unsafe extern "C" fn PyTuple_extractPyBool(ptr: *mut PyTuple, index: usize) 
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyFloat(ptr: *mut PyTuple, index: usize) -> f32 {
     let tuple = &*ptr;
-    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut f32);
-    *elem
+    let elem = PyTuple::get_element(tuple, index).unwrap();
+    match elem.elem {
+        PyArg::F32(val) => val,
+        _ => panic!("expected f32, found other type"),
+    }
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyDouble(ptr: *mut PyTuple, index: usize) -> f64 {
     let tuple = &*ptr;
-    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut f64);
-    *elem
+    let elem = PyTuple::get_element(tuple, index).unwrap();
+    match elem.elem {
+        PyArg::F64(val) => val,
+        _ => panic!("expected f64, found other type"),
+    }
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_extractPyString(ptr: *mut PyTuple, index: usize) -> PyString {
+pub unsafe extern "C" fn PyTuple_extractPyString(ptr: *mut PyTuple,
+                                                 index: usize)
+                                                 -> &'static PyString {
     let tuple = &*ptr;
-    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut PyString);
-    *elem
+    let elem = PyTuple::get_element(tuple, index).unwrap();
+    match elem.elem {
+        PyArg::PyString(ref val) => val,
+        _ => panic!("expected PyString, found other type"),
+    }
 }
 
 macro_rules! unpack_pytype {

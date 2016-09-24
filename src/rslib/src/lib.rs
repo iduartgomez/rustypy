@@ -21,7 +21,7 @@ use syntax::visit::{FnKind, Visitor};
 pub mod pytypes;
 
 // re-export
-pub use self::pytypes::{PyTuple, PyString, PyBool};
+pub use self::pytypes::{PyTuple, PyString, PyBool, PyArg};
 
 #[no_mangle]
 pub extern "C" fn parse_src(mod_: *const c_char, krate_data: &mut KrateData) -> c_uint {

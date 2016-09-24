@@ -17,22 +17,21 @@ def setUpModule():
     _rs_lib_dir = os.path.join(os.path.dirname(_py_test_dir), 'src', 'rslib')
     # compile rust lib
     load_rust_lib(recmpl=True)
+    # load sample lib
+    ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
+    pre = {'win32': ''}.get(sys.platform, 'lib')
+    global lib_test_entry
+    lib_test_entry = os.path.join(_py_test_dir, 'rs_test_lib')
+    global lib_test
+    lib_test = os.path.join(lib_test_entry, 'target', 'debug',
+                            '{}test_lib{}'.format(pre, ext))
 
 
-#@unittest.skip
 class GenerateRustToPythonBinds(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if sys.platform.startswith("win"):
-            ext = ".dll"
-        elif sys.platform == "darwin":
-            ext = ".dylib"
-        else:
-            ext = ".so"
-        source = os.path.join(_py_test_dir, 'rs_test_lib')
-        lib_test = os.path.join(source, 'target', 'debug', 'libtest_lib' + ext)
-        cls.bindings = bind_rs_crate_funcs(source, lib_test)
+        cls.bindings = bind_rs_crate_funcs(lib_test_entry, lib_test)
 
     def test_basics_primitives(self):
         # non ref int
@@ -51,25 +50,27 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         return_val = self.bindings.python_bind_bool(True)
         self.assertEqual(return_val, False)
 
-    #@unittest.skip
     def test_tuple_conversion(self):
         # tuple
         U = typing.Tuple[int, int]
         self.bindings.python_bind_tuple.add_return_type(U)
-        return_val = self.bindings.python_bind_tuple(1, 2)
-        self.assertEqual(return_val, (1, 2))
+        for i in range(0, 100):
+            return_val = self.bindings.python_bind_tuple(1, 2)
+            self.assertEqual(return_val, (1, 2))
+
+        U = typing.Tuple[str, str]
+        self.bindings.python_bind_str_tuple.add_return_type(U)
+        return_val = self.bindings.python_bind_str_tuple("Some")
+        self.assertEqual(return_val, ("Some", "from Rust"))
 
         # mixed types
-        """
         T = typing.Tuple[int, bool, Float, str]
         self.bindings.python_bind_tuple_mixed.add_return_type(T)
         return_val = self.bindings.python_bind_tuple_mixed(
-            1, False, 2.5, "Some")
-        self.assertEqual(return_val, (1, False, 2.5, "Some"))
-        """
+            1, True, 2.5, "Some from Rust")
+        self.assertEqual(return_val, (1, False, 2.5, "Some from Rust"))
 
 
-@unittest.skip
 class GeneratePythonToRustBinds(unittest.TestCase):
 
     def setUp(self):
@@ -82,7 +83,6 @@ class GeneratePythonToRustBinds(unittest.TestCase):
         f = open(self._mod, 'w')
         f.close()
 
-    @unittest.skip
     def test_basics_primitives(self):
         self.set_python_path('test_package', 'basics')
         import primitives as test
@@ -102,7 +102,6 @@ class GeneratePythonToRustBinds(unittest.TestCase):
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `basics_nested_types`')
 
-    @unittest.skip
     def test_nested_modules(self):
         self.set_python_path()
         init_package = os.path.join(_rs_lib_dir, 'tests',
@@ -130,9 +129,6 @@ class GeneratePythonToRustBinds(unittest.TestCase):
             sys.path = self._original_path
         if hasattr(self, '_original_env'):
             os.putenv('PYTHONPATH', self._original_env)
-        # delete files
-        # os.remove(self._basics)
-        # os.remove(self._mod)
 
 if __name__ == "__main__":
     unittest.main()

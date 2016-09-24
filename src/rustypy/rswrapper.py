@@ -9,6 +9,8 @@ import types
 import typing
 
 from string import Template
+
+##### CFFI #####
 from cffi import FFI
 
 PY_TYPES = """
@@ -25,15 +27,10 @@ PY_TYPES = """
     long long PyTuple_extractPyInt(PyTuple* ptr, size_t elem);
     float PyTuple_extractPyFloat(PyTuple* ptr, size_t elem);
     double PyTuple_extractPyDouble(PyTuple* ptr, size_t elem);
-    PyBool PyTuple_extractPyBool(PyTuple* ptr, size_t elem);
-    PyString PyTuple_extractPyString(PyTuple* ptr, size_t elem);
+    PyBool* PyTuple_extractPyBool(PyTuple* ptr, size_t elem);
+    PyString* PyTuple_extractPyString(PyTuple* ptr, size_t elem);
 """
 ffi = FFI()
-
-import ctypes
-from ctypes import size_t
-rslib.PyTuple_len.restype(size_t)
-
 ffi.cdef(PY_TYPES)
 ffi.cdef("""
     typedef struct KrateData* KrateData;
@@ -45,6 +42,9 @@ ffi.cdef("""
 
     int parse_src(char* mod_, KrateData* krate_data);
 """)
+
+#####
+
 RS_TYPE_CONVERSION = {
     'c_float': 'float',
     'c_double': 'double',
@@ -104,8 +104,8 @@ def load_rust_lib(recmpl=False):
         if lib_ver != curr_ver:
             compile_rust_lib(recmpl=True)
         else:
-            # globals()['rslib'] = ffi.dllopen(lib)
-            globals()['rslib'] = ctypes.cdll.LoadLibrary(lib)
+            globals()['rslib'] = ffi.dlopen(lib)
+            #globals()['rslib'] = ctypes.cdll.LoadLibrary(lib)
 
 if not rslib:
     load_rust_lib()

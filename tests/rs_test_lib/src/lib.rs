@@ -6,7 +6,7 @@ extern crate libc;
 extern crate rustypy;
 
 use std::collections::HashMap;
-use rustypy::{PyTuple, PyString, PyBool};
+use rustypy::{PyTuple, PyString, PyBool, PyArg};
 
 #[no_mangle]
 pub extern "C" fn python_bind_int(num: u32) -> u32 {
@@ -41,7 +41,14 @@ pub extern "C" fn python_bind_bool(ptr: *mut PyBool) -> PyBool {
 
 #[no_mangle]
 pub extern "C" fn python_bind_tuple(e1: i32, e2: i32) -> *mut PyTuple {
-    pytuple!(e1, e2)
+    pytuple!(PyArg::I64(e1 as i64), PyArg::I64(e2 as i64))
+}
+
+#[no_mangle]
+pub extern "C" fn python_bind_str_tuple(e1: *mut PyString) -> *mut PyTuple {
+    let s = PyString::from(unsafe { PyString::from_ptr_into_string(e1) });
+    pytuple!(PyArg::PyString(s),
+             PyArg::PyString(PyString::from("from Rust")))
 }
 
 #[no_mangle]
@@ -50,7 +57,12 @@ pub extern "C" fn python_bind_tuple_mixed(e1: i32,
                                           e3: f32,
                                           e4: *mut PyString)
                                           -> *mut PyTuple {
-    pytuple!(e1, e2, e3, e4)
+    assert_eq!(unsafe { PyBool::from_ptr(e2) }, true);
+    let s = PyString::from(unsafe { PyString::from_ptr_into_string(e4) });
+    pytuple!(PyArg::I64(e1 as i64),
+             PyArg::PyBool(PyBool::from(false)),
+             PyArg::F32(e3),
+             PyArg::PyString(s))
 }
 
 #[no_mangle]
