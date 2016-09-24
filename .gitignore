@@ -3,6 +3,7 @@ Cargo.lock
 dist
 build
 .pypirc
+.log
 **/__pycache__
 **/rustypy_pybind.rs
 **/rustypy.egg-info

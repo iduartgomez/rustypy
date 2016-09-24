@@ -6,14 +6,13 @@ extern crate rustypy;
 
 use std::collections::HashMap;
 
-use libc::{c_long, size_t};
+use libc::c_long;
 use cpython::{Python, ToPyObject, PythonObject, PyObject, PyLong, PyString};
 
 mod test_package;
 use test_package::basics::rustypy_pybind::PyModules;
 use rustypy::PyTuple;
 
-#[ignore]
 #[test]
 fn basics_nested_types() {
     let gil = Python::acquire_gil();
@@ -99,12 +98,15 @@ fn basics_nested_types() {
 }
 
 #[test]
-fn tuple_macro_expansion() {
+fn test_pytuple_macro() {
     let e1 = rustypy::PyBool::from(false);
     let e2 = rustypy::PyString::from("test");
-    let ptr = pytuple!(e1, e2);
+    let e3 = 55;
+    let ptr = pytuple!(e1, e2, e3);
     let e1 = unsafe { rustypy::pytypes::PyTuple_extractPyBool(ptr, 0usize) };
     assert_eq!(e1, false);
     let e2 = unsafe { rustypy::pytypes::PyTuple_extractPyString(ptr, 1usize) };
     assert_eq!(unsafe { e2.to_str() }, "test");
+    let e3 = unsafe { rustypy::pytypes::PyTuple_extractPyInt(ptr, 2usize) };
+    assert_eq!(e3, 55);
 }

@@ -19,7 +19,7 @@ def setUpModule():
     load_rust_lib(recmpl=True)
 
 
-@unittest.skip
+#@unittest.skip
 class GenerateRustToPythonBinds(unittest.TestCase):
 
     @classmethod
@@ -34,13 +34,12 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         lib_test = os.path.join(source, 'target', 'debug', 'libtest_lib' + ext)
         cls.bindings = bind_rs_crate_funcs(source, lib_test)
 
-    #@unittest.skip
     def test_basics_primitives(self):
-        # non ref
+        # non ref int
         return_val = self.bindings.python_bind_int(1)
         self.assertIsInstance(return_val, int)
         self.assertEqual(return_val, 2)
-        # ref
+        # ref int
         _, refs = self.bindings.python_bind_ref_int(1, return_ref=True)
         self.assertEqual(refs[0], 2)
         # string
@@ -48,7 +47,11 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.assertEqual(return_val, "From Python. Added in Rust.")
         return_val = self.bindings.python_bind_str_by_ref("From Python.")
         self.assertEqual(return_val, "From Python. Added in Rust.")
+        # bool
+        return_val = self.bindings.python_bind_bool(True)
+        self.assertEqual(return_val, False)
 
+    #@unittest.skip
     def test_tuple_conversion(self):
         # tuple
         U = typing.Tuple[int, int]
@@ -57,14 +60,16 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.assertEqual(return_val, (1, 2))
 
         # mixed types
+        """
         T = typing.Tuple[int, bool, Float, str]
         self.bindings.python_bind_tuple_mixed.add_return_type(T)
         return_val = self.bindings.python_bind_tuple_mixed(
             1, False, 2.5, "Some")
         self.assertEqual(return_val, (1, False, 2.5, "Some"))
+        """
 
 
-#@unittest.skip
+@unittest.skip
 class GeneratePythonToRustBinds(unittest.TestCase):
 
     def setUp(self):
@@ -93,6 +98,7 @@ class GeneratePythonToRustBinds(unittest.TestCase):
         self.gen = RustFuncGen(module=test)
         p = subprocess.run(['cargo', 'test', '--test', 'nested_types'],
                            cwd=_rs_lib_dir)
+
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `basics_nested_types`')
 

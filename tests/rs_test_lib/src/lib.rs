@@ -5,7 +5,6 @@ extern crate libc;
 #[macro_use]
 extern crate rustypy;
 
-use libc::size_t;
 use std::collections::HashMap;
 use rustypy::{PyTuple, PyString, PyBool};
 
@@ -31,6 +30,13 @@ pub extern "C" fn python_bind_str(pystr: *mut PyString) -> PyString {
     let mut string: String = unsafe { PyString::from_ptr_into_string(pystr) };
     string.push_str(" Added in Rust.");
     PyString::from(string)
+}
+
+#[no_mangle]
+pub extern "C" fn python_bind_bool(ptr: *mut PyBool) -> PyBool {
+    let bool_t = unsafe { PyBool::from_ptr_into_bool(ptr) };
+    assert!(bool_t);
+    PyBool::from(false)
 }
 
 #[no_mangle]

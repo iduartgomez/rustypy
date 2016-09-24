@@ -29,6 +29,11 @@ PY_TYPES = """
     PyString PyTuple_extractPyString(PyTuple* ptr, size_t elem);
 """
 ffi = FFI()
+
+import ctypes
+from ctypes import size_t
+rslib.PyTuple_len.restype(size_t)
+
 ffi.cdef(PY_TYPES)
 ffi.cdef("""
     typedef struct KrateData* KrateData;
@@ -74,13 +79,10 @@ rslib = None
 
 
 def load_rust_lib(recmpl=False):
-    if sys.platform.startswith("win"):
-        ext = ".dll"
-    elif sys.platform == "darwin":
-        ext = ".dylib"
-    else:
-        ext = ".so"
-    lib = pkg_resources.resource_filename('rslib', "librustypy{}".format(ext))
+    ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
+    pre = {'win32': ''}.get(sys.platform, 'lib')
+    lib = pkg_resources.resource_filename(
+        'rslib', "{}rustypy{}".format(pre, ext))
     if not os.path.exists(lib) or recmpl:
         print("   library not found at: {}".format(lib))
         print("   compiling with Cargo")
@@ -102,7 +104,8 @@ def load_rust_lib(recmpl=False):
         if lib_ver != curr_ver:
             compile_rust_lib(recmpl=True)
         else:
-            globals()['rslib'] = ffi.dlopen(lib)
+            # globals()['rslib'] = ffi.dllopen(lib)
+            globals()['rslib'] = ctypes.cdll.LoadLibrary(lib)
 
 if not rslib:
     load_rust_lib()

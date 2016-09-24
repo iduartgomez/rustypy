@@ -213,48 +213,81 @@ impl<'a, 'b> BitOr<&'a bool> for &'b PyBool {
     }
 }
 
-#[derive(Debug)]
-pub struct PyTuple {
-    pub array: Vec<size_t>,
+    #[derive(Debug)]
+    pub struct PyTuple {
+        pub elem: usize,
+        pub idx: usize,
+        pub next: Option<Box<PyTuple>>,
+    }
+
+impl PyTuple {
+    fn get_element(&self, idx: usize) -> Result<usize, &str> {
+        if idx == self.idx {
+            Ok(self.elem)
+        } else {
+            match self.next {
+                Some(ref e) => e.get_element(idx),
+                None => Err("index out of range"),
+            }
+        }
+    }
+    fn len(&self) -> usize {
+        match self.next {
+            Some(ref e) => e.len(),
+            None => self.idx + 1,
+        }
+    }
 }
 
 #[macro_export]
 macro_rules! pytuple {
     ( $( $elem:ident ),+ ) => {{
-        let mut vec: Vec<size_t> = Vec::new();
+        let mut cnt;
+        let mut tuple = Vec::new();
+        cnt = 0usize;
         $(
-            let elem_ptr = Box::into_raw(Box::new($elem));
-            vec.push(elem_ptr as size_t);
+            let tuple_e = PyTuple {
+                elem: Box::into_raw(Box::new($elem)) as usize,
+                idx: cnt,
+                next: None,
+            };
+            tuple.push(tuple_e);
+            cnt += 1;
         )*;
-        let tuple = PyTuple {
-            array: vec,
-        };
-        Box::into_raw(Box::new(tuple))
+        if cnt == tuple.len() {}; // stub to remove warning...
+        let t_len = tuple.len() - 1;
+        for i in 1..(t_len + 1) {
+            let idx = t_len - i;
+            let last = tuple.pop().unwrap();
+            let prev = tuple.get_mut(idx).unwrap();
+            prev.next = Some(Box::new(last));
+        }
+        Box::into_raw(Box::new(tuple.pop().unwrap()))
     }};
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_len(ptr: *mut PyTuple) -> u32 {
+pub unsafe extern "C" fn PyTuple_len(ptr: *mut PyTuple) -> usize {
     let tuple = &*ptr;
-    tuple.array.len() as u32
+    tuple.len()
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyInt(ptr: *mut PyTuple, index: usize) -> i64 {
     let tuple = &*ptr;
-    let int: Box<i64> = Box::from_raw(tuple.array[index] as *mut i64);
-    *int
+    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut i64);
+    *elem
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyBool(ptr: *mut PyTuple, index: usize) -> PyBool {
     let tuple = &*ptr;
-    let pybool: Box<PyBool> = Box::from_raw(tuple.array[index] as *mut PyBool);
-    println!("value in Rust: {:?}", pybool.val);
-    *pybool
+    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut PyBool);
+    println!("value in Rust: {:?}", elem.val);
+    *elem
 }
 
 
@@ -262,30 +295,29 @@ pub unsafe extern "C" fn PyTuple_extractPyBool(ptr: *mut PyTuple, index: usize) 
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyFloat(ptr: *mut PyTuple, index: usize) -> f32 {
     let tuple = &*ptr;
-    let float: Box<f32> = Box::from_raw(tuple.array[index] as *mut f32);
-    *float
+    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut f32);
+    *elem
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyDouble(ptr: *mut PyTuple, index: usize) -> f64 {
     let tuple = &*ptr;
-    let float: Box<f64> = Box::from_raw(tuple.array[index] as *mut f64);
-    *float
+    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut f64);
+    *elem
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub unsafe extern "C" fn PyTuple_extractPyString(ptr: *mut PyTuple, index: usize) -> PyString {
     let tuple = &*ptr;
-    let pystr: Box<PyString> = Box::from_raw(tuple.array[index] as *mut PyString);
-    *pystr
+    let elem = Box::from_raw(tuple.get_element(index).unwrap() as *mut PyString);
+    *elem
 }
 
 macro_rules! unpack_pytype {
     ( $ptr:ident: $pytype:ty ) => {{
         if $pytype == PyTuple {
-
         }
     }};
 }
