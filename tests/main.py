@@ -6,8 +6,7 @@ import typing
 from importlib import import_module
 
 from rustypy.pywrapper import RustFuncGen
-from rustypy.rswrapper import load_rust_lib, Float, Double
-from rustypy.rswrapper import bind_rs_crate_funcs
+from rustypy.rswrapper import load_rust_lib, Float, Double, bind_rs_crate_funcs
 
 
 def setUpModule():
@@ -25,6 +24,7 @@ def setUpModule():
     global lib_test
     lib_test = os.path.join(lib_test_entry, 'target', 'debug',
                             '{}test_lib{}'.format(pre, ext))
+
 
 class GenerateRustToPythonBinds(unittest.TestCase):
 
@@ -68,6 +68,7 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         return_val = self.bindings.python_bind_tuple_mixed(
             1, True, 2.5, "Some from Rust")
         self.assertEqual(return_val, (1, False, 2.5, "Some from Rust"))
+
 
 class GeneratePythonToRustBinds(unittest.TestCase):
 
