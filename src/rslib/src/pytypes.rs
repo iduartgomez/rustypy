@@ -6,6 +6,16 @@ use std::convert::From;
 use std::fmt;
 use std::ops::{Not, BitAnd, BitOr};
 
+/// An analog of a Python String.
+///
+/// To return to Python you must use as_ptr method and return a raw pointer.
+/// You can create them using PyString::from trait, from both &str and String.
+///
+/// # Safety
+/// When passed from Python you can convert from PyString to an owned string
+/// (from\_ptr\_into\_string method) or to a &str slice (to\_str method), or
+/// to a PyString reference (from\_ptr method). Those operations are unsafe
+/// as they require dereferencing a raw pointer.
 #[derive(Debug)]
 #[repr(C)]
 pub struct PyString {
@@ -17,12 +27,12 @@ impl PyString {
     pub unsafe fn from_ptr(ptr: *mut PyString) -> &'static PyString {
         &*ptr
     }
-    pub unsafe fn into_string(&self) -> String {
-        let c_str = CStr::from_ptr(self.ptr);
+    pub fn into_string(&self) -> String {
+        let c_str = unsafe { CStr::from_ptr(self.ptr) };
         String::from_utf8_lossy(c_str.to_bytes()).into_owned()
     }
-    pub unsafe fn to_str(&self) -> Cow<str> {
-        let c_str = CStr::from_ptr(self.ptr);
+    pub fn to_str(&self) -> Cow<str> {
+        let c_str = unsafe { CStr::from_ptr(self.ptr) };
         String::from_utf8_lossy(c_str.to_bytes())
     }
     pub unsafe fn from_ptr_into_string(ptr: *mut PyString) -> String {
@@ -37,7 +47,7 @@ impl PyString {
 
 impl fmt::Display for PyString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe { write!(f, "{}", self.to_str()) }
+        write!(f, "{}", self.to_str())
     }
 }
 
@@ -61,6 +71,15 @@ impl From<String> for PyString {
     }
 }
 
+/// Analog to a Python boolean type.
+///
+/// It supports & and | operators, and comparison to Rust bool types.
+/// To return to Python use the *as_ptr* method and return a raw pointer.
+///
+/// # Safety
+/// You can convert a raw pointer to a bool type with *from\_ptr\_into\_bool* method,
+/// or to a &PyBool with *from\_* method. Those operations are unsafe as they require
+/// dereferencing a raw pointer.
 #[derive(Debug)]
 #[repr(C)]
 pub struct PyBool {
@@ -231,6 +250,18 @@ impl<'a, 'b> BitOr<&'a bool> for &'b PyBool {
     }
 }
 
+/// An analog of a Python tuple, will accept an undefined number of other supported types.
+///
+/// You can construct it using the pytuple! macro, ie:
+///
+/// ```
+/// # #[macro_use] extern crate rustypy;
+/// # fn main(){
+/// pytuple!(PyArg::I64(10), PyArg::F32(10.5))
+/// # }
+/// ```
+///
+/// You must pass the variety of the argument using the PyArg enum.
 #[derive(Debug)]
 pub struct PyTuple {
     pub elem: PyArg,
@@ -238,9 +269,27 @@ pub struct PyTuple {
     pub next: Option<Box<PyTuple>>,
 }
 
+/// Enum type used to construct PyTuple types. All the kinds supported in Python
+/// are included here.
+///
+/// In Python, conversion of floats default to double precision unless explicitly stated
+/// Adding the Float custom rustypy type to the return type signature.
+///
+/// ```Python
+///     from rustypy.rswrapper import Double, Float
+///     bindings.my_binded_func.restype = Float
+///     bindings.my_binded_func.restype = Double
+/// ```
+///
 #[derive(Debug)]
 pub enum PyArg {
     I64(i64),
+    I32(i32),
+    I16(i16),
+    I8(i8),
+    U32(u32),
+    U16(u16),
+    U8(u8),
     F32(f32),
     F64(f64),
     PyBool(PyBool),
