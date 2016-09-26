@@ -18,12 +18,14 @@ PY_TYPES = """
         char* ptr;
         size_t length;
     } PyString;
+
     typedef struct {
         uint8_t val;
     } PyBool;
-    typedef struct PyTuple* PyTuple;
 
+    typedef struct PyTuple* PyTuple;
     size_t PyTuple_len(PyTuple* ptr);
+    void PyTuple_free(PyTuple* ptr);
     long long PyTuple_extractPyInt(PyTuple* ptr, size_t elem);
     float PyTuple_extractPyFloat(PyTuple* ptr, size_t elem);
     double PyTuple_extractPyDouble(PyTuple* ptr, size_t elem);
@@ -34,7 +36,6 @@ ffi = FFI()
 ffi.cdef(PY_TYPES)
 ffi.cdef("""
     typedef struct KrateData* KrateData;
-
     KrateData* krate_data_new();
     void krate_data_free(KrateData* ptr);
     size_t krate_data_len(KrateData* ptr);
@@ -42,7 +43,6 @@ ffi.cdef("""
 
     int parse_src(char* mod_, KrateData* krate_data);
 """)
-
 #####
 
 RS_TYPE_CONVERSION = {
@@ -200,7 +200,8 @@ class MissingTypeHint(TypeError):
     pass
 
 
-def _extract_pytypes(libffi, ref, downcast=False, elem_num=None, call_fn=None):
+def _extract_pytypes(libffi, ref, call_fn=None, depth=0, elem_num=None,
+                     downcast=False, sig=False):
     if downcast:
         if issubclass(downcast, bool):
             pybool = rslib.PyTuple_extractPyBool(ref, elem_num)
@@ -215,6 +216,10 @@ def _extract_pytypes(libffi, ref, downcast=False, elem_num=None, call_fn=None):
         elif issubclass(downcast, str):
             pystr = rslib.PyTuple_extractPyString(ref, elem_num)
             return _extract_pytypes(ffi, pystr)
+        elif issubclass(downcast, typing.Tuple):
+            raise NotImplementedError
+            pytuple = rslib.PyTuple_extractPyTuple(ref, elem_num, sig=sig)
+            return _extract_pytypes(ffi, pytuple)
     ref_t = libffi.typeof(ref)
     if ref_t is libffi.typeof("long long*"):
         return ref[0]
@@ -225,7 +230,10 @@ def _extract_pytypes(libffi, ref, downcast=False, elem_num=None, call_fn=None):
     elif ref_t is libffi.typeof("PyTuple*"):
         array = ffi.cast("PyTuple*", ref)
         arity = rslib.PyTuple_len(array)
-        types = typing.get_type_hints(call_fn.__call__).get('return')
+        if not sig:
+            types = call_fn.restype
+        else:
+            types = sig
         if not types:
             raise MissingTypeHint
         if arity != len(types.__tuple_params__):
@@ -235,7 +243,8 @@ def _extract_pytypes(libffi, ref, downcast=False, elem_num=None, call_fn=None):
         tuple_elems = []
         for i, t in enumerate(types.__tuple_params__):
             pytype = _extract_pytypes(
-                ffi, array, downcast=t, elem_num=i, call_fn=call_fn)
+                ffi, array, call_fn=call_fn, depth=depth + 1, elem_num=i,
+                downcast=t)
             tuple_elems.append(pytype)
         return tuple(tuple_elems)
     elif (ref_t is libffi.typeof("PyString*")) \
@@ -419,19 +428,19 @@ class RustBinds(object):
 
     class FnCall(object):
 
-        def __init__(self, name, params, libffi, lib):
+        def __init__(self, name, argtypes, libffi, lib):
             self._rs_fn = getattr(lib, name)
             self._libffi = libffi
             self._fn_name = name
-            self._return_type = params.pop()
-            self._params = params
+            self.__type_hints = {'real_return': argtypes.pop()}
+            self.__type_hints['argtypes'] = argtypes
 
         def __call__(self, *args, **kwargs):
             if kwargs:
                 return_ref = kwargs['return_ref']
             else:
                 return_ref = False
-            n_args = len(self._params)
+            n_args = len(self.argtypes)
             g_args = len(args)
             if g_args != n_args:
                 raise TypeError("{}() takes exactly {} "
@@ -439,7 +448,7 @@ class RustBinds(object):
                                     self._fn_name, n_args, g_args))
             prep_args = []
             for x, a in enumerate(args):
-                p = self._params[x]
+                p = self.argtypes[x]
                 if p.ref or p.mutref:
                     ref = _get_memref_to_obj(a, self._libffi)
                     prep_args.append(ref)
@@ -451,19 +460,22 @@ class RustBinds(object):
                 elif isinstance(a, int) or isinstance(a, float):
                     prep_args.append(a)
                 else:
-                    raise TypeError("argument {} of type of `{}` passed to "
-                                    "function `{}` not supported".format(x, a, self._fn_name))
+                    raise TypeError("argument #{} type of `{}` passed to "
+                                    "function `{}` not supported".format(
+                                        x, a, self._fn_name))
             result = self._rs_fn(*prep_args)
             if not return_ref:
                 # connversion of result to Python objects
                 if isinstance(result, ffi.CData):
                     try:
-                        result = _extract_pytypes(
+                        python_result = _extract_pytypes(
                             self._libffi, result, call_fn=self)
                     except MissingTypeHint:
-                        raise TypeError("must add type hint for return type of "
+                        raise TypeError("must add return type of "
                                         "function `{}`".format(self._fn_name))
-                return result
+                else:
+                    python_result = result
+                return python_result
             else:
                 arg_refs = []
                 for x, r in enumerate(prep_args):
@@ -482,8 +494,35 @@ class RustBinds(object):
                         arg_refs.append(r)
                 return result, arg_refs
 
-        def add_return_type(self, annotation):
-            self.__call__.__func__.__annotations__ = {'return': annotation}
+        @property
+        def real_restype(self):
+            return self.__type_hints['real_return']
+
+        @property
+        def restype(self):
+            try:
+                restype = self.__type_hints['return']
+            except KeyError:
+                return
+            else:
+                return restype
+
+        @restype.setter
+        def restype(self, annotation):
+            self.__type_hints['return'] = annotation
+
+        @property
+        def argtypes(self):
+            try:
+                restype = self.__type_hints['argtypes']
+            except KeyError:
+                return
+            else:
+                return restype
+
+        @argtypes.setter
+        def argtypes(self, annotations):
+            raise AttributeError("private member, cannot be set directly")
 
     def decl_C_def(self, name, params):
         params_str = ""

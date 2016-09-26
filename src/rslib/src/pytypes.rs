@@ -266,6 +266,17 @@ impl<'a> PyTuple {
     }
 }
 
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn PyTuple_free(ptr: *mut PyTuple) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        Box::from_raw(ptr);
+    }
+}
+
 #[macro_export]
 macro_rules! pytuple {
     ( $( $elem:ident ),+ ) => {{

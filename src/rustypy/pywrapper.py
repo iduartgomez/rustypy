@@ -30,20 +30,20 @@ PRIMITIVES = (
 
 class ModuleStruct(object):
     _function = Template("""
-        pub fn $name(&self, py: Python,
+        pub fn $name(&self,
 $parameters
         ) $return_type {
             $body
         }
     """)
     _fn_body = Template("""
-            let func = self.module.get(py, "$name").unwrap();
+            let func = self.module.get(*(self.py), "$name").unwrap();
 $convert
-            let result = func.call(py, $args None).unwrap();
+            let result = func.call(*(self.py), $args None).unwrap();
 $extract_values
             return $return_value
     """)
-    _fn_arg = "let {0} = {0}.to_py_object(py);"
+    _fn_arg = "let {0} = {0}.to_py_object(*(self.py));"
 
     def __init__(self, module, objs, pckg_tree=None):
         self.name = module.split('.')
@@ -101,23 +101,24 @@ $extract_values
                 ))
         self._generated_functions = code
 
-    _extract_tuple_field = """let {var_name} = {parent}.get_item(py,\
-{position}).unwrap().extract::<{type_}>(py).unwrap();\n"""
+    _extract_tuple_field = """let {var_name} = {parent}.get_item
+(*(self.py),\
+{position}).unwrap().extract::<{type_}>(*(self.py)).unwrap();\n"""
     _extract_tuple = """let {var_name} = {parent}.get_item(\
-py, {position}).unwrap();\n"""
-    _extract_type = """let {var_name} = {parent}.extract::<{type_}>(py).\
+*(self.py), {position}).unwrap();\n"""
+    _extract_type = """let {var_name} = {parent}.extract::<{type_}>(*(self.py)).\
 unwrap();\n"""
     _iter_list = """let mut {var_name} = vec![];
-for e in {parent}.iter(py).unwrap() {{
+for e in {parent}.iter(*(self.py)).unwrap() {{
 """
-    _collect_from_list = """{var_name}.push(e.unwrap().extract::<{type_}>(py)\
+    _collect_from_list = """{var_name}.push(e.unwrap().extract::<{type_}>(*(self.py))\
 .unwrap());\n"""
     _push_tuple_into_vec = """let {var_name} = ({subtypes});
 {parent}.push({var_name});
 """
     _iter_dict = """let mut {var_name} = HashMap::new();
-let {var_name}_d: PyDict = PyDict::downcast_from(py, {parent}).unwrap();
-for (key, value) in {var_name}_d.items(py) {{
+let {var_name}_d: PyDict = PyDict::downcast_from(*(self.py), {parent}).unwrap();
+for (key, value) in {var_name}_d.items(*(self.py)) {{
 """
 
     def unwrap_types(self,
@@ -159,11 +160,11 @@ for (key, value) in {var_name}_d.items(py) {{
                 elif in_dict and not isinstance(type_, tuple):
                     if i == 0:
                         xtc = "let dict_key = " + \
-                              "key.extract::<{key_type}>(py).unwrap();\n"
+                              "key.extract::<{key_type}>(*(self.py)).unwrap();\n"
                         xtc = xtc.format(key_type=type_)
                     elif i == 1:
                         xtc = "let dict_value = " + \
-                              "value.extract::<{value_type}>(py).unwrap();\n"
+                              "value.extract::<{value_type}>(*(self.py)).unwrap();\n"
                         xtc = xtc.format(value_type=type_)
                     extractors.append(indent(xtc, tab * 2 + tab * depth))
                 elif in_dict and type_[0] == 'tuple':
@@ -282,7 +283,7 @@ for (key, value) in {var_name}_d.items(py) {{
                         name = rnd_var_name(self, arg_names)
                         if in_tuple:
                             tpl_xtc = rnd_var_name(self, arg_names)
-                            xtc = "let {name} = {parent}.get_item(py, {pos})" \
+                            xtc = "let {name} = {parent}.get_item(*(self.py), {pos})" \
                                 + ".unwrap();\n".format(parent=parent,
                                                         pos=i,
                                                         name=tpl_xtc)
@@ -633,12 +634,12 @@ class RustFuncGen(object):
 
     _mod_manager = Template("""
     /// Python module manager
-    pub struct PyModules {
+    pub struct PyModules<'a> {
 $mod_list
     }
 
-    impl PyModules {
-        pub fn new(py: Python) -> PyModules {
+    impl<'a> PyModules<'a> {
+        pub fn new(py: &'a Python) -> PyModules<'a> {
             PyModules {
 $mod_list_init
             }
@@ -648,18 +649,20 @@ $mod_list_init
 
     _mod_struct = Template("""
     /// Binds for Python module `$m_name`
-    pub struct $name {
-        module: PyModule
+    pub struct $name<'a> {
+        module: PyModule,
+        py: &'a Python<'a>
     }
 
-    impl $name {
+    impl<'a> $name<'a> {
         /// Loads the module instance to the interpreter
-        pub fn new(py: Python) -> Option<$name> {
+        pub fn new(py: &'a Python) -> Option<$name<'a>> {
             let module = py.import("$import_path");
             match module {
                 Ok(m) => Some(
                     $name {
                         module: m,
+                        py: py
                     }),
                 Err(exception) => {
                     handle_import_error(exception);
@@ -673,13 +676,13 @@ $mod_list_init
 
     _folder_struct = Template("""
     /// Struct for folder `$f_name`
-    pub struct $name {
+    pub struct $name<'a> {
 $fields
     }
 
-    impl $name {
+    impl<'a> $name<'a> {
         /// Loads the module instance to the interpreter
-        pub fn new(py: Python) -> Option<$name> {
+        pub fn new(py: &'a Python) -> Option<$name<'a>> {
             Some($name {
 $build
             })
@@ -732,8 +735,8 @@ $build
                     f = self.add_folder(next_f)
                     f.walk(path[1:], mod)
 
-        _field = tab * 2 + 'pub {n}: {rn},\n'
-        _build = tab * 4 + '{n}: {rn}::new(py).unwrap(),\n'
+        _field = tab * 2 + "pub {n}: {rn}<'a>,\n"
+        _build = tab * 4 + '{n}: {rn}::new(&py).unwrap(),\n'
 
         def write_structs(self, f, struct_names={}):
             if self.ismodule:

@@ -26,7 +26,6 @@ def setUpModule():
     lib_test = os.path.join(lib_test_entry, 'target', 'debug',
                             '{}test_lib{}'.format(pre, ext))
 
-
 class GenerateRustToPythonBinds(unittest.TestCase):
 
     @classmethod
@@ -53,23 +52,22 @@ class GenerateRustToPythonBinds(unittest.TestCase):
     def test_tuple_conversion(self):
         # tuple
         U = typing.Tuple[int, int]
-        self.bindings.python_bind_tuple.add_return_type(U)
+        self.bindings.python_bind_tuple.restype = U
         for i in range(0, 100):
             return_val = self.bindings.python_bind_tuple(1, 2)
             self.assertEqual(return_val, (1, 2))
 
         U = typing.Tuple[str, str]
-        self.bindings.python_bind_str_tuple.add_return_type(U)
+        self.bindings.python_bind_str_tuple.restype = U
         return_val = self.bindings.python_bind_str_tuple("Some")
         self.assertEqual(return_val, ("Some", "from Rust"))
 
         # mixed types
         T = typing.Tuple[int, bool, Float, str]
-        self.bindings.python_bind_tuple_mixed.add_return_type(T)
+        self.bindings.python_bind_tuple_mixed.restype = T
         return_val = self.bindings.python_bind_tuple_mixed(
             1, True, 2.5, "Some from Rust")
         self.assertEqual(return_val, (1, False, 2.5, "Some from Rust"))
-
 
 class GeneratePythonToRustBinds(unittest.TestCase):
 
