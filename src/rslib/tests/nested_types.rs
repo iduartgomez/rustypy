@@ -12,6 +12,7 @@ use cpython::{Python, ToPyObject, PythonObject, PyObject, PyLong, PyString};
 mod test_package;
 use test_package::basics::rustypy_pybind::PyModules;
 use rustypy::{PyTuple, PyArg};
+use rustypy::pytypes::pytuple;
 
 #[test]
 fn basics_nested_types() {
@@ -102,10 +103,10 @@ fn test_pytuple_macro() {
     let ptr = pytuple!(PyArg::PyBool(rustypy::PyBool::from(false)),
                        PyArg::PyString(rustypy::PyString::from("test")),
                        PyArg::I64(55));
-    let e1 = unsafe { rustypy::pytypes::PyTuple_extractPyBool(ptr, 0usize) };
+    let e1 = unsafe { pytuple::PyTuple_extractPyBool(ptr, 0usize) };
     assert_eq!(e1, false);
-    let e2 = unsafe { rustypy::pytypes::PyTuple_extractPyString(ptr, 1usize) };
-    assert_eq!(unsafe { e2.to_str() }, "test");
-    let e3 = unsafe { rustypy::pytypes::PyTuple_extractPyInt(ptr, 2usize) };
+    let e2 = unsafe { pytuple::PyTuple_extractPyString(ptr, 1usize) };
+    assert_eq!(&(e2.to_string()), "test");
+    let e3 = unsafe { pytuple::PyTuple_extractPyInt(ptr, 2usize) };
     assert_eq!(e3, 55);
 }

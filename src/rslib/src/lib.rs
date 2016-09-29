@@ -1,3 +1,13 @@
+//! Binding Rust with Python, both ways!
+//!
+//! This library will generate and handle type conversions between Python and
+//! Rust. To use Python from Rust refer to the
+//! [library wiki](https://github.com/iduartgomez/rustypy/wiki), more general examples
+//! and information on how to use Rust in Python can also be found there.
+//!
+//! Checkout the [PyTypes](../rustypy/pytypes/index.html) module documentation for more information
+//! on how to write foreign functions that are compliant with Python as well as using the custom
+//! types that will ease type conversion.
 #![crate_type = "cdylib"]
 
 extern crate cpython;
@@ -6,10 +16,9 @@ extern crate syntex_errors;
 extern crate libc;
 
 use std::collections::HashMap;
-use std::ffi::CStr;
 use std::path::Path;
 
-use libc::{c_char, c_uint, size_t};
+use libc::{c_uint, size_t};
 
 use syntex_errors::DiagnosticBuilder;
 use syntax::ast;
@@ -24,17 +33,14 @@ pub mod pytypes;
 pub use self::pytypes::{PyTuple, PyString, PyBool, PyArg};
 
 #[no_mangle]
-pub extern "C" fn parse_src(mod_: *const c_char, krate_data: &mut KrateData) -> c_uint {
-    let path = unsafe {
-        assert!(!mod_.is_null());
-        CStr::from_ptr(mod_)
-    };
+pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> c_uint {
     // parse and walk
-    let parse_session = ParseSess::new();
-    let krate = match parse(path.to_str().unwrap(), &parse_session) {
+    let mut parse_session = ParseSess::new();
+    let krate = match parse(unsafe { &(PyString::from_ptr_to_string(path)).to_string() },
+                            &mut parse_session) {
         Ok(krate) => krate,
-        Err(None) => return 1 as c_uint, // return value to Python to raise error from there
-        Err(Some(_)) => panic!(),
+        Err(None) => return 1 as c_uint,
+        Err(Some(_)) => return 2 as c_uint,
     };
     // prepare data for Python
     krate_data.visit_mod(&krate.module, krate.span, 0);
@@ -43,7 +49,7 @@ pub extern "C" fn parse_src(mod_: *const c_char, krate_data: &mut KrateData) -> 
 }
 
 fn parse<'a, T: ?Sized + AsRef<Path>>(path: &T,
-                                      parse_session: &'a ParseSess)
+                                      parse_session: &'a mut ParseSess)
                                       -> Result<ast::Crate, Option<DiagnosticBuilder<'a>>> {
     let path = path.as_ref();
     let cfgs = vec![];
@@ -134,39 +140,19 @@ pub extern "C" fn krate_data_free(ptr: *mut KrateData) {
     if ptr.is_null() {
         return;
     }
-    unsafe {
-        Box::from_raw(ptr);
-    }
+    unsafe { *(Box::from_raw(ptr)) };
 }
 
 #[no_mangle]
-pub extern "C" fn krate_data_len(ptr: *const KrateData) -> size_t {
-    let krate = unsafe {
-        assert!(!ptr.is_null());
-        &*ptr
-    };
+pub extern "C" fn krate_data_len(krate: &KrateData) -> size_t {
     krate.collected.len()
 }
 
 #[no_mangle]
-pub extern "C" fn krate_data_iter(ptr: *const KrateData, idx: size_t) -> PyString {
-    let krate = unsafe {
-        assert!(!ptr.is_null());
-        &*ptr
-    };
+pub extern "C" fn krate_data_iter(krate: &KrateData, idx: size_t) -> *mut PyString {
     match krate.iter_krate(idx as usize) {
-        Some(v) => {
-            PyString {
-                ptr: v.as_ptr() as *const c_char,
-                length: v.len()
-            }
-        }
-        None => {
-            PyString {
-                ptr: "NO_IDX_ERROR".as_ptr() as *const c_char,
-                length: "NO_IDX_ERROR".len()
-            }
-        }
+        Some(val) => PyString::from(val).as_ptr(),
+        None => PyString::from("NO_IDX_ERROR").as_ptr(),
     }
 }
 

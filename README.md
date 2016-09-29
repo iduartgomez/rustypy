@@ -4,7 +4,7 @@ Python files.
 
 ## Features
 - Generate bindings in Rust targetting Python functions.
-- (TODO) ~~Generate bindings in Python targetting Rust functions.~~ 
+- Generate bindings in Python targetting Rust functions.
 
 ## Installation
 To install RustyPy just use pip:
