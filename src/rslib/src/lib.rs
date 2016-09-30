@@ -35,9 +35,9 @@ pub use self::pytypes::{PyTuple, PyString, PyBool, PyArg};
 #[no_mangle]
 pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> c_uint {
     // parse and walk
+    let path = unsafe { PyString::from_ptr_to_string(path).to_string() };
     let mut parse_session = ParseSess::new();
-    let krate = match parse(unsafe { &(PyString::from_ptr_to_string(path)).to_string() },
-                            &mut parse_session) {
+    let krate = match parse(&path, &mut parse_session) {
         Ok(krate) => krate,
         Err(None) => return 1 as c_uint,
         Err(Some(_)) => return 2 as c_uint,
@@ -69,7 +69,10 @@ struct FnDef {
 
 impl FnDef {
     fn new(name: InternedString) -> FnDef {
-        let n = unsafe { String::from_raw_parts(name.as_ptr() as *mut _, name.len(), name.len()) };
+        let mut n = String::with_capacity(name.len());
+        n.push_str(&name);
+        // let n = unsafe { String::from_raw_parts(name.as_ptr() as *mut _,
+        //    name.len(), name.len()) };
         FnDef {
             name: n,
             process: true,

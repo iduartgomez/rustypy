@@ -1,19 +1,24 @@
+//! An analog of a Python tuple, will accept an undefined number of other supported types.
+//!
+//! You can construct it using the pytuple! macro, ie:
+//!
+//! ```
+//! # #[macro_use] extern crate rustypy;
+//! # fn main(){
+//! pytuple!(PyArg::I64(10), PyArg::F32(10.5))
+//! # }
+//! ```
+//!
+//! You must pass the variety of the argument using the PyArg enum.
+//!
+//! When extracting from Python with the FFI elements are copied, not moved, and when free'd
+//! all the original elements are dropped
 use libc;
-
 use pytypes::{PyArg, PyBool, PyString};
 
 /// An analog of a Python tuple, will accept an undefined number of other supported types.
 ///
-/// You can construct it using the pytuple! macro, ie:
-///
-/// ```
-/// # #[macro_use] extern crate rustypy;
-/// # fn main(){
-/// pytuple!(PyArg::I64(10), PyArg::F32(10.5))
-/// # }
-/// ```
-///
-/// You must pass the variety of the argument using the PyArg enum.
+/// Read the [module docs](index.html) for more information.
 #[derive(Debug)]
 pub struct PyTuple {
     pub elem: PyArg,
@@ -57,7 +62,7 @@ macro_rules! abort_on_extraction_fail {
 impl<'a> PyTuple {
     fn get_element(&self, idx: usize) -> Result<&PyTuple, &str> {
         if idx == self.idx {
-            Ok(&self)
+            Ok(self)
         } else {
             match self.next {
                 Some(ref e) => e.get_element(idx),

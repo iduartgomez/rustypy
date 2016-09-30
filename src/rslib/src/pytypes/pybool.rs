@@ -1,3 +1,25 @@
+//! Analog to a Python boolean type.
+//!
+//! It supports & and | operators, and comparison to Rust bool types.
+//! To return to Python use the *as_ptr* method and return a raw pointer.
+//!
+//! # Safety
+//! You can convert a raw pointer to a bool type with *from\_ptr\_into\_bool* method,
+//! or to a &PyBool with *from\_ptr* method. Those operations are unsafe as they require
+//! dereferencing a raw pointer.
+//!
+//! # Examples
+//!
+//! ```
+//! use rustypy::PyBool;
+//! let pybool = PyBool::from(true);
+//! assert_eq(pybool, true);
+//!
+//! // prepare to return to Python:
+//! let ptr = pybool.as_ptr();
+//! // convert from raw pointer to a bool
+//! let rust_bool = PyBool::from_ptr_into_bool(ptr);
+//! ```
 use libc::c_char;
 
 use std::convert::From;
@@ -5,26 +27,7 @@ use std::ops::{Not, BitAnd, BitOr};
 
 /// Analog to a Python boolean type.
 ///
-/// It supports & and | operators, and comparison to Rust bool types.
-/// To return to Python use the *as_ptr* method and return a raw pointer.
-///
-/// # Safety
-/// You can convert a raw pointer to a bool type with *from\_ptr\_into\_bool* method,
-/// or to a &PyBool with *from\_* method. Those operations are unsafe as they require
-/// dereferencing a raw pointer.
-///
-/// # Examples
-///
-/// ```
-/// use rustypy::PyBool;
-/// let pybool = PyBool::from(true);
-/// assert_eq(pybool, true);
-///
-/// // prepare to return to Python:
-/// let ptr = pybool.as_ptr();
-/// // convert from raw pointer to a bool
-/// let rust_bool = PyBool::from_ptr_into_bool(ptr);
-/// ```
+/// Read the [module docs](index.html) for more information.
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct PyBool {
