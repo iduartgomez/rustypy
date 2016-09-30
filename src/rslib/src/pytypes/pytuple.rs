@@ -1,6 +1,6 @@
 //! An analog of a Python tuple, will accept an undefined number of other supported types.
 //!
-//! You can construct it using the pytuple! macro, ie:
+//! You can construct it using the [pytuple!](../../macro.pytuple!.html) macro, ie:
 //!
 //! ```
 //! # #[macro_use] extern crate rustypy;
@@ -25,19 +25,6 @@ pub struct PyTuple {
     pub idx: usize,
     pub next: Option<Box<PyTuple>>,
 }
-
-/// Enum type used to construct PyTuple types. All the kinds supported in Python
-/// are included here.
-///
-/// In Python, conversion of floats default to double precision unless explicitly stated
-/// Adding the Float custom rustypy type to the return type signature.
-///
-/// ```Python
-///     from rustypy.rswrapper import Double, Float
-///     bindings.my_binded_func.restype = Float
-///     bindings.my_binded_func.restype = Double
-/// ```
-///
 
 extern "C" fn _abort_msg() {
     use std::io::{self, Write};

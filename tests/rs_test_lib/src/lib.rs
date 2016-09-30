@@ -23,6 +23,7 @@ pub extern "C" fn python_bind_str(pystr: *mut PyString) -> *mut PyString {
     let mut string = unsafe { PyString::from_ptr_to_string(pystr) };
     assert_eq!(string, "From Python.");
     string.push_str(" Added in Rust.");
+
     PyString::from(string).as_ptr()
 }
 

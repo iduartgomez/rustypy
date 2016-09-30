@@ -7,6 +7,18 @@ pub use self::pybool::PyBool;
 pub use self::pystring::PyString;
 pub use self::pytuple::PyTuple;
 
+/// Enum type used to construct PyTuple types. All the kinds supported in Python
+/// are included here.
+///
+/// In Python, conversion of floats default to double precision unless explicitly stated
+/// Adding the Float custom rustypy type to the return type signature.
+///
+/// ```Python
+///     from rustypy.rswrapper import Double, Float
+///     bindings.my_binded_func.restype = Float
+///     bindings.my_binded_func.restype = Double
+/// ```
+///
 #[derive(Debug)]
 pub enum PyArg {
     I64(i64),

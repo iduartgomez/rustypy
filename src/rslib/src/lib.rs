@@ -71,8 +71,6 @@ impl FnDef {
     fn new(name: InternedString) -> FnDef {
         let mut n = String::with_capacity(name.len());
         n.push_str(&name);
-        // let n = unsafe { String::from_raw_parts(name.as_ptr() as *mut _,
-        //    name.len(), name.len()) };
         FnDef {
             name: n,
             process: true,
