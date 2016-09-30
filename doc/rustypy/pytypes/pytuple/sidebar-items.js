@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["PyTuple_extractPyBool",""],["PyTuple_extractPyDouble",""],["PyTuple_extractPyFloat",""],["PyTuple_extractPyInt",""],["PyTuple_extractPyString",""],["PyTuple_free",""],["PyTuple_len",""]],"struct":[["PyTuple","An analog of a Python tuple, will accept an undefined number of other supported types."]]});

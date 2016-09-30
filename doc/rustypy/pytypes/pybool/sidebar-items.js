@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["PyBool_free",""],["PyBool_get_val",""],["PyBool_new",""]],"struct":[["PyBool","Analog to a Python boolean type."]]});
