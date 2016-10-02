@@ -8,10 +8,11 @@ import re
 import types
 import typing
 from string import Template
+from collections import deque
 
 ##### CFFI #####
 import ctypes
-from ctypes import POINTER
+from ctypes import POINTER, ARRAY, c_void_p
 global c_backend
 c_backend = None
 
@@ -37,9 +38,9 @@ RS_TYPE_CONVERSION = {
     'PyTuple': 'tuple',
     'PyBool': 'bool',
     'PyString': 'str',
-    'void': 'None',
-    'Vec': 'list',
+    'PyList': 'list',
     'HashMap': 'dict',
+    'void': 'None',
 }
 
 
@@ -55,6 +56,14 @@ class PyTuple_RS(ctypes.Structure):
     pass
 
 
+class PyList_RS(ctypes.Structure):
+    pass
+
+
+class PyArg_RS(ctypes.Structure):
+    pass
+
+
 class KrateData_RS(ctypes.Structure):
     pass
 
@@ -63,7 +72,7 @@ def config_ctypes():
     # Krate parsing functions
     c_backend.krate_data_new.restype = POINTER(KrateData_RS)
     c_backend.krate_data_free.argtypes = (POINTER(KrateData_RS), )
-    c_backend.krate_data_free.restype = ctypes.c_void_p
+    c_backend.krate_data_free.restype = c_void_p
     c_backend.krate_data_len.argtypes = (POINTER(KrateData_RS), )
     c_backend.krate_data_len.restype = ctypes.c_size_t
     c_backend.krate_data_iter.argtypes = (
@@ -74,39 +83,56 @@ def config_ctypes():
     c_backend.parse_src.restype = ctypes.c_uint
 
     # String related functions
-    c_backend.PyString_new.argtypes = (ctypes.c_char_p, )
-    c_backend.PyString_new.restype = POINTER(PyString_RS)
-    c_backend.PyString_free.argtypes = (POINTER(PyString_RS), )
-    c_backend.PyString_free.restype = ctypes.c_void_p
-    c_backend.PyString_get_str.argtypes = (POINTER(PyString_RS), )
-    c_backend.PyString_get_str.restype = ctypes.c_void_p
+    c_backend.pystring_new.argtypes = (ctypes.c_char_p, )
+    c_backend.pystring_new.restype = POINTER(PyString_RS)
+    c_backend.pystring_free.argtypes = (POINTER(PyString_RS), )
+    c_backend.pystring_free.restype = c_void_p
+    c_backend.pystring_get_str.argtypes = (POINTER(PyString_RS), )
+    c_backend.pystring_get_str.restype = ctypes.c_char_p
 
     # Bool related functions
-    c_backend.PyBool_new.argtypes = (ctypes.c_byte, )
-    c_backend.PyBool_new.restype = POINTER(PyBool_RS)
-    c_backend.PyBool_free.argtypes = (POINTER(PyBool_RS), )
-    c_backend.PyBool_free.restype = ctypes.c_void_p
-    c_backend.PyBool_get_val.argtypes = (POINTER(PyBool_RS), )
-    c_backend.PyBool_get_val.restype = ctypes.c_byte
+    c_backend.pybool_new.argtypes = (ctypes.c_byte, )
+    c_backend.pybool_new.restype = POINTER(PyBool_RS)
+    c_backend.pybool_free.argtypes = (POINTER(PyBool_RS), )
+    c_backend.pybool_free.restype = c_void_p
+    c_backend.pybool_get_val.argtypes = (POINTER(PyBool_RS), )
+    c_backend.pybool_get_val.restype = ctypes.c_byte
 
     # Tuple related functions
-    c_backend.PyTuple_len.argtypes = (POINTER(PyTuple_RS),)
-    c_backend.PyTuple_len.restype = ctypes.c_size_t
-    c_backend.PyTuple_extractPyInt.argtypes = (
+    c_backend.pytuple_len.argtypes = (POINTER(PyTuple_RS),)
+    c_backend.pytuple_len.restype = ctypes.c_size_t
+    c_backend.pytuple_extract_pyint.argtypes = (
         POINTER(PyTuple_RS), ctypes.c_size_t)
-    c_backend.PyTuple_extractPyInt.restype = ctypes.c_longlong
-    c_backend.PyTuple_extractPyFloat.argtypes = (
+    c_backend.pytuple_extract_pyint.restype = ctypes.c_longlong
+    c_backend.pytuple_extract_pyfloat.argtypes = (
         POINTER(PyTuple_RS), ctypes.c_size_t)
-    c_backend.PyTuple_extractPyFloat.restype = ctypes.c_float
-    c_backend.PyTuple_extractPyDouble.argtypes = (
+    c_backend.pytuple_extract_pyfloat.restype = ctypes.c_float
+    c_backend.pytuple_extract_pydouble.argtypes = (
         POINTER(PyTuple_RS), ctypes.c_size_t)
-    c_backend.PyTuple_extractPyDouble.restype = ctypes.c_double
-    c_backend.PyTuple_extractPyBool.argtypes = (
+    c_backend.pytuple_extract_pydouble.restype = ctypes.c_double
+    c_backend.pytuple_extract_pybool.argtypes = (
         POINTER(PyTuple_RS), ctypes.c_size_t)
-    c_backend.PyTuple_extractPyBool.restype = POINTER(PyBool_RS)
-    c_backend.PyTuple_extractPyString.argtypes = (
+    c_backend.pytuple_extract_pybool.restype = POINTER(PyBool_RS)
+    c_backend.pytuple_extract_pystring.argtypes = (
         POINTER(PyTuple_RS), ctypes.c_size_t)
-    c_backend.PyTuple_extractPyString.restype = POINTER(PyString_RS)
+    c_backend.pytuple_extract_pystring.restype = POINTER(PyString_RS)
+
+    # List related functions
+    c_backend.pylist_new.argtypes = (ctypes.c_size_t, )
+    c_backend.pylist_new.restype = POINTER(PyList_RS)
+    c_backend.pylist_push.argtypes = (POINTER(PyList_RS), POINTER(PyArg_RS))
+    c_backend.pylist_push.restype = c_void_p
+    c_backend.pylist_len.argtypes = (POINTER(PyList_RS), )
+    c_backend.pylist_len.restype = ctypes.c_size_t
+    c_backend.pylist_free.argtypes = (POINTER(PyList_RS), )
+    c_backend.pylist_free.restype = c_void_p
+    c_backend.pylist_extract_pystring.argtypes = (
+        POINTER(PyList_RS), ctypes.c_size_t)
+    c_backend.pylist_extract_pystring.restype = POINTER(PyString_RS)
+
+    # Wrap type in PyArg enum
+    c_backend.pyarg_from_str.argtypes = (ctypes.c_char_p,)
+    c_backend.pyarg_from_str.restype = POINTER(PyArg_RS)
 
 
 def load_rust_lib(recmpl=False):
@@ -114,7 +140,7 @@ def load_rust_lib(recmpl=False):
     pre = {'win32': ''}.get(sys.platform, 'lib')
     lib = pkg_resources.resource_filename(
         'rslib', "{}rustypy{}".format(pre, ext))
-    if not os.path.exists(lib) or recmpl:
+    if (not os.path.exists(lib)) or recmpl:
         print("   library not found at: {}".format(lib))
         print("   compiling with Cargo")
         import subprocess
@@ -137,10 +163,6 @@ def load_rust_lib(recmpl=False):
         else:
             globals()['c_backend'] = ctypes.cdll.LoadLibrary(lib)
             config_ctypes()
-
-if not c_backend or not rslib:
-    load_rust_lib()
-
 
 # ==================== #
 #   Type Wrappers      #
@@ -169,28 +191,27 @@ class PythonObject(object):
 class PyString(PythonObject):
 
     def free(self):
-        c_backend.PyString_free(self._ptr)
+        c_backend.pystring_free(self._ptr)
 
     def to_str(self):
         """Consumes the wrapper and returns a raw c_char pointer.
         Afterwards is not necessary to destruct it as it has already
         been consumed."""
-        val = c_backend.PyString_get_str(self._ptr)
-        pystr = ctypes.cast(val, ctypes.c_char_p).value.decode("utf-8")
-        return pystr
+        val = c_backend.pystring_get_str(self._ptr)
+        return val.decode("utf-8")
 
     @staticmethod
     def from_str(s: str):
-        return c_backend.PyString_new(s.encode("utf-8"))
+        return c_backend.pystring_new(s.encode("utf-8"))
 
 
 class PyBool(PythonObject):
 
     def free(self):
-        c_backend.PyBool_free(self._ptr)
+        c_backend.pybool_free(self._ptr)
 
     def to_bool(self):
-        val = c_backend.PyBool_get_val(self._ptr)
+        val = c_backend.pybool_get_val(self._ptr)
         if val == 0:
             val = False
         else:
@@ -200,9 +221,9 @@ class PyBool(PythonObject):
     @staticmethod
     def from_bool(val: bool):
         if val is True:
-            return c_backend.PyBool_new(1)
+            return c_backend.pybool_new(1)
         else:
-            return c_backend.PyBool_new(0)
+            return c_backend.pybool_new(0)
 
 
 class PyTuple(PythonObject):
@@ -213,19 +234,19 @@ class PyTuple(PythonObject):
         self.call_fn = call_fn
 
     def free(self):
-        c_backend.PyTuple_free(self._ptr)
+        c_backend.pytuple_free(self._ptr)
 
     def to_tuple(self, depth, elem_num):
-        #raise RuntimeError
-        arity = c_backend.PyTuple_len(self._ptr)
+        arity = c_backend.pytuple_len(self._ptr)
         if not types:
             raise MissingTypeHint
         if arity != len(self.sig.__tuple_params__) and self.call_fn:
-            raise TypeError("the type hint for returning tuple of fn `{}` "
+            raise TypeError("rustypy: the type hint for returning tuple of fn `{}` "
                             "and the return tuple value are not of "
                             "the same length".format(self.call_fn._fn_name))
         elif arity != len(self.sig.__tuple_params__):
-            raise TypeError("type hint for PyTuple is of wrong length")
+            raise TypeError(
+                "rustypy: type hint for PyTuple is of wrong length")
         tuple_elems = []
         for i, t in enumerate(self.sig.__tuple_params__):
             pytype = _extract_pytypes(
@@ -238,30 +259,92 @@ class PyTuple(PythonObject):
     def from_tuple(val: tuple):
         raise NotImplementedError
 
+
+class PyList(PythonObject):
+
+    def __init__(self, ptr, signature, call_fn=None):
+        self._ptr = ptr
+        self._len = c_backend.pylist_len(self._ptr)
+        self.sig = signature
+        self.call_fn = call_fn
+
+    def free(self):
+        c_backend.pylist_free(self._ptr)
+
+    def to_list(self):
+        arg = self.sig.__args__[0]
+        pylist = deque()
+        if arg is str:
+            last = self._len - 1
+            for e in range(0, self._len):
+                pylist.appendleft(
+                    c_backend.pystring_get_str(
+                        c_backend.pylist_extract_pystring(self._ptr, last)
+                    ).decode("utf-8"))
+                last -= 1
+        elif arg is bool:
+            fn = to_bool
+        elif arg is int:
+            fn = c_backend.pyarg_from_int
+        elif arg is Double or arg is float:
+            fn = c_backend.pyarg_from_double
+        elif arg is Float:
+            fn = c_backend.pyarg_from_float
+        else:
+            raise TypeError("rustypy: subtype {t} of List type is \
+                            not supported".format(t=arg))
+        return list(pylist)
+
+    @staticmethod
+    def from_list(source: list, sig):
+        def _to_bool(arg):
+            if arg:
+                return c_backend.pyarg_from_bool(1)
+            else:
+                return c_backend.pyarg_from_bool(0)
+
+        def _to_bytes(arg):
+            return c_backend.pyarg_from_str(arg.encode("utf-8"))
+
+        arg = sig.__args__[0]
+        if arg is str:
+            fn = _to_bytes
+        elif arg is bool:
+            fn = to_bool
+        elif arg is int:
+            fn = c_backend.pyarg_from_int
+        elif arg is Double or arg is float:
+            fn = c_backend.pyarg_from_double
+        elif arg is Float:
+            fn = c_backend.pyarg_from_float
+        else:
+            raise TypeError("rustypy: subtype {t} of List type is \
+                            not supported".format(t=arg))
+
+        pylist = c_backend.pylist_new(len(source))
+        for e in source:
+            c_backend.pylist_push(pylist, fn(e))
+        return pylist
+
 FIND_TYPE = re.compile("type\((.*)\)")
-NESTED_TYPE = re.compile("(?P<parent>\w*)<(?P<child>.*)>$")
 
 
 def _get_signature_types(params):
     def inner_types(t):
         t = t.strip()
-        match = re.search(NESTED_TYPE, t)
         mutref, ref = False, False
-        if match:
-            type_ = match.group('parent')
+        if "&mut" in t or "*mut" in t:
+            type_ = t.replace("&mut", '').replace("*mut", '').strip()
+            mutref = True
+        elif "&" in t or "*const" in t:
+            type_ = t.replace('&', '').replace("*const", '').strip()
+            ref = True
         else:
-            if "&mut" in t or "*mut" in t:
-                type_ = t.replace("&mut", '').replace("*mut", '').strip()
-                mutref = True
-            elif "&" in t or "*const" in t:
-                type_ = t.replace('&', '').replace("*const", '').strip()
-                ref = True
-            else:
-                type_ = t
+            type_ = t
         try:
             equiv = RS_TYPE_CONVERSION[type_]
         except:
-            raise TypeError('type not supported: {}'.format(type_))
+            raise TypeError('rustypy: type not supported: {}'.format(type_))
         else:
             if equiv == 'int':
                 return RustType(equiv=int, ref=ref, mutref=mutref)
@@ -276,13 +359,9 @@ def _get_signature_types(params):
             elif equiv == 'tuple':
                 return RustType(equiv=tuple, ref=True, mutref=False)
             elif equiv == 'list':
-                inner = match.group('child')
-                inner_t = inner_types(inner)
-                return typing.List[inner_t]
+                return RustType(equiv=list, ref=True, mutref=mutref)
             elif equiv == 'dict':
-                inner = match.group('child')
-                k, v = inner.split(',')
-                return typing.Dict[inner_types(k), inner_types(v)]
+                return RustType(equiv=dict, ref=True, mutref=mutref)
             elif equiv == 'None':
                 return RustType(equiv=None, ref=False, mutref=False)
 
@@ -306,28 +385,38 @@ def _get_ptr_to_C_obj(obj, signature=None):
     elif isinstance(obj, str):
         return PyString.from_str(obj)
     elif isinstance(obj, tuple):
-        raise NotImplementedError
+        return PyTuple.from_tuple(obj)
+    elif isinstance(obj, list):
+        if not signature:
+            raise MissingTypeHint(
+                "rustypy: list type arguments require a type hint")
+        return PyList.from_list(obj, signature)
 
 
 def _extract_pytypes(ref, call_fn=None, depth=0, elem_num=None,
                      downcast=False, sig=False, curr_elem=None):
     if downcast:
         if issubclass(downcast, bool):
-            pybool = c_backend.PyTuple_extractPyBool(ref, elem_num)
+            pybool = c_backend.pytuple_extract_pybool(ref, elem_num)
             return _extract_pytypes(pybool)
         elif issubclass(downcast, int):
-            return c_backend.PyTuple_extractPyInt(ref, elem_num)
+            return c_backend.pytuple_extract_pyint(ref, elem_num)
         elif issubclass(downcast, float):
             if downcast is Float:
-                return c_backend.PyTuple_extractPyFloat(ref, elem_num)
+                return c_backend.pytuple_extract_pyfloat(ref, elem_num)
             else:
-                return c_backend.PyTuple_extractPyDouble(ref, elem_num)
+                return c_backend.pytuple_extract_pydouble(ref, elem_num)
         elif issubclass(downcast, str):
-            pystr = c_backend.PyTuple_extractPyString(ref, elem_num)
+            pystr = c_backend.pytuple_extract_pystring(ref, elem_num)
             return _extract_pytypes(pystr)
         elif issubclass(downcast, typing.Tuple):
             raise NotImplementedError
-            pytuple = c_backend.PyTuple_extractPyTuple(ref, elem_num)
+            pytuple = c_backend.pytuple_extract_pytuple(ref, elem_num)
+            return _extract_pytypes(
+                pytuple, depth=depth + 1, sig=sig, curr_elem=elem_num)
+        elif issubclass(downcast, typing.List):
+            raise NotImplementedError
+            pytuple = c_backend.pytuple_extract_pylist(ref, elem_num)
             return _extract_pytypes(
                 pytuple, depth=depth + 1, sig=sig, curr_elem=elem_num)
 
@@ -361,8 +450,14 @@ def _extract_pytypes(ref, call_fn=None, depth=0, elem_num=None,
         if depth == 0:
             pyobj.free()
         return val
+    elif isinstance(ref, POINTER(PyList_RS)):
+        pyobj = PyList(ref, sig, call_fn)
+        val = pyobj.to_list()
+        if depth == 0:
+            pyobj.free()
+        return val
     else:
-        raise TypeError("return type not supported")
+        raise TypeError("rustypy: return type not supported")
 
 
 def get_crate_entry(mod, manifest):
@@ -385,13 +480,15 @@ def get_crate_entry(mod, manifest):
 
 
 def bind_rs_crate_funcs(mod, lib, cargo=False, ismodule=False, prefix=None):
+    if not c_backend:
+        load_rust_lib()
     if not isinstance(mod, str):
         # type checking is necessary as it will be passed to Rust
-        raise TypeError('`mod` parameter must be a valid string')
+        raise TypeError('rustypy: `mod` parameter must be a valid string')
     if not cargo:
         manifest = os.path.join(mod, 'Cargo.toml')
         if not os.path.exists(manifest):
-            raise OSError("no Cargo(.toml) manifest found")
+            raise OSError("rustypy: no Cargo(.toml) manifest found")
         entry_point = get_crate_entry(mod, manifest)
     return RustBinds(entry_point, lib, prefix=prefix)
 
@@ -463,7 +560,7 @@ class RustBinds(object):
             self._rs_fn = getattr(lib, name)
             self._fn_name = name
             self.__type_hints = {'real_return': argtypes.pop()}
-            self.__type_hints['argtypes'] = argtypes
+            self.__type_hints['real_argtypes'] = argtypes
 
         def __call__(self, *args, **kwargs):
             if kwargs:
@@ -475,14 +572,15 @@ class RustBinds(object):
             n_args = len(self.argtypes)
             g_args = len(args)
             if g_args != n_args:
-                raise TypeError("{}() takes exactly {} "
+                raise TypeError("rustypy: {}() takes exactly {} "
                                 "arguments ({} given)".format(
                                     self._fn_name, n_args, g_args))
             prep_args = []
             for x, a in enumerate(args):
                 p = self.argtypes[x]
                 if p.ref or p.mutref:
-                    ref = _get_ptr_to_C_obj(a)
+                    sig = self.get_argtype(x)
+                    ref = _get_ptr_to_C_obj(a, signature=sig)
                     prep_args.append(ref)
                 elif isinstance(a, bool):
                     ref = _get_ptr_to_C_obj(a)
@@ -493,16 +591,16 @@ class RustBinds(object):
                 elif isinstance(a, int) or isinstance(a, float):
                     prep_args.append(a)
                 else:
-                    raise TypeError("argument #{} type of `{}` passed to "
+                    raise TypeError("rustypy: argument #{} type of `{}` passed to "
                                     "function `{}` not supported".format(
                                         x, a, self._fn_name))
             result = self._rs_fn(*prep_args)
             if not return_ref:
-                # connversion of result to Python objects
                 try:
-                    python_result = _extract_pytypes(result, call_fn=self)
+                    python_result = _extract_pytypes(
+                        result, call_fn=self, sig=self.restype)
                 except MissingTypeHint:
-                    raise TypeError("must add return type of "
+                    raise TypeError("rustypy: must add return type of "
                                     "function `{}`".format(self._fn_name))
                 return python_result
             elif get_contents:
@@ -536,11 +634,9 @@ class RustBinds(object):
         @property
         def restype(self):
             try:
-                restype = self.__type_hints['return']
+                return self.__type_hints['return']
             except KeyError:
                 return
-            else:
-                return restype
 
         @restype.setter
         def restype(self, annotation):
@@ -549,22 +645,35 @@ class RustBinds(object):
         @property
         def argtypes(self):
             try:
-                restype = self.__type_hints['argtypes']
+                return self.__type_hints['real_argtypes']
             except KeyError:
                 return
-            else:
-                return restype
 
         @argtypes.setter
-        def argtypes(self, annotations):
-            raise AttributeError("private member, cannot be set directly")
+        def argtypes(self):
+            raise AttributeError(
+                "rustypy: private attribute, cannot be set directly")
+
+        def add_argtype(self, position, hint):
+            types = self.__type_hints.setdefault(
+                'argtypes', [None] * len(self.argtypes))
+            if self.argtypes[position].equiv == list \
+                    and not issubclass(hint, typing.List):
+                raise TypeError("rustypy: type hint for argument {n} of function {fn} \
+                must be of typing.List type")
+            types[position] = hint
+
+        def get_argtype(self, position):
+            hints = self.__type_hints.get('argtypes')
+            if hints:
+                return hints[position]
 
     def decl_C_args(self, name, params):
         restype = None
         argtypes = []
         for x, p in enumerate(params, 1):
             if p.equiv is None:
-                add_p = ctypes.c_void_p
+                add_p = c_void_p
             elif issubclass(p.equiv, bool):
                 add_p = PyBool_RS
             elif issubclass(p.equiv, int):
@@ -575,6 +684,8 @@ class RustBinds(object):
                 add_p = PyString_RS
             elif issubclass(p.equiv, tuple):
                 add_p = PyTuple_RS
+            elif issubclass(p.equiv, list):
+                add_p = PyList_RS
             if p.mutref or p.ref:
                 add_p = POINTER(add_p)
             if x <= (len(params) - 1):
@@ -603,13 +714,13 @@ class RsStruct(object):
             self.name = name
 
         def __str__(self, name, mod):
-            msg = "`new` (constructor) method name not defined for struct `{}`" \
+            msg = "rustypy: `new` (constructor) method name not defined for struct `{}`" \
                 " in module `{}`"
             msg = msg.format(self.name)
             return msg
 
     class StructPtr(object):
-        _ERR_RESERVED = "cannot use `krate` attr name, is a reserved attribute"
+        _ERR_RESERVED = "rustypy: cannot use `krate` attr name, is a reserved attribute"
 
         def __init__(self, kls, ffi, krate):
             self.__krate = krate

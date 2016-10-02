@@ -36,9 +36,9 @@ pub struct PyString {
 }
 
 impl PyString {
-    /// Dereferences a PyString raw pointer to an inmutable reference.
-    pub unsafe fn from_ptr(ptr: *mut PyString) -> &'static PyString {
-        &*ptr
+    /// Dereferences a raw pointer from a boxed PyString.
+    pub unsafe fn from_ptr(ptr: *mut PyString) -> PyString {
+        *(Box::from_raw(ptr))
     }
     /// Constructs an owned String from a PyString.
     pub fn to_string(&self) -> String {
@@ -46,13 +46,17 @@ impl PyString {
     }
     /// Constructs an owned String from a raw pointer.
     pub unsafe fn from_ptr_to_string(ptr: *mut PyString) -> String {
-        let pystr = &*ptr;
+        let pystr = *(Box::from_raw(ptr));
         String::from(pystr._inner.to_str().unwrap())
     }
     /// Returns PyString as a raw pointer. Use this whenever you want to return
     /// a PyString to Python.
     pub fn as_ptr(self) -> *mut PyString {
         Box::into_raw(Box::new(self))
+    }
+    /// Return a PyString from a raw char pointer.
+    pub unsafe fn from_raw(ptr: *const c_char) -> PyString {
+        PyString { _inner: CStr::from_ptr(ptr).to_owned() }
     }
 }
 
@@ -77,28 +81,28 @@ impl From<String> for PyString {
 }
 
 /// Destructs the PyString, mostly to be used from Python.
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyString_free(ptr: *mut PyString) {
+pub extern "C" fn pystring_free(ptr: *mut PyString) {
     if ptr.is_null() {
         return;
     }
-    Box::from_raw(ptr);
+    unsafe {
+        Box::from_raw(ptr);
+    }
 }
 
+use std::ffi::CStr;
 /// Creates a PyString wrapper from a raw c_char pointer
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyString_new(ptr: *mut c_char) -> *mut PyString {
-    let pystr = PyString { _inner: CString::from_raw(ptr) };
+pub extern "C" fn pystring_new(ptr: *const c_char) -> *mut PyString {
+    let pystr = PyString { _inner: unsafe { CStr::from_ptr(ptr).to_owned() } };
     pystr.as_ptr()
 }
 
 /// Consumes the wrapper and returns a raw c_char pointer. Afterwards is not necessary
 /// to destruct it as it has already been consumed.
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyString_get_str(ptr: *mut PyString) -> *const c_char {
-    let pystr: PyString = *(Box::from_raw(ptr));
+pub extern "C" fn pystring_get_str(ptr: *mut PyString) -> *const c_char {
+    let pystr: PyString = unsafe { PyString::from_ptr(ptr) };
     pystr._inner.into_raw()
 }

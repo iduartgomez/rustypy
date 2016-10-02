@@ -35,9 +35,9 @@ pub struct PyBool {
 }
 
 impl PyBool {
-    /// Dereferences a PyBool raw pointer to an inmutable reference.
-    pub unsafe fn from_ptr(ptr: *mut PyBool) -> &'static PyBool {
-        &*ptr
+    /// Dereferences a raw pointer to PyBool.
+    pub unsafe fn from_ptr(ptr: *mut PyBool) -> PyBool {
+        *(Box::from_raw(ptr))
     }
     /// Creates a bool from a raw pointer to a PyBool.
     pub unsafe fn from_ptr_into_bool(ptr: *mut PyBool) -> bool {
@@ -61,18 +61,16 @@ impl PyBool {
     }
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyBool_free(ptr: *mut PyBool) {
+pub extern "C" fn pybool_free(ptr: *mut PyBool) {
     if ptr.is_null() {
         return;
     }
-    Box::from_raw(ptr);
+    unsafe { Box::from_raw(ptr) };
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyBool_new(val: c_char) -> *mut PyBool {
+pub extern "C" fn pybool_new(val: c_char) -> *mut PyBool {
     let val = match val {
         0 => 0,
         _ => 1,
@@ -81,10 +79,10 @@ pub unsafe extern "C" fn PyBool_new(val: c_char) -> *mut PyBool {
     pystr.as_ptr()
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyBool_get_val(ptr: &PyBool) -> i8 {
-    ptr.val
+pub extern "C" fn pybool_get_val(ptr: *mut PyBool) -> i8 {
+    let pybool = unsafe { &*ptr };
+    pybool.val
 }
 
 impl From<bool> for PyBool {
@@ -102,6 +100,16 @@ impl<'a> From<&'a bool> for PyBool {
         let val = match b {
             &true => 1,
             &false => 0,
+        };
+        PyBool { val: val }
+    }
+}
+
+impl From<i8> for PyBool {
+    fn from(b: i8) -> PyBool {
+        let val = match b {
+            0 => 0,
+            _ => 1,
         };
         PyBool { val: val }
     }

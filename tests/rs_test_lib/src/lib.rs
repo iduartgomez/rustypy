@@ -6,7 +6,8 @@ extern crate libc;
 extern crate rustypy;
 
 use std::collections::HashMap;
-use rustypy::{PyTuple, PyString, PyBool, PyArg};
+use std::iter::FromIterator;
+use rustypy::{PyTuple, PyString, PyBool, PyArg, PyList};
 
 #[no_mangle]
 pub extern "C" fn python_bind_int(num: u32) -> u32 {
@@ -61,9 +62,17 @@ pub extern "C" fn python_bind_tuple_mixed(e1: i32,
 }
 
 #[no_mangle]
-pub extern "C" fn ython_bind_list1(_: Vec<bool>) -> Vec<String> {
-    let returnval = vec![String::from("Rust")];
-    returnval
+pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
+    let mut list = unsafe { PyList::from_ptr(list) };
+    let converted = pylist_to_vec!(list; PyArg::PyString => PyString);
+    for e in &converted {
+        assert_eq!(e.to_string(), String::from("Python"));
+    }
+    assert_eq!(converted.len(), 3);
+
+    let content = vec![PyString::from(String::from("Rust")); 3];
+    let returnval = PyList::from_iter(content);
+    returnval.as_ptr()
 }
 
 #[no_mangle]

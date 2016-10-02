@@ -20,30 +20,11 @@ use pytypes::{PyArg, PyBool, PyString};
 ///
 /// Read the [module docs](index.html) for more information.
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct PyTuple {
     pub elem: PyArg,
     pub idx: usize,
     pub next: Option<Box<PyTuple>>,
-}
-
-extern "C" fn _abort_msg() {
-    use std::io::{self, Write};
-    let mut output = io::stdout();
-    output.write(b"rustypy failed abrupty!").unwrap();
-    output.flush().unwrap();
-}
-
-macro_rules! abort_on_extraction_fail {
-    ($t:ident) => {{
-        use std::io::{self, Write};
-        let msg = format!(
-            "rustypy: aborted process, tried to extract one type, but found {:?} instead", $t);
-        //let msg = CString::new(msg.as_str()).unwrap().as_ptr();
-        let mut output = io::stdout();
-        output.write(msg.as_bytes()).unwrap();
-        libc::atexit(_abort_msg);
-        libc::exit(1)
-    }};
 }
 
 impl<'a> PyTuple {
@@ -62,17 +43,6 @@ impl<'a> PyTuple {
             Some(ref e) => e.len(),
             None => self.idx + 1,
         }
-    }
-}
-
-#[allow(non_snake_case)]
-#[no_mangle]
-pub extern "C" fn PyTuple_free(ptr: *mut PyTuple) {
-    if ptr.is_null() {
-        return;
-    }
-    unsafe {
-        Box::from_raw(ptr);
     }
 }
 
@@ -139,14 +109,23 @@ macro_rules! pytuple {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_len(ptr: *mut PyTuple) -> usize {
-    let tuple = &*ptr;
+pub extern "C" fn pytuple_free(ptr: *mut PyTuple) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        Box::from_raw(ptr);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn pytuple_len(ptr: *mut PyTuple) -> usize {
+    let tuple = unsafe { &*ptr };
     tuple.len()
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_extractPyInt(ptr: *mut PyTuple, index: usize) -> i64 {
+pub unsafe extern "C" fn pytuple_extract_pyint(ptr: *mut PyTuple, index: usize) -> i64 {
     let tuple = &*ptr;
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
@@ -161,9 +140,8 @@ pub unsafe extern "C" fn PyTuple_extractPyInt(ptr: *mut PyTuple, index: usize) -
     }
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_extractPyBool(ptr: *mut PyTuple, index: usize) -> *mut PyBool {
+pub unsafe extern "C" fn pytuple_extract_pybool(ptr: *mut PyTuple, index: usize) -> *mut PyBool {
     let tuple = &*ptr;
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
@@ -173,9 +151,8 @@ pub unsafe extern "C" fn PyTuple_extractPyBool(ptr: *mut PyTuple, index: usize) 
 }
 
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_extractPyFloat(ptr: *mut PyTuple, index: usize) -> f32 {
+pub unsafe extern "C" fn pytuple_extract_pyfloat(ptr: *mut PyTuple, index: usize) -> f32 {
     let tuple = &*ptr;
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
@@ -184,9 +161,8 @@ pub unsafe extern "C" fn PyTuple_extractPyFloat(ptr: *mut PyTuple, index: usize)
     }
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_extractPyDouble(ptr: *mut PyTuple, index: usize) -> f64 {
+pub unsafe extern "C" fn pytuple_extract_pydouble(ptr: *mut PyTuple, index: usize) -> f64 {
     let tuple = &*ptr;
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
@@ -195,9 +171,8 @@ pub unsafe extern "C" fn PyTuple_extractPyDouble(ptr: *mut PyTuple, index: usize
     }
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
-pub unsafe extern "C" fn PyTuple_extractPyString(ptr: *mut PyTuple, index: usize) -> *mut PyString {
+pub unsafe extern "C" fn pytuple_extract_pystring(ptr: *mut PyTuple, index: usize) -> *mut PyString {
     let tuple = &*ptr;
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {

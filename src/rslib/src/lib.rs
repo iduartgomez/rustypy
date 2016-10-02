@@ -30,12 +30,12 @@ use syntax::visit::{FnKind, Visitor};
 pub mod pytypes;
 
 // re-export
-pub use self::pytypes::{PyTuple, PyString, PyBool, PyArg};
+pub use self::pytypes::{PyTuple, PyList, PyString, PyBool, PyArg};
 
 #[no_mangle]
 pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> c_uint {
     // parse and walk
-    let path = unsafe { PyString::from_ptr_to_string(path).to_string() };
+    let path = unsafe { PyString::from_ptr_to_string(path) };
     let mut parse_session = ParseSess::new();
     let krate = match parse(&path, &mut parse_session) {
         Ok(krate) => krate,

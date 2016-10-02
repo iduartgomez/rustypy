@@ -7,11 +7,11 @@ import typing
 from importlib import import_module
 from rustypy.pywrapper import RustFuncGen
 from rustypy.rswrapper import bind_rs_crate_funcs, Float, Double, load_rust_lib
-load_rust_lib(recmpl=True)
 
 
 def setUpModule():
     # compile rust lib
+    load_rust_lib(recmpl=True)
     global _py_test_dir
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     global _rs_lib_dir
@@ -75,7 +75,6 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         return_val = self.bindings.python_bind_str_tuple("Some")
         self.assertEqual(return_val, ("Some", "from Rust"))
 
-
         # mixed types
         T = typing.Tuple[int, bool, Float, str]
         self.bindings.python_bind_tuple_mixed.restype = T
@@ -84,7 +83,12 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.assertEqual(return_val, (1, False, 2.5, "Some from Rust"))
 
     def test_list_conversion(self):
-        pass
+        # string list
+        sig1 = typing.List[str]
+        self.bindings.python_bind_list1.add_argtype(0, sig1)
+        self.bindings.python_bind_list1.restype = sig1
+        result = self.bindings.python_bind_list1(["Python"] * 3)
+        self.assertEqual(result, ["Rust"] * 3)
 
 
 @unittest.skip
