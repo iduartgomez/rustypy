@@ -24,6 +24,7 @@ def setUpModule():
     global lib_test
     lib_test = os.path.join(lib_test_entry, 'target', 'debug',
                             '{}test_lib{}'.format(pre, ext))
+    subprocess.run(['cargo', 'build'], cwd=lib_test_entry)
 
 
 def set_python_path(self, *path):
@@ -160,13 +161,13 @@ class ExtractionFailures(unittest.TestCase):
 
     def test_failure(self):
         set_python_path(self, 'test_package', 'basics')
-        import primitives as test
+        import nested_types as test
         self.gen = RustFuncGen(module=test)
-        p = subprocess.run(['cargo', 'test', '--test', 'primitives'],
+        p = subprocess.run(['cargo', 'test', '--test', 'nested_types', '--', '--nocapture'],
                            cwd=_rs_lib_dir, universal_newlines=True, stderr=subprocess.STDOUT)
         print("Output:\n", p.stdout)
         self.assertEqual(p.returncode, 0,
-                         'failed Rust integration test `nested modules`')
+                         'failed Rust integration test `nested types`')
 
     def tearDown(self):
         if hasattr(self, '_original_path'):

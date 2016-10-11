@@ -36,7 +36,7 @@ pub struct PyString {
 }
 
 impl PyString {
-    /// Dereferences a raw pointer from a boxed PyString.
+    /// Get a PyString from a previously boxed raw pointer.
     pub unsafe fn from_ptr(ptr: *mut PyString) -> PyString {
         *(Box::from_raw(ptr))
     }

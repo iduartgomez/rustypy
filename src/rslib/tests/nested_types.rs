@@ -11,7 +11,7 @@ use cpython::{Python, ToPyObject, PythonObject, PyObject, PyLong, PyString};
 
 mod test_package;
 use test_package::basics::rustypy_pybind::PyModules;
-use rustypy::{PyTuple, PyArg};
+use rustypy::{PyTuple, PyArg, PyBool};
 use rustypy::pytypes::pytuple;
 
 #[test]
@@ -99,14 +99,24 @@ fn basics_nested_types() {
 }
 
 #[test]
-fn test_pytuple_macro() {
+fn test_pytuple_macros() {
+    use rustypy::PyString;
     let ptr = pytuple!(PyArg::PyBool(rustypy::PyBool::from(false)),
                        PyArg::PyString(rustypy::PyString::from("test")),
-                       PyArg::I64(55));
-    let e1 = unsafe { pytuple::PyTuple_extractPyBool(ptr, 0usize) };
-    assert_eq!(e1, false);
-    let e2 = unsafe { pytuple::PyTuple_extractPyString(ptr, 1usize) };
+                       PyArg::I64(55i64))
+        .as_ptr();
+    let e1 = unsafe { PyBool::from_ptr(pytuple::pytuple_extract_pybool(ptr, 0usize)) };
+    assert_eq!(e1.to_bool(), false);
+    let e2 = unsafe { PyString::from_ptr(pytuple::pytuple_extract_pystring(ptr, 1usize)) };
     assert_eq!(&(e2.to_string()), "test");
-    let e3 = unsafe { pytuple::PyTuple_extractPyInt(ptr, 2usize) };
+    let e3 = unsafe { pytuple::pytuple_extract_pyint(ptr, 2usize) };
     assert_eq!(e3, 55);
+
+    let pytuple = unsafe { rustypy::PyTuple::from_ptr(ptr) };
+    let unpacked = unpack_pytuple!(pytuple; (PyBool, PyString, I64,));
+    assert_eq!((false, String::from("test"), 55i64), unpacked);
+
+    let nested = pytuple!(PyArg::I64(60i64), PyArg::PyTuple(Box::new(pytuple)));
+    let unpacked = unpack_pytuple!(nested; (I64, (PyBool, PyString, I64,),));
+    assert_eq!((60, (false, String::from("test"), 55i64)), unpacked)
 }

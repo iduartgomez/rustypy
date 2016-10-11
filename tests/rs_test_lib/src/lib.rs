@@ -37,7 +37,7 @@ pub extern "C" fn python_bind_bool(ptr: *mut PyBool) -> *mut PyBool {
 
 #[no_mangle]
 pub extern "C" fn python_bind_int_tuple(e1: i32, e2: i32) -> *mut PyTuple {
-    pytuple!(PyArg::I32(e1), PyArg::I32(e2))
+    pytuple!(PyArg::I32(e1), PyArg::I32(e2)).as_ptr()
 }
 
 #[no_mangle]
@@ -45,6 +45,7 @@ pub extern "C" fn python_bind_str_tuple(e1: *mut PyString) -> *mut PyTuple {
     let s = PyString::from(unsafe { PyString::from_ptr_to_string(e1) });
     pytuple!(PyArg::PyString(s),
              PyArg::PyString(PyString::from("from Rust")))
+        .as_ptr()
 }
 
 #[no_mangle]
@@ -59,12 +60,13 @@ pub extern "C" fn python_bind_tuple_mixed(e1: i32,
              PyArg::PyBool(PyBool::from(false)),
              PyArg::F32(e3),
              PyArg::PyString(s))
+        .as_ptr()
 }
 
 #[no_mangle]
 pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
     let mut list = unsafe { PyList::from_ptr(list) };
-    let converted = pylist_to_vec!(list; PyArg::PyString => PyString);
+    let converted = unpack_pylist!(list; PyArg::PyString => PyString);
     for e in &converted {
         assert_eq!(e.to_string(), String::from("Python"));
     }
@@ -76,12 +78,16 @@ pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
 }
 
 #[no_mangle]
-pub extern "C" fn ython_bind_dict(dict: HashMap<&str, u32>) -> HashMap<&str, u32> {
-    dict
+pub extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
+    let mut list = unsafe { PyList::from_ptr(list) };
+    let converted = unpack_pylist!(list; PyArg::PyTuple => Box<PyTuple>);
+
+    let v: Vec<PyTuple> = vec![pytuple!(PyArg::F64(0.5f64), PyArg::PyBool(PyBool::from(true))),
+                               pytuple!(PyArg::F64(-0.5f64), PyArg::PyBool(PyBool::from(false)))];
+    PyList::from_iter(v).as_ptr()
 }
 
 #[no_mangle]
-pub extern "C" fn ython_bind_list2(_: Vec<(f64, bool)>) -> Vec<String> {
-    let returnval = vec![String::from("Rust")];
-    returnval
+pub extern "C" fn ython_bind_dict(dict: HashMap<&str, u32>) -> HashMap<&str, u32> {
+    dict
 }

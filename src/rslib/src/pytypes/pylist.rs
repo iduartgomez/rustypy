@@ -1,5 +1,5 @@
 use libc;
-use pytypes::{PyArg, PyBool, PyString};
+use pytypes::{PyArg, PyBool, PyString, PyTuple};
 
 use std::ops::{Index, IndexMut};
 use std::iter::{FromIterator, IntoIterator};
@@ -22,9 +22,11 @@ impl PyList {
     pub fn len(&self) -> usize {
         self.members.len()
     }
+    /// Get a PyList from a previously boxed raw pointer.
     pub unsafe fn from_ptr(ptr: *mut PyList) -> PyList {
         *(Box::from_raw(ptr))
     }
+    /// Return a PyList as a raw pointer.
     pub fn as_ptr(self) -> *mut PyList {
         Box::into_raw(Box::new(self))
     }
@@ -32,8 +34,13 @@ impl PyList {
 
 /// Consumes a PyList<PyArg(T)> and returns a Vec<T> from it, no copies.
 #[macro_export]
-macro_rules! pylist_to_vec {
+macro_rules! unpack_pylist {
     ( $pylist:ident; $p:path => $type_:ty ) => {{
+        macro_rules! _abort {
+            ( ) => {{
+                panic!("rustypy: expected an other type while converting pylist to vec")
+            }};
+        };
         use rustypy::PyArg;
         trait PyListPop {
             type Target;
@@ -43,9 +50,10 @@ macro_rules! pylist_to_vec {
         impl PyListPop for PyList {
             type Target = $type_;
             fn pop_t(&mut self) -> Option<Self::Target> {
-                match self.pop() {
+                let e = self.pop();
+                match e {
                     Some($p(val)) => Some(val),
-                    Some(_) => panic!("rustypy error: unexpected type on PyList"),
+                    Some(_) => _abort!(),
                     None => None
                 }
             }
@@ -60,8 +68,6 @@ macro_rules! pylist_to_vec {
         list
     }}
 }
-
-
 
 impl IntoIterator for PyList {
     type Item = PyArg;
@@ -171,6 +177,22 @@ impl FromIterator<PyArg> for PyList {
     }
 }
 
+impl PyListPush<PyTuple> for PyList {
+    fn push(&mut self, e: PyTuple) {
+        self.members.push(PyArg::PyTuple(Box::new(e)));
+    }
+}
+
+impl FromIterator<PyTuple> for PyList {
+    fn from_iter<I: IntoIterator<Item = PyTuple>>(iter: I) -> Self {
+        let mut c = PyList::new();
+        for e in iter {
+            c.members.push(PyArg::PyTuple(Box::new(e)))
+        }
+        c
+    }
+}
+
 impl Index<usize> for PyList {
     type Output = PyArg;
     fn index(&self, index: usize) -> &PyArg {
@@ -210,7 +232,6 @@ pub extern "C" fn pylist_free(ptr: *mut PyList) {
     }
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn pylist_extract_pyint(ptr: *mut PyList, index: usize) -> i64 {
     let list = &mut *ptr;
@@ -233,7 +254,6 @@ pub unsafe extern "C" fn pylist_extract_pybool(ptr: *mut PyList, index: usize) -
     let elem = PyList::remove(list, index);
     match elem {
         PyArg::PyBool(val) => val,
-        // _ => panic!("expected PyBool, found other type"),
         _ => abort_on_extraction_fail!(elem),
     }
 }
@@ -264,6 +284,16 @@ pub unsafe extern "C" fn pylist_extract_pystring(ptr: *mut PyList, index: usize)
     let elem = PyList::remove(list, index);
     match elem {
         PyArg::PyString(val) => val.as_ptr(),
+        _ => abort_on_extraction_fail!(elem),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn pylist_extract_pytuple(ptr: *mut PyList, index: usize) -> *mut PyTuple {
+    let list = &mut *ptr;
+    let elem = PyList::remove(list, index);
+    match elem {
+        PyArg::PyTuple(val) => (*val).as_ptr(),
         _ => abort_on_extraction_fail!(elem),
     }
 }

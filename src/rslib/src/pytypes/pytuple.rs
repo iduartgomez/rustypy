@@ -13,6 +13,9 @@
 //!
 //! When extracting from Python with the FFI elements are copied, not moved, and when free'd
 //! all the original elements are dropped
+use std::iter::IntoIterator;
+use std::ops::Deref;
+
 use libc;
 use pytypes::{PyArg, PyBool, PyString};
 
@@ -28,6 +31,10 @@ pub struct PyTuple {
 }
 
 impl<'a> PyTuple {
+    /// Get a PyTuple from a previously boxed raw pointer.
+    pub unsafe fn from_ptr(ptr: *mut PyTuple) -> PyTuple {
+        *(Box::from_raw(ptr))
+    }
     fn get_element(&self, idx: usize) -> Result<&PyTuple, &str> {
         if idx == self.idx {
             Ok(self)
@@ -38,11 +45,45 @@ impl<'a> PyTuple {
             }
         }
     }
-    fn len(&self) -> usize {
+    pub fn get_inner_ref(&self, idx: usize) -> Result<&PyArg, &str> {
+        if idx == self.idx {
+            Ok(&self.elem)
+        } else {
+            match self.next {
+                Some(ref e) => e.get_inner_ref(idx),
+                None => Err("PyTuple index out of range."),
+            }
+        }
+    }
+    pub fn len(&self) -> usize {
         match self.next {
             Some(ref e) => e.len(),
             None => self.idx + 1,
         }
+    }
+    pub fn as_ptr(self) -> *mut PyTuple {
+        Box::into_raw(Box::new(self))
+    }
+}
+
+impl<'a> IntoIterator for &'a PyTuple {
+    type Item = &'a PyArg;
+    type IntoIter = ::std::vec::IntoIter<&'a PyArg>;
+    fn into_iter(self) -> Self::IntoIter {
+        let l = self.len();
+        let mut iter = Vec::with_capacity(l);
+        for i in 0..l {
+            iter.push(self.get_inner_ref(i).unwrap());
+        }
+        iter.into_iter()
+    }
+}
+
+impl Deref for PyTuple {
+    type Target = PyArg;
+
+    fn deref(&self) -> &PyArg {
+        &self.elem
     }
 }
 
@@ -80,7 +121,7 @@ macro_rules! pytuple {
             let prev = tuple.get_mut(idx).unwrap();
             prev.next = Some(Box::new(last));
         }
-        Box::into_raw(Box::new(tuple.pop().unwrap()))
+        tuple.pop().unwrap()
     }};
     ( $( $elem:expr ),+ ) => {{
         let mut cnt;
@@ -95,7 +136,7 @@ macro_rules! pytuple {
             tuple.push(tuple_e);
             cnt += 1;
         )*;
-        if cnt == tuple.len() {}; // stub to remove warning...
+        if cnt == 0 {}; // stub to remove warning...
         let t_len = tuple.len() - 1;
         for i in 1..(t_len + 1) {
             let idx = t_len - i;
@@ -103,7 +144,159 @@ macro_rules! pytuple {
             let prev = tuple.get_mut(idx).unwrap();
             prev.next = Some(Box::new(last));
         }
-        Box::into_raw(Box::new(tuple.pop().unwrap()))
+        tuple.pop().unwrap()
+    }};
+}
+
+#[macro_export]
+macro_rules! unpack_pytuple {
+    ($t:ident; ($($p:tt,)+) ) => {{
+        macro_rules! _abort {
+            () => {{
+                panic!("rustypy: expected an other type while unpacking pytuple")
+            }};
+        };
+        use rustypy::PyArg;
+        let mut cnt = 0;
+        ($(
+            unpack_pytuple!($t; cnt; elem: $p)
+        ,)*)
+    }};
+    ($t:ident; $i:ident; elem: ($($p:tt,)+))  => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::PyTuple(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                let pytuple = val.clone();
+                let mut cnt = 0;
+                ($(
+                    unpack_pytuple!(pytuple; cnt; elem: $p)
+                ,)*)
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: PyBool) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::PyBool(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.to_bool()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: PyString) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::PyString(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.to_string()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: I64) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::I64(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: I32) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::I32(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: I16) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::I16(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: I8) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::I8(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: U32) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::U32(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: U16) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::U16(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: U8) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::U8(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: F32) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::F32(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: F64) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::F64(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                val.clone()
+            },
+            _ => _abort!(),
+        }
     }};
 }
 
@@ -150,7 +343,6 @@ pub unsafe extern "C" fn pytuple_extract_pybool(ptr: *mut PyTuple, index: usize)
     }
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn pytuple_extract_pyfloat(ptr: *mut PyTuple, index: usize) -> f32 {
     let tuple = &*ptr;
@@ -172,7 +364,9 @@ pub unsafe extern "C" fn pytuple_extract_pydouble(ptr: *mut PyTuple, index: usiz
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pystring(ptr: *mut PyTuple, index: usize) -> *mut PyString {
+pub unsafe extern "C" fn pytuple_extract_pystring(ptr: *mut PyTuple,
+                                                  index: usize)
+                                                  -> *mut PyString {
     let tuple = &*ptr;
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {

@@ -35,7 +35,7 @@ pub struct PyBool {
 }
 
 impl PyBool {
-    /// Dereferences a raw pointer to PyBool.
+    /// Get a PyBool from a previously boxed raw pointer.
     pub unsafe fn from_ptr(ptr: *mut PyBool) -> PyBool {
         *(Box::from_raw(ptr))
     }

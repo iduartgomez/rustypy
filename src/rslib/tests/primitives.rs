@@ -54,8 +54,8 @@ fn pystring_operations() {
 	let source = "test string";
 	let owned_pystr = PyString::from(source).as_ptr();
 	let back_from_py = unsafe { PyString::from_ptr_to_string(owned_pystr) };
-	assert_eq!(back_from_py, "test string")
+	assert_eq!(back_from_py, "test string");
 	{
-		let x = String::from(source);
+		String::from(source);
 	}
 }
