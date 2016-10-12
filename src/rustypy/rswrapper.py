@@ -99,8 +99,15 @@ def config_ctypes():
     c_backend.pybool_get_val.restype = ctypes.c_byte
 
     # Tuple related functions
+    c_backend.pytuple_new.argtypes = (ctypes.c_size_t, )
+    c_backend.pytuple_new.restype = POINTER(PyTuple_RS)
+    c_backend.pytuple_push.argtypes = (
+        POINTER(PyTuple_RS), POINTER(PyTuple_RS))
+    c_backend.pytuple_push.restype = c_void_p
     c_backend.pytuple_len.argtypes = (POINTER(PyTuple_RS),)
     c_backend.pytuple_len.restype = ctypes.c_size_t
+    c_backend.pytuple_free.argtypes = (POINTER(PyTuple_RS), )
+    c_backend.pytuple_free.restype = c_void_p
     c_backend.pytuple_extract_pyint.argtypes = (
         POINTER(PyTuple_RS), ctypes.c_size_t)
     c_backend.pytuple_extract_pyint.restype = ctypes.c_longlong
@@ -126,13 +133,38 @@ def config_ctypes():
     c_backend.pylist_len.restype = ctypes.c_size_t
     c_backend.pylist_free.argtypes = (POINTER(PyList_RS), )
     c_backend.pylist_free.restype = c_void_p
+    c_backend.pylist_extract_pyint.argtypes = (
+        POINTER(PyList_RS), ctypes.c_size_t)
+    c_backend.pylist_extract_pyint.restype = ctypes.c_longlong
+    c_backend.pylist_extract_pyfloat.argtypes = (
+        POINTER(PyList_RS), ctypes.c_size_t)
+    c_backend.pylist_extract_pyfloat.restype = ctypes.c_float
+    c_backend.pylist_extract_pydouble.argtypes = (
+        POINTER(PyList_RS), ctypes.c_size_t)
+    c_backend.pylist_extract_pydouble.restype = ctypes.c_double
+    c_backend.pylist_extract_pybool.argtypes = (
+        POINTER(PyList_RS), ctypes.c_size_t)
+    c_backend.pylist_extract_pybool.restype = POINTER(PyBool_RS)
     c_backend.pylist_extract_pystring.argtypes = (
         POINTER(PyList_RS), ctypes.c_size_t)
     c_backend.pylist_extract_pystring.restype = POINTER(PyString_RS)
+    c_backend.pylist_extract_pytuple.argtypes = (
+        POINTER(PyList_RS), ctypes.c_size_t)
+    c_backend.pylist_extract_pytuple.restype = POINTER(PyTuple_RS)
 
     # Wrap type in PyArg enum
     c_backend.pyarg_from_str.argtypes = (ctypes.c_char_p,)
     c_backend.pyarg_from_str.restype = POINTER(PyArg_RS)
+    c_backend.pyarg_from_int.argtypes = (ctypes.c_longlong,)
+    c_backend.pyarg_from_int.restype = POINTER(PyArg_RS)
+    c_backend.pyarg_from_float.argtypes = (ctypes.c_float,)
+    c_backend.pyarg_from_float.restype = POINTER(PyArg_RS)
+    c_backend.pyarg_from_double.argtypes = (ctypes.c_double,)
+    c_backend.pyarg_from_double.restype = POINTER(PyArg_RS)
+    c_backend.pyarg_from_bool.argtypes = (ctypes.c_byte,)
+    c_backend.pyarg_from_bool.restype = POINTER(PyArg_RS)
+    c_backend.pyarg_from_pytuple.argtypes = (POINTER(PyTuple_RS),)
+    c_backend.pyarg_from_pytuple.restype = POINTER(PyArg_RS)
 
 
 def load_rust_lib(recmpl=False):
@@ -226,6 +258,23 @@ class PyBool(PythonObject):
             return c_backend.pybool_new(0)
 
 
+def _to_bool(arg):
+    if arg:
+        return c_backend.pyarg_from_bool(1)
+    else:
+        return c_backend.pyarg_from_bool(0)
+
+
+def _to_bytes(arg):
+    return c_backend.pyarg_from_str(arg.encode("utf-8"))
+
+
+def _to_tuple(sig):
+    def dec(arg):
+        return c_backend.pyarg_from_pytuple(PyTuple.from_tuple(arg, sig))
+    return dec
+
+
 class PyTuple(PythonObject):
 
     def __init__(self, ptr, signature, call_fn=None):
@@ -236,7 +285,7 @@ class PyTuple(PythonObject):
     def free(self):
         c_backend.pytuple_free(self._ptr)
 
-    def to_tuple(self, depth, elem_num):
+    def to_tuple(self, depth):
         arity = c_backend.pytuple_len(self._ptr)
         if not types:
             raise MissingTypeHint
@@ -256,8 +305,33 @@ class PyTuple(PythonObject):
         return tuple(tuple_elems)
 
     @staticmethod
-    def from_tuple(val: tuple):
-        raise NotImplementedError
+    def from_tuple(source: tuple, sig):
+        next_e = None
+        cnt = len(source) - 1
+        for i in range(0, len(source)):
+            cnt = cnt - i
+            arg_t = sig.__tuple_params__[cnt]
+            last = source[cnt]
+            if arg_t is str:
+                pyarg = _to_bytes(last)
+            elif arg_t is bool:
+                pyarg = _to_bytes(last)
+            elif arg_t is int:
+                pyarg = c_backend.pyarg_from_int(last)
+            elif arg_t is Double or arg_t is float:
+                pyarg = c_backend.pyarg_from_double(last)
+            elif arg_t is Float:
+                pyarg = c_backend.pyarg_from_float(last)
+            elif issubclass(arg_t, typing.Tuple):
+                pyarg = _to_tuple(arg_t)(last)
+            else:
+                raise TypeError("rustypy: subtype `{t}` of Tuple type is \
+                                not supported".format(t=arg_t))
+            prev_e = c_backend.pytuple_new(cnt, pyarg)
+            if next_e:
+                c_backend.pytuple_push(next_e, prev_e)
+            next_e = prev_e
+        return prev_e
 
 
 class PyList(PythonObject):
@@ -271,55 +345,53 @@ class PyList(PythonObject):
     def free(self):
         c_backend.pylist_free(self._ptr)
 
-    def to_list(self):
-        arg = self.sig.__args__[0]
+    def to_list(self, depth):
+        arg_t = self.sig.__args__[0]
         pylist = deque()
-        if arg is str:
-            last = self._len - 1
+        last = self._len - 1
+        if arg_t is str:
             for e in range(0, self._len):
                 pylist.appendleft(
                     c_backend.pystring_get_str(
                         c_backend.pylist_extract_pystring(self._ptr, last)
                     ).decode("utf-8"))
                 last -= 1
-        elif arg is bool:
+        elif arg_t is bool:
             fn = to_bool
-        elif arg is int:
+        elif arg_t is int:
             fn = c_backend.pyarg_from_int
-        elif arg is Double or arg is float:
+        elif arg_t is Double or arg_t is float:
             fn = c_backend.pyarg_from_double
-        elif arg is Float:
+        elif arg_t is Float:
             fn = c_backend.pyarg_from_float
+        elif issubclass(arg_t, typing.Tuple):
+            for e in range(0, self._len):
+                ptr = c_backend.pylist_extract_pytuple(self._ptr, last)
+                pylist.appendleft(PyTuple(ptr, arg_t).to_tuple(depth=depth + 1))
+                last -= 1
         else:
-            raise TypeError("rustypy: subtype {t} of List type is \
-                            not supported".format(t=arg))
-        return list(pylist)
+            raise TypeError("rustypy: subtype `{t}` of List type is \
+                            not supported".format(t=arg_t))
+        return pylist
 
     @staticmethod
     def from_list(source: list, sig):
-        def _to_bool(arg):
-            if arg:
-                return c_backend.pyarg_from_bool(1)
-            else:
-                return c_backend.pyarg_from_bool(0)
-
-        def _to_bytes(arg):
-            return c_backend.pyarg_from_str(arg.encode("utf-8"))
-
-        arg = sig.__args__[0]
-        if arg is str:
+        arg_t = sig.__args__[0]
+        if arg_t is str:
             fn = _to_bytes
-        elif arg is bool:
-            fn = to_bool
-        elif arg is int:
+        elif arg_t is bool:
+            fn = _to_bool
+        elif arg_t is int:
             fn = c_backend.pyarg_from_int
-        elif arg is Double or arg is float:
+        elif arg_t is Double or arg_t is float:
             fn = c_backend.pyarg_from_double
-        elif arg is Float:
+        elif arg_t is Float:
             fn = c_backend.pyarg_from_float
+        elif issubclass(arg_t, typing.Tuple):
+            fn = _to_tuple(arg_t)
         else:
             raise TypeError("rustypy: subtype {t} of List type is \
-                            not supported".format(t=arg))
+                            not supported".format(t=arg_t))
 
         pylist = c_backend.pylist_new(len(source))
         for e in source:
@@ -385,7 +457,10 @@ def _get_ptr_to_C_obj(obj, signature=None):
     elif isinstance(obj, str):
         return PyString.from_str(obj)
     elif isinstance(obj, tuple):
-        return PyTuple.from_tuple(obj)
+        if not signature:
+            raise MissingTypeHint(
+                "rustypy: tuple type arguments require a type hint")
+        return PyTuple.from_tuple(obj, signature)
     elif isinstance(obj, list):
         if not signature:
             raise MissingTypeHint(
@@ -436,7 +511,7 @@ def _extract_pytypes(ref, call_fn=None, depth=0, elem_num=None,
         else:
             types = sig
         pyobj = PyTuple(ref, types, call_fn=call_fn)
-        val = pyobj.to_tuple(depth, elem_num)
+        val = pyobj.to_tuple(depth)
         if depth == 0:
             pyobj.free()
         return val
@@ -452,7 +527,7 @@ def _extract_pytypes(ref, call_fn=None, depth=0, elem_num=None,
         return val
     elif isinstance(ref, POINTER(PyList_RS)):
         pyobj = PyList(ref, sig, call_fn)
-        val = pyobj.to_list()
+        val = pyobj.to_list(depth)
         if depth == 0:
             pyobj.free()
         return val

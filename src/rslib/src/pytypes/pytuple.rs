@@ -55,6 +55,9 @@ impl<'a> PyTuple {
             }
         }
     }
+    fn push(&mut self, next: PyTuple) {
+        self.next = Some(Box::new(next));
+    }
     pub fn len(&self) -> usize {
         match self.next {
             Some(ref e) => e.len(),
@@ -298,6 +301,22 @@ macro_rules! unpack_pytuple {
             _ => _abort!(),
         }
     }};
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn pytuple_new(idx: usize, elem: *mut PyArg) -> *mut PyTuple {
+    let tuple = PyTuple {
+        elem: *(Box::from_raw(elem)),
+        idx: idx,
+        next: None,
+    };
+    tuple.as_ptr()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn pytuple_push(next: *mut PyTuple, prev: &mut PyTuple) {
+    let next: PyTuple = *(Box::from_raw(next));
+    prev.push(next)
 }
 
 #[allow(non_snake_case)]

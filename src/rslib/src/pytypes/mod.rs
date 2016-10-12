@@ -60,6 +60,7 @@ pub enum PyArg {
     PyBool(PyBool),
     PyString(PyString),
     PyTuple(Box<PyTuple>),
+    PyList(Box<PyList>),
 }
 
 #[no_mangle]
@@ -89,4 +90,10 @@ pub extern "C" fn pyarg_from_str(e: *const c_char) -> *mut PyArg {
 pub extern "C" fn pyarg_from_bool(e: i8) -> *mut PyArg {
     let e = PyBool::from(e);
     Box::into_raw(Box::new(PyArg::PyBool(e)))
+}
+
+#[no_mangle]
+pub extern "C" fn pyarg_from_pytuple(e: *mut PyTuple) -> *mut PyArg {
+    let e = unsafe { PyTuple::from_ptr(e) };
+    Box::into_raw(Box::new(PyArg::PyTuple(Box::new(e))))
 }

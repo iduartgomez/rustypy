@@ -66,13 +66,21 @@ pub extern "C" fn python_bind_tuple_mixed(e1: i32,
 #[no_mangle]
 pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
     let mut list = unsafe { PyList::from_ptr(list) };
-    let converted = unpack_pylist!(list; PyArg::PyString => PyString);
-    for e in &converted {
-        assert_eq!(e.to_string(), String::from("Python"));
-    }
+    let converted = unpack_pylist!(list; PyString => PyString);
     assert_eq!(converted.len(), 3);
+    for (i, e) in (&converted).iter().enumerate() {
+        if i == 0 {
+            assert_eq!(e.to_string(), String::from("Python"));
+        } else if i == 1 {
+            assert_eq!(e.to_string(), String::from("in"));
+        } else if i == 2 {
+            assert_eq!(e.to_string(), String::from("Rust"));
+        }
+    }
 
-    let content = vec![PyString::from(String::from("Rust")); 3];
+    let content = vec![PyString::from(String::from("Rust")),
+                       PyString::from(String::from("in")),
+                       PyString::from(String::from("Python"))];
     let returnval = PyList::from_iter(content);
     returnval.as_ptr()
 }
@@ -80,7 +88,9 @@ pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
 #[no_mangle]
 pub extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
     let mut list = unsafe { PyList::from_ptr(list) };
-    let converted = unpack_pylist!(list; PyArg::PyTuple => Box<PyTuple>);
+    let converted = unpack_pylist!(list; PyTuple => (I64, (F32, I64,),));
+    assert_eq!(vec![(50i64, (1.0f32, 30i64)), (25i64, (0.5f32, 40i64))],
+               converted);
 
     let v: Vec<PyTuple> = vec![pytuple!(PyArg::F64(0.5f64), PyArg::PyBool(PyBool::from(true))),
                                pytuple!(PyArg::F64(-0.5f64), PyArg::PyBool(PyBool::from(false)))];

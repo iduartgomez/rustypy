@@ -85,14 +85,23 @@ class GenerateRustToPythonBinds(unittest.TestCase):
 
     def test_list_conversion(self):
         # string list
-        sig1 = typing.List[str]
-        self.bindings.python_bind_list1.add_argtype(0, sig1)
-        self.bindings.python_bind_list1.restype = sig1
-        result = self.bindings.python_bind_list1(["Python"] * 3)
-        self.assertEqual(result, ["Rust"] * 3)
+        T = typing.List[str]
+        self.bindings.python_bind_list1.add_argtype(0, T)
+        self.bindings.python_bind_list1.restype = T
+        result = self.bindings.python_bind_list1(["Python", "in", "Rust"])
+        self.assertEqual(list(result), ["Rust", "in", "Python"])
+
+        # list of tuples
+        T = typing.List[typing.Tuple[int, typing.Tuple[Float, int]]]
+        self.bindings.python_bind_list2.add_argtype(0, T)
+        U = typing.List[typing.Tuple[Double, bool]]
+        self.bindings.python_bind_list2.restype = U
+        result = self.bindings.python_bind_list2(
+            [(50, (1.0, 30)), (25, (0.5, 40))])
+        self.assertEqual(list(result), [(0.5, True), (-0.5, False)])
 
 
-@unittest.skip
+#@unittest.skip
 class GeneratePythonToRustBinds(unittest.TestCase):
 
     @classmethod

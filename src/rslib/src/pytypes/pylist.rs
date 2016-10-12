@@ -4,6 +4,7 @@ use pytypes::{PyArg, PyBool, PyString, PyTuple};
 use std::ops::{Index, IndexMut};
 use std::iter::{FromIterator, IntoIterator};
 
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct PyList {
     members: Vec<PyArg>,
@@ -35,7 +36,28 @@ impl PyList {
 /// Consumes a PyList<PyArg(T)> and returns a Vec<T> from it, no copies.
 #[macro_export]
 macro_rules! unpack_pylist {
-    ( $pylist:ident; $p:path => $type_:ty ) => {{
+    ($pylist:ident; PyTuple => $p:tt) => {{
+        macro_rules! _abort {
+            ( ) => {{
+                panic!("rustypy: expected an other type while converting pylist to vec")
+            }};
+        };
+        use std::collections::VecDeque;
+        let mut list = VecDeque::with_capacity($pylist.len());
+        for _ in 0..$pylist.len() {
+            match $pylist.pop() {
+                Some(PyArg::PyTuple(val)) => {
+                    let val = *val;
+                    let unpacked = unpack_pytuple!(val; $p);
+                    list.push_front(unpacked);
+                },
+                Some(_) => _abort!(),
+                None => {}
+            }
+        };
+        Vec::from(list)
+    }};
+    ($pylist:ident; $p:tt => $type_:ty) => {{
         macro_rules! _abort {
             ( ) => {{
                 panic!("rustypy: expected an other type while converting pylist to vec")
@@ -46,26 +68,26 @@ macro_rules! unpack_pylist {
             type Target;
             fn pop_t(&mut self) -> Option<Self::Target>;
         }
-
         impl PyListPop for PyList {
             type Target = $type_;
             fn pop_t(&mut self) -> Option<Self::Target> {
                 let e = self.pop();
                 match e {
-                    Some($p(val)) => Some(val),
+                    Some(PyArg::$p(val)) => Some(val),
                     Some(_) => _abort!(),
                     None => None
                 }
             }
         }
-        let mut list: Vec<$type_> = Vec::new();
+        use std::collections::VecDeque;
+        let mut list = VecDeque::with_capacity($pylist.len());
         for _ in 0..$pylist.len() {
             match $pylist.pop_t() {
-                Some(v) => list.push(v),
+                Some(v) => list.push_front(v),
                 None => {}
             }
         };
-        list
+        Vec::from(list)
     }}
 }
 
