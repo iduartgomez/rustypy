@@ -1,25 +1,32 @@
-//! An analog of a Python tuple, will accept an undefined number of other supported types.
+//! An analog of a Python tuple, will accept an undefined number of any other supported types.
 //!
 //! You can construct it using the [pytuple!](../../macro.pytuple!.html) macro, ie:
 //!
 //! ```
 //! # #[macro_use] extern crate rustypy;
 //! # fn main(){
-//! pytuple!(PyArg::I64(10), PyArg::F32(10.5))
+//! use rustypy::PyArg;
+//! pytuple!(PyArg::I64(10), PyArg::F32(10.5));
 //! # }
 //! ```
 //!
 //! You must pass the variety of the argument using the PyArg enum.
 //!
-//! When extracting from Python with the FFI elements are copied, not moved, and when free'd
-//! all the original elements are dropped
+//! When extracting elements in Python with the FFI, elements are copied, not moved,
+//! and when free'd all the original elements are dropped.
+//!
+//! ## Unpacking PyTuple from Python
+//! Is recommended to use the [unpack_pytuple!](../../macro.unpack_pytuple!.html) macro in order
+//! to convert a PyTuple to a Rust native type. Check the macro documentation for more info.
+
 use std::iter::IntoIterator;
 use std::ops::Deref;
 
 use libc;
-use pytypes::{PyArg, PyBool, PyString};
+use pytypes::{PyArg, PyBool, PyString, PyList};
 
-/// An analog of a Python tuple, will accept an undefined number of other supported types.
+/// An analog of a Python tuple, will accept an undefined number of other
+/// [supported types](../../../rustypy/pytypes/enum.PyArg.html).
 ///
 /// Read the [module docs](index.html) for more information.
 #[derive(Debug)]
@@ -90,20 +97,23 @@ impl Deref for PyTuple {
     }
 }
 
-/// This macro allows the construction of [PyTuple](../rustypy/pytypes/struct.PyTuple.html) types.
+/// This macro allows the construction of [PyTuple](../rustypy/pytypes/pytuple/struct.PyTuple.html)
+/// types.
 ///
 /// # Examples
 ///
 /// ```
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
-/// pytuple!(PyArg::I64(10), PyArg::F32(10.5))
+/// # use rustypy::PyArg;
+/// pytuple!(PyArg::I64(10), PyArg::F32(10.5));
 /// # }
 /// ```
 ///
 #[macro_export]
 macro_rules! pytuple {
     ( $( $elem:ident ),+ ) => {{
+        use rustypy::PyTuple;
         let mut cnt;
         let mut tuple = Vec::new();
         cnt = 0usize;
@@ -127,6 +137,7 @@ macro_rules! pytuple {
         tuple.pop().unwrap()
     }};
     ( $( $elem:expr ),+ ) => {{
+        use rustypy::PyTuple;
         let mut cnt;
         let mut tuple = Vec::new();
         cnt = 0usize;
@@ -151,6 +162,18 @@ macro_rules! pytuple {
     }};
 }
 
+/// Iterates over a a PyTuple and returns a corresponding Rust tuple.
+///
+/// PyTuple types are inmmutable, all inner types contents are copied when destructured
+/// (this includes inner container types like PyList or nested PyTuples).
+/// Inner `PyList<PyArg(T)>` are converted to the respective `Vec<T>` and requires
+/// valid syntax for [unpack_pytuple!](../rustypy/macro.unpack_pylist!.html).
+///
+/// # Examples
+///
+/// ```
+/// ```
+///
 #[macro_export]
 macro_rules! unpack_pytuple {
     ($t:ident; ($($p:tt,)+) ) => {{
@@ -176,6 +199,18 @@ macro_rules! unpack_pytuple {
                 ($(
                     unpack_pytuple!(pytuple; cnt; elem: $p)
                 ,)*)
+            },
+            _ => _abort!(),
+        }
+    }};
+    ($t:ident; $i:ident; elem: {PyList{$($u:tt)*}}) => {{
+        let e = $t.get_inner_ref($i).unwrap();
+        match e {
+            &PyArg::PyList(ref val) => {
+                $i += 1;
+                if $i == 0 {}; // stub to remove warning...
+                let copied = (*val).clone();
+                unpack_pylist!(copied; PyList{$($u)*})
             },
             _ => _abort!(),
         }
@@ -348,7 +383,7 @@ pub unsafe extern "C" fn pytuple_extract_pyint(ptr: *mut PyTuple, index: usize) 
         PyArg::U32(val) => val as i64,
         PyArg::U16(val) => val as i64,
         PyArg::U8(val) => val as i64,
-        _ => abort_on_extraction_fail!(elem),
+        _ => _abort_xtract_fail!(elem),
     }
 }
 
@@ -358,7 +393,7 @@ pub unsafe extern "C" fn pytuple_extract_pybool(ptr: *mut PyTuple, index: usize)
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
         PyArg::PyBool(ref val) => val.clone().as_ptr(),
-        _ => abort_on_extraction_fail!(elem),
+        _ => _abort_xtract_fail!(elem),
     }
 }
 
@@ -368,7 +403,7 @@ pub unsafe extern "C" fn pytuple_extract_pyfloat(ptr: *mut PyTuple, index: usize
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
         PyArg::F32(val) => val,
-        _ => abort_on_extraction_fail!(elem),
+        _ => _abort_xtract_fail!(elem),
     }
 }
 
@@ -378,7 +413,7 @@ pub unsafe extern "C" fn pytuple_extract_pydouble(ptr: *mut PyTuple, index: usiz
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
         PyArg::F64(val) => val,
-        _ => abort_on_extraction_fail!(elem),
+        _ => _abort_xtract_fail!(elem),
     }
 }
 
@@ -390,6 +425,26 @@ pub unsafe extern "C" fn pytuple_extract_pystring(ptr: *mut PyTuple,
     let elem = PyTuple::get_element(tuple, index).unwrap();
     match elem.elem {
         PyArg::PyString(ref val) => val.clone().as_ptr(),
-        _ => abort_on_extraction_fail!(elem),
+        _ => _abort_xtract_fail!(elem),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn pytuple_extract_pytuple(ptr: *mut PyTuple, index: usize) -> *mut PyTuple {
+    let tuple = &*ptr;
+    let elem = PyTuple::get_element(tuple, index).unwrap();
+    match elem.elem {
+        PyArg::PyTuple(ref val) => (*val).clone().as_ptr(),
+        _ => _abort_xtract_fail!(elem),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn pytuple_extract_pylist(ptr: *mut PyTuple, index: usize) -> *mut PyList {
+    let tuple = &*ptr;
+    let elem = PyTuple::get_element(tuple, index).unwrap();
+    match elem.elem {
+        PyArg::PyList(ref val) => (*val).clone().as_ptr(),
+        _ => _abort_xtract_fail!(elem),
     }
 }

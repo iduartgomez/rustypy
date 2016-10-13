@@ -69,5 +69,6 @@ There is no concept of 'module' in C (which is the language used for interfacing
 so the functions cannot be namedspaced as you would in pure Rust. Read about
 Rust FFI in [the book](https://doc.rust-lang.org/stable/book/ffi.html).
 
-More info: [Rust in Python](https://github.com/iduartgomez/rustypy/wiki/Rust-in-Python)
+More info: [Rust in Python](https://github.com/iduartgomez/rustypy/wiki/Rust-in-Python).
+
 Rust crate [documentation](https://iduartgomez.github.io/rustypy/).

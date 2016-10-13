@@ -18,7 +18,7 @@
 //! // prepare to return to Python:
 //! let ptr = pystr.as_ptr();
 //! // convert from raw pointer to an owned String
-//! let rust_string = PyString::from_ptr_into_string(ptr);
+//! let rust_string = unsafe { PyString::from_ptr_to_string(ptr) };
 //! ```
 use std::ffi::CString;
 use libc::c_char;
@@ -26,7 +26,7 @@ use libc::c_char;
 use std::convert::From;
 use std::fmt;
 
-/// An analog of a Python String.
+/// An analog of a Python string.
 ///
 /// Read the [module docs](index.html) for more information.
 #[derive(Clone)]
@@ -105,4 +105,20 @@ pub extern "C" fn pystring_new(ptr: *const c_char) -> *mut PyString {
 pub extern "C" fn pystring_get_str(ptr: *mut PyString) -> *const c_char {
     let pystr: PyString = unsafe { PyString::from_ptr(ptr) };
     pystr._inner.into_raw()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pystring_operations() {
+        let source = "test string";
+        let owned_pystr = PyString::from(source).as_ptr();
+        let back_from_py = unsafe { PyString::from_ptr_to_string(owned_pystr) };
+        assert_eq!(back_from_py, "test string");
+        {
+            String::from(source);
+        }
+    }
 }

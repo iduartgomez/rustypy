@@ -3,11 +3,12 @@ extern crate cpython;
 extern crate rustypy;
 
 mod test_package;
-use test_package::basics::rustypy_pybind::PyModules;
+
 use cpython::Python;
 
 #[test]
 fn basics_primitives() {
+    use test_package::basics::rustypy_pybind::PyModules;
     let gil = Python::acquire_gil();
     let py = gil.python();
 
@@ -45,17 +46,4 @@ fn basics_primitives() {
 
     let answ = basics.rust_bind_tuple3(0.5, true);
     assert_eq!((1.0, false), answ);
-}
-
-#[test]
-fn pystring_operations() {
-	use rustypy::PyString;
-
-	let source = "test string";
-	let owned_pystr = PyString::from(source).as_ptr();
-	let back_from_py = unsafe { PyString::from_ptr_to_string(owned_pystr) };
-	assert_eq!(back_from_py, "test string");
-	{
-		String::from(source);
-	}
 }

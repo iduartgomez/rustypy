@@ -66,8 +66,8 @@ setup(
     package_data={'rslib': ['*.toml', 'src/*.rs']},
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    setup_requires=['cffi'],
-    install_requires=['cffi'],
+    #setup_requires=['cffi'],
+    #install_requires=['cffi'],
     entry_points={
         'console_scripts': [
             'rustypy=rustypy.scripts:cli',

@@ -3,6 +3,7 @@ import subprocess
 import sys
 import os
 import typing
+import shutil
 
 from importlib import import_module
 from rustypy.pywrapper import RustFuncGen
@@ -89,7 +90,7 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.bindings.python_bind_list1.add_argtype(0, T)
         self.bindings.python_bind_list1.restype = T
         result = self.bindings.python_bind_list1(["Python", "in", "Rust"])
-        self.assertEqual(list(result), ["Rust", "in", "Python"])
+        self.assertEqual(result, ["Rust", "in", "Python"])
 
         # list of tuples
         T = typing.List[typing.Tuple[int, typing.Tuple[Float, int]]]
@@ -98,7 +99,34 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.bindings.python_bind_list2.restype = U
         result = self.bindings.python_bind_list2(
             [(50, (1.0, 30)), (25, (0.5, 40))])
-        self.assertEqual(list(result), [(0.5, True), (-0.5, False)])
+        self.assertEqual(result, [(0.5, True), (-0.5, False)])
+
+        # list of lists of tuples
+        T = typing.List[typing.List[
+            typing.Tuple[int, typing.Tuple[Float, int]]]]
+        self.bindings.python_bind_nested1_t_n_ls.add_argtype(0, T)
+        self.bindings.python_bind_nested1_t_n_ls.restype = T
+        result = self.bindings.python_bind_nested1_t_n_ls(
+            [[(50, (1.0, 30))], [(25, (0.5, 40))]])
+        self.assertEqual(result, [[(50, (1.0, 30))], [(25, (0.5, 40))]])
+
+        # list of tuples of lists
+        T = typing.List[typing.Tuple[typing.List[int], Float]]
+        self.bindings.python_bind_nested2_t_n_ls.add_argtype(0, T)
+        self.bindings.python_bind_nested2_t_n_ls.restype = T
+        result = self.bindings.python_bind_nested2_t_n_ls(
+            [([1, 2, 3], 0.1), ([3, 2, 1], 0.2)])
+        f = []
+        for x in result:
+            l = []
+            for i, y in enumerate(x):
+                if isinstance(y, float):
+                    e = round(y, 1)
+                else:
+                    e = y
+                l.append(e)
+            f.append(tuple(l))
+        self.assertEqual(f, [([3, 2, 1], 0.2), ([1, 2, 3], 0.1)])
 
 
 #@unittest.skip
@@ -121,29 +149,56 @@ class GeneratePythonToRustBinds(unittest.TestCase):
         set_python_path(self, 'test_package', 'basics')
         import primitives as test
         self.gen = RustFuncGen(module=test)
+        #
+        src = os.path.join(_rs_lib_dir, 'tests', 'python', 'primitives.rs')
+        dst = os.path.join(_rs_lib_dir, 'tests')
+        shutil.move(src, dst)
+        #
         p = subprocess.run(['cargo', 'test', '--test', 'primitives'],
                            cwd=_rs_lib_dir)
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `basics_primitives`')
+        #
+        src = os.path.join(_rs_lib_dir, 'tests', 'primitives.rs')
+        dst = os.path.join(_rs_lib_dir, 'tests', 'python')
+        shutil.move(src, dst)
 
     def test_basics_nested_types(self):
         set_python_path(self, 'test_package', 'basics')
         import nested_types as test
         self.gen = RustFuncGen(module=test)
+        #
+        src = os.path.join(_rs_lib_dir, 'tests', 'python', 'nested_types.rs')
+        dst = os.path.join(_rs_lib_dir, 'tests')
+        shutil.move(src, dst)
+        #
         p = subprocess.run(['cargo', 'test', '--test', 'nested_types'],
                            cwd=_rs_lib_dir)
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `basics_nested_types`')
+        #
+        src = os.path.join(_rs_lib_dir, 'tests', 'nested_types.rs')
+        dst = os.path.join(_rs_lib_dir, 'tests', 'python')
+        shutil.move(src, dst)
 
     def test_nested_modules(self):
         set_python_path(self)
         init_package = os.path.join(_rs_lib_dir, 'tests',
                                     'test_package', '__init__.py')
         subprocess.run('python {}'.format(init_package), shell=True)
+        #
+        src = os.path.join(_rs_lib_dir, 'tests', 'python', 'submodules.rs')
+        dst = os.path.join(_rs_lib_dir, 'tests')
+        shutil.move(src, dst)
+        #
         p = subprocess.run(['cargo', 'test', '--test', 'submodules'],
                            cwd=_rs_lib_dir)
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `nested modules`')
+        #
+        src = os.path.join(_rs_lib_dir, 'tests', 'submodules.rs')
+        dst = os.path.join(_rs_lib_dir, 'tests', 'python')
+        shutil.move(src, dst)
 
     def tearDown(self):
         if hasattr(self, '_original_path'):
@@ -172,9 +227,11 @@ class ExtractionFailures(unittest.TestCase):
         set_python_path(self, 'test_package', 'basics')
         import nested_types as test
         self.gen = RustFuncGen(module=test)
-        p = subprocess.run(['cargo', 'test', '--test', 'nested_types', '--', '--nocapture'],
-                           cwd=_rs_lib_dir, universal_newlines=True, stderr=subprocess.STDOUT)
-        print("Output:\n", p.stdout)
+        p = subprocess.run(['cargo', 'test', '--test', 'common/nested_types',
+                            '--', '--nocapture'],
+                           cwd=_rs_lib_dir, universal_newlines=True,
+                           stderr=subprocess.STDOUT)
+        print("stdout:\n", p.stdout)
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `nested types`')
 
@@ -183,6 +240,10 @@ class ExtractionFailures(unittest.TestCase):
             sys.path = self._original_path
         if hasattr(self, '_original_env'):
             os.putenv('PYTHONPATH', self._original_env)
+        f = open(self._basics, 'w')
+        f.close()
+        f = open(self._mod, 'w')
+        f.close()
 
 
 if __name__ == "__main__":

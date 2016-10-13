@@ -2,7 +2,7 @@
 
 // private macros
 #[doc(hidden)]
-macro_rules! abort_on_extraction_fail {
+macro_rules! _abort_xtract_fail {
     ($t:ident) => {{
         extern "C" fn _abort_msg() {
             use std::io::{self, Write};
@@ -15,7 +15,6 @@ macro_rules! abort_on_extraction_fail {
         let msg = format!(
             "rustypy: aborted process, tried to extract one type, \
             but found {:?} instead", $t);
-        //let msg = CString::new(msg.as_str()).unwrap().as_ptr();
         let mut output = io::stdout();
         output.write(msg.as_bytes()).unwrap();
         libc::atexit(_abort_msg);
@@ -28,16 +27,16 @@ pub mod pybool;
 pub mod pytuple;
 pub mod pylist;
 
-pub use self::pybool::PyBool;
 pub use self::pystring::PyString;
+pub use self::pybool::PyBool;
 pub use self::pytuple::PyTuple;
 pub use self::pylist::PyList;
 
-/// Enum type used to construct PyTuple types. All the kinds supported in Python
+/// Enum type used to construct PyTuple and PyList types. All the kinds supported in Python
 /// are included here.
 ///
 /// In Python, conversion of floats default to double precision unless explicitly stated
-/// Adding the Float custom rustypy type to the return type signature.
+/// adding the Float custom rustypy type to the return type signature.
 ///
 /// ```Python
 ///     from rustypy.rswrapper import Double, Float
@@ -96,4 +95,10 @@ pub extern "C" fn pyarg_from_bool(e: i8) -> *mut PyArg {
 pub extern "C" fn pyarg_from_pytuple(e: *mut PyTuple) -> *mut PyArg {
     let e = unsafe { PyTuple::from_ptr(e) };
     Box::into_raw(Box::new(PyArg::PyTuple(Box::new(e))))
+}
+
+#[no_mangle]
+pub extern "C" fn pyarg_from_pylist(e: *mut PyList) -> *mut PyArg {
+    let e = unsafe { PyList::from_ptr(e) };
+    Box::into_raw(Box::new(PyArg::PyList(Box::new(e))))
 }

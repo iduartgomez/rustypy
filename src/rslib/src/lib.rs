@@ -32,6 +32,7 @@ pub mod pytypes;
 // re-export
 pub use self::pytypes::{PyTuple, PyList, PyString, PyBool, PyArg};
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> c_uint {
     // parse and walk
@@ -82,6 +83,7 @@ impl FnDef {
     }
 }
 
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct KrateData {
     functions: HashMap<codemap::Span, FnDef>,
@@ -131,11 +133,13 @@ impl KrateData {
 }
 
 // C FFI for KrateData objects:
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn krate_data_new() -> *mut KrateData {
     Box::into_raw(Box::new(KrateData::new()))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn krate_data_free(ptr: *mut KrateData) {
     if ptr.is_null() {
@@ -144,11 +148,13 @@ pub extern "C" fn krate_data_free(ptr: *mut KrateData) {
     unsafe { *(Box::from_raw(ptr)) };
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn krate_data_len(krate: &KrateData) -> size_t {
     krate.collected.len()
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn krate_data_iter(krate: &KrateData, idx: size_t) -> *mut PyString {
     match krate.iter_krate(idx as usize) {

@@ -5,11 +5,13 @@ extern crate cpython;
 extern crate rustypy;
 
 mod test_package;
-use test_package::rustypy_pybind::PyModules;
+
 use cpython::{Python};
 
 #[test]
 fn submodules() {
+	use test_package::rustypy_pybind::PyModules;
+	
 	let gil = Python::acquire_gil();
 	let py = gil.python();
 	let test_package: PyModules = PyModules::new(&py);

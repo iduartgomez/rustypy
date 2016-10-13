@@ -13,12 +13,12 @@
 //! ```
 //! use rustypy::PyBool;
 //! let pybool = PyBool::from(true);
-//! assert_eq(pybool, true);
+//! assert_eq!(pybool, true);
 //!
 //! // prepare to return to Python:
 //! let ptr = pybool.as_ptr();
 //! // convert from raw pointer to a bool
-//! let rust_bool = PyBool::from_ptr_into_bool(ptr);
+//! let rust_bool = unsafe { PyBool::from_ptr_into_bool(ptr) };
 //! ```
 use libc::c_char;
 
