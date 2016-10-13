@@ -146,6 +146,26 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! An analog of a Python String.</span>
 <span class='doccomment'>//!</span>
@@ -167,7 +187,7 @@
 <span class='doccomment'>//! // prepare to return to Python:</span>
 <span class='doccomment'>//! let ptr = pystr.as_ptr();</span>
 <span class='doccomment'>//! // convert from raw pointer to an owned String</span>
-<span class='doccomment'>//! let rust_string = PyString::from_ptr_into_string(ptr);</span>
+<span class='doccomment'>//! let rust_string = unsafe { PyString::from_ptr_to_string(ptr) };</span>
 <span class='doccomment'>//! ```</span>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ffi</span>::<span class='ident'>CString</span>;
 <span class='kw'>use</span> <span class='ident'>libc</span>::<span class='ident'>c_char</span>;
@@ -175,7 +195,7 @@
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>convert</span>::<span class='ident'>From</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fmt</span>;
 
-<span class='doccomment'>/// An analog of a Python String.</span>
+<span class='doccomment'>/// An analog of a Python string.</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// Read the [module docs](index.html) for more information.</span>
 <span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>)]</span>
@@ -185,9 +205,9 @@
 }
 
 <span class='kw'>impl</span> <span class='ident'>PyString</span> {
-    <span class='doccomment'>/// Dereferences a PyString raw pointer to an inmutable reference.</span>
-    <span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>fn</span> <span class='ident'>from_ptr</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> <span class='ident'>PyString</span> {
-        <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>
+    <span class='doccomment'>/// Get a PyString from a previously boxed raw pointer.</span>
+    <span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>fn</span> <span class='ident'>from_ptr</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span>) <span class='op'>-&gt;</span> <span class='ident'>PyString</span> {
+        <span class='op'>*</span>(<span class='ident'>Box</span>::<span class='ident'>from_raw</span>(<span class='ident'>ptr</span>))
     }
     <span class='doccomment'>/// Constructs an owned String from a PyString.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>to_string</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>String</span> {
@@ -195,13 +215,17 @@
     }
     <span class='doccomment'>/// Constructs an owned String from a raw pointer.</span>
     <span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>fn</span> <span class='ident'>from_ptr_to_string</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span>) <span class='op'>-&gt;</span> <span class='ident'>String</span> {
-        <span class='kw'>let</span> <span class='ident'>pystr</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
+        <span class='kw'>let</span> <span class='ident'>pystr</span> <span class='op'>=</span> <span class='op'>*</span>(<span class='ident'>Box</span>::<span class='ident'>from_raw</span>(<span class='ident'>ptr</span>));
         <span class='ident'>String</span>::<span class='ident'>from</span>(<span class='ident'>pystr</span>.<span class='ident'>_inner</span>.<span class='ident'>to_str</span>().<span class='ident'>unwrap</span>())
     }
     <span class='doccomment'>/// Returns PyString as a raw pointer. Use this whenever you want to return</span>
     <span class='doccomment'>/// a PyString to Python.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>as_ptr</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span> {
         <span class='ident'>Box</span>::<span class='ident'>into_raw</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='self'>self</span>))
+    }
+    <span class='doccomment'>/// Return a PyString from a raw char pointer.</span>
+    <span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>fn</span> <span class='ident'>from_raw</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>c_char</span>) <span class='op'>-&gt;</span> <span class='ident'>PyString</span> {
+        <span class='ident'>PyString</span> { <span class='ident'>_inner</span>: <span class='ident'>CStr</span>::<span class='ident'>from_ptr</span>(<span class='ident'>ptr</span>).<span class='ident'>to_owned</span>() }
     }
 }
 
@@ -226,30 +250,46 @@
 }
 
 <span class='doccomment'>/// Destructs the PyString, mostly to be used from Python.</span>
-<span class='attribute'>#[<span class='ident'>allow</span>(<span class='ident'>non_snake_case</span>)]</span>
 <span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>PyString_free</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span>) {
+<span class='kw'>pub</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pystring_free</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span>) {
     <span class='kw'>if</span> <span class='ident'>ptr</span>.<span class='ident'>is_null</span>() {
         <span class='kw'>return</span>;
     }
-    <span class='ident'>Box</span>::<span class='ident'>from_raw</span>(<span class='ident'>ptr</span>);
+    <span class='kw'>unsafe</span> {
+        <span class='ident'>Box</span>::<span class='ident'>from_raw</span>(<span class='ident'>ptr</span>);
+    }
 }
 
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ffi</span>::<span class='ident'>CStr</span>;
 <span class='doccomment'>/// Creates a PyString wrapper from a raw c_char pointer</span>
-<span class='attribute'>#[<span class='ident'>allow</span>(<span class='ident'>non_snake_case</span>)]</span>
 <span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>PyString_new</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>c_char</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span> {
-    <span class='kw'>let</span> <span class='ident'>pystr</span> <span class='op'>=</span> <span class='ident'>PyString</span> { <span class='ident'>_inner</span>: <span class='ident'>CString</span>::<span class='ident'>from_raw</span>(<span class='ident'>ptr</span>) };
+<span class='kw'>pub</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pystring_new</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>c_char</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span> {
+    <span class='kw'>let</span> <span class='ident'>pystr</span> <span class='op'>=</span> <span class='ident'>PyString</span> { <span class='ident'>_inner</span>: <span class='kw'>unsafe</span> { <span class='ident'>CStr</span>::<span class='ident'>from_ptr</span>(<span class='ident'>ptr</span>).<span class='ident'>to_owned</span>() } };
     <span class='ident'>pystr</span>.<span class='ident'>as_ptr</span>()
 }
 
 <span class='doccomment'>/// Consumes the wrapper and returns a raw c_char pointer. Afterwards is not necessary</span>
 <span class='doccomment'>/// to destruct it as it has already been consumed.</span>
-<span class='attribute'>#[<span class='ident'>allow</span>(<span class='ident'>non_snake_case</span>)]</span>
 <span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>PyString_get_str</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>c_char</span> {
-    <span class='kw'>let</span> <span class='ident'>pystr</span>: <span class='ident'>PyString</span> <span class='op'>=</span> <span class='op'>*</span>(<span class='ident'>Box</span>::<span class='ident'>from_raw</span>(<span class='ident'>ptr</span>));
+<span class='kw'>pub</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pystring_get_str</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>c_char</span> {
+    <span class='kw'>let</span> <span class='ident'>pystr</span>: <span class='ident'>PyString</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>PyString</span>::<span class='ident'>from_ptr</span>(<span class='ident'>ptr</span>) };
     <span class='ident'>pystr</span>.<span class='ident'>_inner</span>.<span class='ident'>into_raw</span>()
+}
+
+<span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
+<span class='kw'>mod</span> <span class='ident'>tests</span> {
+    <span class='kw'>use</span> <span class='kw'>super</span>::<span class='op'>*</span>;
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>pystring_operations</span>() {
+        <span class='kw'>let</span> <span class='ident'>source</span> <span class='op'>=</span> <span class='string'>&quot;test string&quot;</span>;
+        <span class='kw'>let</span> <span class='ident'>owned_pystr</span> <span class='op'>=</span> <span class='ident'>PyString</span>::<span class='ident'>from</span>(<span class='ident'>source</span>).<span class='ident'>as_ptr</span>();
+        <span class='kw'>let</span> <span class='ident'>back_from_py</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>PyString</span>::<span class='ident'>from_ptr_to_string</span>(<span class='ident'>owned_pystr</span>) };
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>back_from_py</span>, <span class='string'>&quot;test string&quot;</span>);
+        {
+            <span class='ident'>String</span>::<span class='ident'>from</span>(<span class='ident'>source</span>);
+        }
+    }
 }
 </pre>
 </section>

@@ -47,17 +47,18 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-426' class='srclink' href='../src/rustypy/src/pytypes/pytuple.rs.html#91-138' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-787' class='srclink' href='../src/rustypy/src/pytypes/pytuple.rs.html#114-163' title='goto source code'>[src]</a></span></h1>
 <pre class='rust macro'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>pytuple</span> {
     ( $( <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>elem</span>:<span class='ident'>ident</span> ),<span class='op'>+</span> ) <span class='op'>=&gt;</span> { ... };
     ( $( <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>elem</span>:<span class='ident'>expr</span> ),<span class='op'>+</span> ) <span class='op'>=&gt;</span> { ... };
 }</pre>
-<div class='docblock'><p>This macro allows the construction of <a href="../rustypy/pytypes/struct.PyTuple.html">PyTuple</a> types.</p>
+<div class='docblock'><p>This macro allows the construction of <a href="../rustypy/pytypes/pytuple/struct.PyTuple.html">PyTuple</a>
+types.</p>
 
 <h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
 <pre class='rust rust-example-rendered'>
-<span class='macro'>pytuple</span><span class='macro'>!</span>(<span class='ident'>PyArg</span>::<span class='ident'>I64</span>(<span class='number'>10</span>), <span class='ident'>PyArg</span>::<span class='ident'>F32</span>(<span class='number'>10.5</span>))</pre>
+<span class='macro'>pytuple</span><span class='macro'>!</span>(<span class='ident'>PyArg</span>::<span class='ident'>I64</span>(<span class='number'>10</span>), <span class='ident'>PyArg</span>::<span class='ident'>F32</span>(<span class='number'>10.5</span>));</pre>
 </div></section>
     <section id='search' class="content hidden"></section>
 

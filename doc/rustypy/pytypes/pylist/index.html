@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `pylist` mod in crate `rustypy`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, pylist">
+
+    <title>rustypy::pytypes::pylist - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a></p><script>window.sidebarCurrent = {name: 'pylist', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Module <a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a>::<wbr><a class='mod' href=''>pylist</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-362' class='srclink' href='../../../src/rustypy/src/pytypes/pylist.rs.html#1-421' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>An analog of a Python list which contains elements of a single type, will accept an
+undefined number of one (and just one) of any other supported type (including other
+PyLists).</p>
+
+<p>PyList can be constructed from other iterable types as long as the inner type is
+supported and will own the inner content (a copy will be performed).</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='ident'>PyList</span>::<span class='ident'>from_iter</span>(<span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>1u32</span>; <span class='number'>3</span>]);</pre>
+
+<p>You can also use the typical vector interfaces (push, pop, remove, etc.) as long as the
+type is supported (check <a href="../rustypy/pytypes/enum.PyArg.html">PyArg</a> variants).</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='comment'>// required to use push:</span>
+<span class='kw'>use</span> <span class='ident'>rustypy</span>::<span class='ident'>pytypes</span>::<span class='ident'>pylist</span>::<span class='ident'>PyListPush</span>;
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>l</span> <span class='op'>=</span> <span class='ident'>PyList</span>::<span class='ident'>new</span>();
+<span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>0u32</span>, <span class='number'>1</span>, <span class='number'>3</span>] {
+    <span class='ident'>l</span>.<span class='ident'>push</span>(<span class='ident'>e</span>);
+}</pre>
+
+<p>When extracting in Python with the FFI, elements are moved, not copied
+(except for PyTuples which require an extra copy)
+and when free&#39;d all the original elements are dropped.</p>
+
+<h2 id='unpacking-pylist-from-python' class='section-header'><a href='#unpacking-pylist-from-python'>Unpacking PyList from Python</a></h2>
+<p>Is recommended to use the <a href="../../macro.unpack_pylist!.html">unpack_pylist!</a> macro in order
+to convert a PyList to a Rust native type. Check the macro documentation for more info.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.PyList.html'
+                                  title='rustypy::pytypes::pylist::PyList'>PyList</a></td>
+                           <td class='docblock short'>
+                                <p>An analog of a Python list which contains an undefined number of elements of
+a single kind, of any <a href="../../../rustypy/pytypes/enum.PyArg.html">supported type</a>.</p>
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.PyListPush.html'
+                                  title='rustypy::pytypes::pylist::PyListPush'>PyListPush</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_extract_pybool.html'
+                                  title='rustypy::pytypes::pylist::pylist_extract_pybool'>pylist_extract_pybool</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_extract_pydouble.html'
+                                  title='rustypy::pytypes::pylist::pylist_extract_pydouble'>pylist_extract_pydouble</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_extract_pyfloat.html'
+                                  title='rustypy::pytypes::pylist::pylist_extract_pyfloat'>pylist_extract_pyfloat</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_extract_pyint.html'
+                                  title='rustypy::pytypes::pylist::pylist_extract_pyint'>pylist_extract_pyint</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_extract_pylist.html'
+                                  title='rustypy::pytypes::pylist::pylist_extract_pylist'>pylist_extract_pylist</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_extract_pystring.html'
+                                  title='rustypy::pytypes::pylist::pylist_extract_pystring'>pylist_extract_pystring</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_extract_pytuple.html'
+                                  title='rustypy::pytypes::pylist::pylist_extract_pytuple'>pylist_extract_pytuple</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_free.html'
+                                  title='rustypy::pytypes::pylist::pylist_free'>pylist_free</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_len.html'
+                                  title='rustypy::pytypes::pylist::pylist_len'>pylist_len</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_new.html'
+                                  title='rustypy::pytypes::pylist::pylist_new'>pylist_new</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_push.html'
+                                  title='rustypy::pytypes::pylist::pylist_push'>pylist_push</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "rustypy";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

@@ -47,19 +47,29 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-17' class='srclink' href='../../src/rustypy/src/pytypes/mod.rs.html#1-36' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-17' class='srclink' href='../../src/rustypy/src/pytypes/mod.rs.html#1-104' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Types for interfacing with Python.</p>
 </div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
 <table><tr><td><code>pub use self::<a class='mod'
-                                       href='./pybool/index.html'>pybool</a>::<a class='struct' href='../../rustypy/pytypes/pybool/struct.PyBool.html' title='rustypy::pytypes::pybool::PyBool'>PyBool</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
                                        href='./pystring/index.html'>pystring</a>::<a class='struct' href='../../rustypy/pytypes/pystring/struct.PyString.html' title='rustypy::pytypes::pystring::PyString'>PyString</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
-                                       href='./pytuple/index.html'>pytuple</a>::<a class='struct' href='../../rustypy/pytypes/pytuple/struct.PyTuple.html' title='rustypy::pytypes::pytuple::PyTuple'>PyTuple</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+                                       href='./pybool/index.html'>pybool</a>::<a class='struct' href='../../rustypy/pytypes/pybool/struct.PyBool.html' title='rustypy::pytypes::pybool::PyBool'>PyBool</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
+                                       href='./pytuple/index.html'>pytuple</a>::<a class='struct' href='../../rustypy/pytypes/pytuple/struct.PyTuple.html' title='rustypy::pytypes::pytuple::PyTuple'>PyTuple</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
+                                       href='./pylist/index.html'>pylist</a>::<a class='struct' href='../../rustypy/pytypes/pylist/struct.PyList.html' title='rustypy::pytypes::pylist::PyList'>PyList</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
                        <tr class=' module-item'>
                            <td><a class='mod' href='pybool/index.html'
                                   title='rustypy::pytypes::pybool'>pybool</a></td>
                            <td class='docblock short'>
                                 <p>Analog to a Python boolean type.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='mod' href='pylist/index.html'
+                                  title='rustypy::pytypes::pylist'>pylist</a></td>
+                           <td class='docblock short'>
+                                <p>An analog of a Python list which contains elements of a single type, will accept an
+undefined number of one (and just one) of any other supported type (including other
+PyLists).</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
@@ -73,7 +83,7 @@
                            <td><a class='mod' href='pytuple/index.html'
                                   title='rustypy::pytypes::pytuple'>pytuple</a></td>
                            <td class='docblock short'>
-                                <p>An analog of a Python tuple, will accept an undefined number of other supported types.</p>
+                                <p>An analog of a Python tuple, will accept an undefined number of any other supported types.</p>
                            </td>
                        </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
@@ -81,8 +91,58 @@
                            <td><a class='enum' href='enum.PyArg.html'
                                   title='rustypy::pytypes::PyArg'>PyArg</a></td>
                            <td class='docblock short'>
-                                <p>Enum type used to construct PyTuple types. All the kinds supported in Python
+                                <p>Enum type used to construct PyTuple and PyList types. All the kinds supported in Python
 are included here.</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pyarg_from_bool.html'
+                                  title='rustypy::pytypes::pyarg_from_bool'>pyarg_from_bool</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pyarg_from_double.html'
+                                  title='rustypy::pytypes::pyarg_from_double'>pyarg_from_double</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pyarg_from_float.html'
+                                  title='rustypy::pytypes::pyarg_from_float'>pyarg_from_float</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pyarg_from_int.html'
+                                  title='rustypy::pytypes::pyarg_from_int'>pyarg_from_int</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pyarg_from_pylist.html'
+                                  title='rustypy::pytypes::pyarg_from_pylist'>pyarg_from_pylist</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pyarg_from_pytuple.html'
+                                  title='rustypy::pytypes::pyarg_from_pytuple'>pyarg_from_pytuple</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pyarg_from_str.html'
+                                  title='rustypy::pytypes::pyarg_from_str'>pyarg_from_str</a></td>
+                           <td class='docblock short'>
+                                
                            </td>
                        </tr></table></section>
     <section id='search' class="content hidden"></section>

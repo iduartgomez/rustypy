@@ -47,7 +47,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-66' class='srclink' href='../../../src/rustypy/src/pytypes/pybool.rs.html#1-230' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-69' class='srclink' href='../../../src/rustypy/src/pytypes/pybool.rs.html#1-238' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Analog to a Python boolean type.</p>
 
 <p>It supports &amp; and | operators, and comparison to Rust bool types.
@@ -62,12 +62,12 @@ dereferencing a raw pointer.</p>
 <pre class='rust rust-example-rendered'>
 <span class='kw'>use</span> <span class='ident'>rustypy</span>::<span class='ident'>PyBool</span>;
 <span class='kw'>let</span> <span class='ident'>pybool</span> <span class='op'>=</span> <span class='ident'>PyBool</span>::<span class='ident'>from</span>(<span class='bool-val'>true</span>);
-<span class='ident'>assert_eq</span>(<span class='ident'>pybool</span>, <span class='bool-val'>true</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>pybool</span>, <span class='bool-val'>true</span>);
 
 <span class='comment'>// prepare to return to Python:</span>
 <span class='kw'>let</span> <span class='ident'>ptr</span> <span class='op'>=</span> <span class='ident'>pybool</span>.<span class='ident'>as_ptr</span>();
 <span class='comment'>// convert from raw pointer to a bool</span>
-<span class='kw'>let</span> <span class='ident'>rust_bool</span> <span class='op'>=</span> <span class='ident'>PyBool</span>::<span class='ident'>from_ptr_into_bool</span>(<span class='ident'>ptr</span>);</pre>
+<span class='kw'>let</span> <span class='ident'>rust_bool</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>PyBool</span>::<span class='ident'>from_ptr_into_bool</span>(<span class='ident'>ptr</span>) };</pre>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
@@ -79,22 +79,22 @@ dereferencing a raw pointer.</p>
                        </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.PyBool_free.html'
-                                  title='rustypy::pytypes::pybool::PyBool_free'>PyBool_free</a></td>
+                           <td><a class='fn' href='fn.pybool_free.html'
+                                  title='rustypy::pytypes::pybool::pybool_free'>pybool_free</a></td>
                            <td class='docblock short'>
                                 
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.PyBool_get_val.html'
-                                  title='rustypy::pytypes::pybool::PyBool_get_val'>PyBool_get_val</a></td>
+                           <td><a class='fn' href='fn.pybool_get_val.html'
+                                  title='rustypy::pytypes::pybool::pybool_get_val'>pybool_get_val</a></td>
                            <td class='docblock short'>
                                 
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.PyBool_new.html'
-                                  title='rustypy::pytypes::pybool::PyBool_new'>PyBool_new</a></td>
+                           <td><a class='fn' href='fn.pybool_new.html'
+                                  title='rustypy::pytypes::pybool::pybool_new'>pybool_new</a></td>
                            <td class='docblock short'>
                                 
                            </td>

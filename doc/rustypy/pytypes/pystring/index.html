@@ -47,7 +47,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-18' class='srclink' href='../../../src/rustypy/src/pytypes/pystring.rs.html#1-104' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-18' class='srclink' href='../../../src/rustypy/src/pytypes/pystring.rs.html#1-124' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>An analog of a Python String.</p>
 
 <p>To return to Python you must use as_ptr method and return a raw pointer.
@@ -67,35 +67,35 @@ as they require dereferencing a raw pointer.</p>
 <span class='comment'>// prepare to return to Python:</span>
 <span class='kw'>let</span> <span class='ident'>ptr</span> <span class='op'>=</span> <span class='ident'>pystr</span>.<span class='ident'>as_ptr</span>();
 <span class='comment'>// convert from raw pointer to an owned String</span>
-<span class='kw'>let</span> <span class='ident'>rust_string</span> <span class='op'>=</span> <span class='ident'>PyString</span>::<span class='ident'>from_ptr_into_string</span>(<span class='ident'>ptr</span>);</pre>
+<span class='kw'>let</span> <span class='ident'>rust_string</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>PyString</span>::<span class='ident'>from_ptr_to_string</span>(<span class='ident'>ptr</span>) };</pre>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
                            <td><a class='struct' href='struct.PyString.html'
                                   title='rustypy::pytypes::pystring::PyString'>PyString</a></td>
                            <td class='docblock short'>
-                                <p>An analog of a Python String.</p>
+                                <p>An analog of a Python string.</p>
                            </td>
                        </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.PyString_free.html'
-                                  title='rustypy::pytypes::pystring::PyString_free'>PyString_free</a></td>
+                           <td><a class='fn' href='fn.pystring_free.html'
+                                  title='rustypy::pytypes::pystring::pystring_free'>pystring_free</a></td>
                            <td class='docblock short'>
                                 <p>Destructs the PyString, mostly to be used from Python.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.PyString_get_str.html'
-                                  title='rustypy::pytypes::pystring::PyString_get_str'>PyString_get_str</a></td>
+                           <td><a class='fn' href='fn.pystring_get_str.html'
+                                  title='rustypy::pytypes::pystring::pystring_get_str'>pystring_get_str</a></td>
                            <td class='docblock short'>
                                 <p>Consumes the wrapper and returns a raw c_char pointer. Afterwards is not necessary
 to destruct it as it has already been consumed.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.PyString_new.html'
-                                  title='rustypy::pytypes::pystring::PyString_new'>PyString_new</a></td>
+                           <td><a class='fn' href='fn.pystring_new.html'
+                                  title='rustypy::pytypes::pystring::pystring_new'>pystring_new</a></td>
                            <td class='docblock short'>
                                 <p>Creates a PyString wrapper from a raw c_char pointer</p>
                            </td>
