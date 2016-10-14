@@ -45,6 +45,7 @@ use std::iter::{FromIterator, IntoIterator};
 /// Read the [module docs](index.html) for more information.
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct PyList {
     members: Vec<PyArg>,
 }
@@ -87,8 +88,8 @@ impl PyList {
 /// ```
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
-/// #    use rustypy::{PyString, PyList};
-/// #    use std::iter::FromIterator;
+/// use rustypy::{PyString, PyList};
+/// use std::iter::FromIterator;
 /// let string_list = Box::new(PyList::from_iter(vec![PyString::from(String::from("Python")),
 ///                                                   PyString::from(String::from("in")),
 ///                                                   PyString::from(String::from("Rust"))]));
@@ -101,8 +102,8 @@ impl PyList {
 /// ```
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
-/// #    use rustypy::{PyString, PyList};
-/// #    use std::iter::FromIterator;
+/// use rustypy::{PyString, PyList};
+/// use std::iter::FromIterator;
 /// let int_list = Box::new(PyList::from_iter(vec![1i32; 5]));
 /// let unpacked = unpack_pylist!(int_list; PyList{I32 => i32});
 /// # }

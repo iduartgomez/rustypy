@@ -29,8 +29,9 @@ use pytypes::{PyArg, PyBool, PyString, PyList};
 /// [supported types](../../../rustypy/pytypes/enum.PyArg.html).
 ///
 /// Read the [module docs](index.html) for more information.
-#[derive(Debug)]
 #[derive(Clone)]
+#[derive(Debug)]
+#[derive(PartialEq)]
 pub struct PyTuple {
     pub elem: PyArg,
     pub idx: usize,
@@ -354,7 +355,6 @@ pub unsafe extern "C" fn pytuple_push(next: *mut PyTuple, prev: &mut PyTuple) {
     prev.push(next)
 }
 
-#[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn pytuple_free(ptr: *mut PyTuple) {
     if ptr.is_null() {

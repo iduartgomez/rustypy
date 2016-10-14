@@ -31,6 +31,9 @@ use std::fmt;
 /// Read the [module docs](index.html) for more information.
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Eq)]
+#[derive(Hash)]
 pub struct PyString {
     _inner: CString,
 }

@@ -30,6 +30,9 @@ use std::ops::{Not, BitAnd, BitOr};
 /// Read the [module docs](index.html) for more information.
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Eq)]
+#[derive(Hash)]
 pub struct PyBool {
     val: i8,
 }
