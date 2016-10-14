@@ -471,6 +471,10 @@ class PyList(PythonObject):
 
 FIND_TYPE = re.compile("type\((.*)\)")
 
+# ==================== #
+#   Conversion Funcs   #
+# ==================== #
+
 
 def _get_signature_types(params):
     def inner_types(t):
@@ -575,6 +579,10 @@ def _extract_pytypes(ref, sig=False, call_fn=None, depth=0, elem_num=None):
     else:
         raise TypeError("rustypy: return type not supported")
 
+# ============================= #
+#   Helper classes and funcs    #
+# ============================= #
+
 
 def get_crate_entry(mod, manifest):
     rgx_lib = re.compile(r'\[lib\]')
@@ -608,10 +616,6 @@ def bind_rs_crate_funcs(mod, lib, cargo=False, ismodule=False, prefix=None):
         entry_point = get_crate_entry(mod, manifest)
     return RustBinds(entry_point, lib, prefix=prefix)
 
-# ==================== #
-#   Support classes    #
-# ==================== #
-
 
 class KrateData(object):
 
@@ -637,12 +641,9 @@ class KrateData(object):
         self._idx += 1
         return PyString(val)
 
-# ==================== #
-#   Main generators    #
-# ==================== #
-
 
 class RustBinds(object):
+    """Main binding generator class."""
 
     def __init__(self, entry_point, compiled_lib, prefix=None):
         self._FFI = ctypes.cdll.LoadLibrary(compiled_lib)
