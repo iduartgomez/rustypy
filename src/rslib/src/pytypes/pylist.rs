@@ -33,7 +33,6 @@
 //! Is recommended to use the [unpack_pylist!](../../macro.unpack_pylist!.html) macro in order
 //! to convert a PyList to a Rust native type. Check the macro documentation for more info.
 
-use libc;
 use pytypes::{PyArg, PyBool, PyString, PyTuple};
 
 use std::ops::{Index, IndexMut};
@@ -43,9 +42,7 @@ use std::iter::{FromIterator, IntoIterator};
 /// a single kind, of any [supported type](../../../rustypy/pytypes/enum.PyArg.html).
 ///
 /// Read the [module docs](index.html) for more information.
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PyList {
     members: Vec<PyArg>,
 }
@@ -262,9 +259,27 @@ impl PyListPush<PyString> for PyList {
     }
 }
 
+impl PyListPush<String> for PyList {
+    fn push(&mut self, e: String) {
+        self.members.push(PyArg::PyString(PyString::from(e)));
+    }
+}
+
+impl<'a> PyListPush<&'a str> for PyList {
+    fn push(&mut self, e: &'a str) {
+        self.members.push(PyArg::PyString(PyString::from(e)));
+    }
+}
+
 impl PyListPush<PyBool> for PyList {
     fn push(&mut self, e: PyBool) {
         self.members.push(PyArg::PyBool(e));
+    }
+}
+
+impl PyListPush<bool> for PyList {
+    fn push(&mut self, e: bool) {
+        self.members.push( PyArg::PyBool(PyBool::from(e)));
     }
 }
 
@@ -346,77 +361,7 @@ pub extern "C" fn pylist_free(ptr: *mut PyList) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pylist_extract_pyint(ptr: *mut PyList, index: usize) -> i64 {
+pub unsafe extern "C" fn pylist_get_element(ptr: *mut PyList, index: usize) -> *mut PyArg {
     let list = &mut *ptr;
-    let elem = PyList::remove(list, index);
-    match elem {
-        PyArg::I64(val) => val,
-        PyArg::I32(val) => val as i64,
-        PyArg::I16(val) => val as i64,
-        PyArg::I8(val) => val as i64,
-        PyArg::U32(val) => val as i64,
-        PyArg::U16(val) => val as i64,
-        PyArg::U8(val) => val as i64,
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pylist_extract_pybool(ptr: *mut PyList, index: usize) -> PyBool {
-    let list = &mut *ptr;
-    let elem = PyList::remove(list, index);
-    match elem {
-        PyArg::PyBool(val) => val,
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pylist_extract_pyfloat(ptr: *mut PyList, index: usize) -> f32 {
-    let list = &mut *ptr;
-    let elem = PyList::remove(list, index);
-    match elem {
-        PyArg::F32(val) => val,
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pylist_extract_pydouble(ptr: *mut PyList, index: usize) -> f64 {
-    let list = &mut *ptr;
-    let elem = PyList::remove(list, index);
-    match elem {
-        PyArg::F64(val) => val,
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pylist_extract_pystring(ptr: *mut PyList, index: usize) -> *mut PyString {
-    let list = &mut *ptr;
-    let elem = PyList::remove(list, index);
-    match elem {
-        PyArg::PyString(val) => val.as_ptr(),
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pylist_extract_pytuple(ptr: *mut PyList, index: usize) -> *mut PyTuple {
-    let list = &mut *ptr;
-    let elem = PyList::remove(list, index);
-    match elem {
-        PyArg::PyTuple(val) => (*val).as_ptr(),
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pylist_extract_pylist(ptr: *mut PyList, index: usize) -> *mut PyList {
-    let list = &mut *ptr;
-    let elem = PyList::remove(list, index);
-    match elem {
-        PyArg::PyList(val) => (*val).as_ptr(),
-        _ => _abort_xtract_fail!(elem),
-    }
+    Box::into_raw(Box::new(PyList::remove(list, index)))
 }

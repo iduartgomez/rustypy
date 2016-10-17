@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rustypy;
 
-use rustypy::{PyArg, PyList, PyString, PyBool};
+use rustypy::{PyArg, PyList, PyTuple, PyString, PyBool};
 
 #[test]
 fn test_unpack_pylist_macro() {
@@ -22,15 +22,8 @@ fn test_pytuple_macros() {
                        PyArg::PyString(PyString::from("test")),
                        PyArg::I64(55i64))
         .as_ptr();
-    use rustypy::pytypes::pytuple;
-    let e1 = unsafe { PyBool::from_ptr(pytuple::pytuple_extract_pybool(ptr, 0usize)) };
-    assert_eq!(e1.to_bool(), false);
-    let e2 = unsafe { PyString::from_ptr(pytuple::pytuple_extract_pystring(ptr, 1usize)) };
-    assert_eq!(&(e2.to_string()), "test");
-    let e3 = unsafe { pytuple::pytuple_extract_pyint(ptr, 2usize) };
-    assert_eq!(e3, 55);
 
-    let pytuple = unsafe { rustypy::PyTuple::from_ptr(ptr) };
+    let pytuple = unsafe { PyTuple::from_ptr(ptr) };
     let unpacked = unpack_pytuple!(pytuple; (PyBool, PyString, I64,));
     assert_eq!((false, String::from("test"), 55i64), unpacked);
 }

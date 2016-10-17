@@ -22,16 +22,13 @@
 use std::iter::IntoIterator;
 use std::ops::Deref;
 
-use libc;
-use pytypes::{PyArg, PyBool, PyString, PyList};
+use pytypes::PyArg;
 
 /// An analog of a Python tuple, will accept an undefined number of other
 /// [supported types](../../../rustypy/pytypes/enum.PyArg.html).
 ///
 /// Read the [module docs](index.html) for more information.
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PyTuple {
     pub elem: PyArg,
     pub idx: usize,
@@ -372,79 +369,9 @@ pub extern "C" fn pytuple_len(ptr: *mut PyTuple) -> usize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pyint(ptr: *mut PyTuple, index: usize) -> i64 {
+pub unsafe extern "C" fn pytuple_get_element(ptr: *mut PyTuple, index: usize) -> *mut PyArg {
     let tuple = &*ptr;
-    let elem = PyTuple::get_element(tuple, index).unwrap();
-    match elem.elem {
-        PyArg::I64(val) => val,
-        PyArg::I32(val) => val as i64,
-        PyArg::I16(val) => val as i64,
-        PyArg::I8(val) => val as i64,
-        PyArg::U32(val) => val as i64,
-        PyArg::U16(val) => val as i64,
-        PyArg::U8(val) => val as i64,
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pybool(ptr: *mut PyTuple, index: usize) -> *mut PyBool {
-    let tuple = &*ptr;
-    let elem = PyTuple::get_element(tuple, index).unwrap();
-    match elem.elem {
-        PyArg::PyBool(ref val) => val.clone().as_ptr(),
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pyfloat(ptr: *mut PyTuple, index: usize) -> f32 {
-    let tuple = &*ptr;
-    let elem = PyTuple::get_element(tuple, index).unwrap();
-    match elem.elem {
-        PyArg::F32(val) => val,
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pydouble(ptr: *mut PyTuple, index: usize) -> f64 {
-    let tuple = &*ptr;
-    let elem = PyTuple::get_element(tuple, index).unwrap();
-    match elem.elem {
-        PyArg::F64(val) => val,
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pystring(ptr: *mut PyTuple,
-                                                  index: usize)
-                                                  -> *mut PyString {
-    let tuple = &*ptr;
-    let elem = PyTuple::get_element(tuple, index).unwrap();
-    match elem.elem {
-        PyArg::PyString(ref val) => val.clone().as_ptr(),
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pytuple(ptr: *mut PyTuple, index: usize) -> *mut PyTuple {
-    let tuple = &*ptr;
-    let elem = PyTuple::get_element(tuple, index).unwrap();
-    match elem.elem {
-        PyArg::PyTuple(ref val) => (*val).clone().as_ptr(),
-        _ => _abort_xtract_fail!(elem),
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pytuple_extract_pylist(ptr: *mut PyTuple, index: usize) -> *mut PyList {
-    let tuple = &*ptr;
-    let elem = PyTuple::get_element(tuple, index).unwrap();
-    match elem.elem {
-        PyArg::PyList(ref val) => (*val).clone().as_ptr(),
-        _ => _abort_xtract_fail!(elem),
-    }
+    let ref elem = PyTuple::get_element(tuple, index).unwrap().elem;
+    let copied: PyArg = elem.clone();
+    Box::into_raw(Box::new(copied))
 }

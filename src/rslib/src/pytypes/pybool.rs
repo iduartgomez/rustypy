@@ -28,11 +28,7 @@ use std::ops::{Not, BitAnd, BitOr};
 /// Analog to a Python boolean type.
 ///
 /// Read the [module docs](index.html) for more information.
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(PartialEq)]
-#[derive(Eq)]
-#[derive(Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 pub struct PyBool {
     val: i8,
 }

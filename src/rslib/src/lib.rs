@@ -44,7 +44,7 @@ pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> 
         Err(Some(_)) => return 2 as c_uint,
     };
     // prepare data for Python
-    krate_data.visit_mod(&krate.module, krate.span, 0);
+    krate_data.visit_mod(&krate.module, krate.span, ast::CRATE_NODE_ID);
     krate_data.collect_values();
     return 0 as c_uint;
 }
@@ -58,28 +58,6 @@ fn parse<'a, T: ?Sized + AsRef<Path>>(path: &T,
         Ok(_) if parse_session.span_diagnostic.has_errors() => Err(None),
         Ok(krate) => Ok(krate),
         Err(e) => Err(Some(e)),
-    }
-}
-
-#[derive(Debug)]
-struct FnDef {
-    name: String,
-    process: bool,
-    args: Vec<String>,
-}
-
-impl FnDef {
-    fn new(name: InternedString) -> FnDef {
-        let mut n = String::with_capacity(name.len());
-        n.push_str(&name);
-        FnDef {
-            name: n,
-            process: true,
-            args: Vec::new(),
-        }
-    }
-    fn add_type(&mut self, ty: String) {
-        self.args.push(ty);
     }
 }
 
@@ -132,37 +110,6 @@ impl KrateData {
     }
 }
 
-// C FFI for KrateData objects:
-#[doc(hidden)]
-#[no_mangle]
-pub extern "C" fn krate_data_new() -> *mut KrateData {
-    Box::into_raw(Box::new(KrateData::new()))
-}
-
-#[doc(hidden)]
-#[no_mangle]
-pub extern "C" fn krate_data_free(ptr: *mut KrateData) {
-    if ptr.is_null() {
-        return;
-    }
-    unsafe { *(Box::from_raw(ptr)) };
-}
-
-#[doc(hidden)]
-#[no_mangle]
-pub extern "C" fn krate_data_len(krate: &KrateData) -> size_t {
-    krate.collected.len()
-}
-
-#[doc(hidden)]
-#[no_mangle]
-pub extern "C" fn krate_data_iter(krate: &KrateData, idx: size_t) -> *mut PyString {
-    match krate.iter_krate(idx as usize) {
-        Some(val) => PyString::from(val).as_ptr(),
-        None => PyString::from("NO_IDX_ERROR").as_ptr(),
-    }
-}
-
 impl Visitor for KrateData {
     fn visit_fn(&mut self,
                 fnkind: FnKind,
@@ -201,5 +148,58 @@ impl Visitor for KrateData {
         if name.as_str().contains("python_bind_") {
             self.functions.insert(span, FnDef::new(name.as_str()));
         }
+    }
+}
+
+#[derive(Debug)]
+struct FnDef {
+    name: String,
+    process: bool,
+    args: Vec<String>,
+}
+
+impl FnDef {
+    fn new(name: InternedString) -> FnDef {
+        let mut n = String::with_capacity(name.len());
+        n.push_str(&name);
+        FnDef {
+            name: n,
+            process: true,
+            args: Vec::new(),
+        }
+    }
+    fn add_type(&mut self, ty: String) {
+        self.args.push(ty);
+    }
+}
+
+// C FFI for KrateData objects:
+#[doc(hidden)]
+#[no_mangle]
+pub extern "C" fn krate_data_new() -> *mut KrateData {
+    Box::into_raw(Box::new(KrateData::new()))
+}
+
+#[doc(hidden)]
+#[no_mangle]
+pub extern "C" fn krate_data_free(ptr: *mut KrateData) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe { *(Box::from_raw(ptr)) };
+}
+
+#[doc(hidden)]
+#[no_mangle]
+pub extern "C" fn krate_data_len(krate: &KrateData) -> size_t {
+    krate.collected.len()
+}
+
+#[doc(hidden)]
+#[no_mangle]
+pub extern "C" fn krate_data_iter(krate: &KrateData, idx: size_t) -> *mut PyString {
+    match krate.iter_krate(idx as usize) {
+        Some(val) => PyString::from(val).as_ptr(),
+        None => PyString::from("NO_IDX_ERROR").as_ptr(),
     }
 }

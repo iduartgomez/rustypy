@@ -12,7 +12,7 @@ from rustypy.rswrapper import bind_rs_crate_funcs, Float, Double, load_rust_lib
 
 def setUpModule():
     # compile rust lib
-    load_rust_lib(recmpl=True)
+    load_rust_lib(recmpl=False)
     global _py_test_dir
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     global _rs_lib_dir

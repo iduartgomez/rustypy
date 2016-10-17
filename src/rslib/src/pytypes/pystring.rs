@@ -29,11 +29,7 @@ use std::fmt;
 /// An analog of a Python string.
 ///
 /// Read the [module docs](index.html) for more information.
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(PartialEq)]
-#[derive(Eq)]
-#[derive(Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PyString {
     _inner: CString,
 }

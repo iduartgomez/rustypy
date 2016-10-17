@@ -43,6 +43,7 @@ pub extern "C" fn python_bind_int_tuple(e1: i32, e2: i32) -> *mut PyTuple {
 #[no_mangle]
 pub extern "C" fn python_bind_str_tuple(e1: *mut PyString) -> *mut PyTuple {
     let s = PyString::from(unsafe { PyString::from_ptr_to_string(e1) });
+
     pytuple!(PyArg::PyString(s),
              PyArg::PyString(PyString::from("from Rust")))
         .as_ptr()
