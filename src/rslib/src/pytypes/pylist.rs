@@ -3,12 +3,13 @@
 //! PyLists).
 //!
 //! PyList can be constructed from other iterable types as long as the inner type is
-//! supported and will own the inner content (a copy will be performed).
+//! supported (a copy will be performed in case is necessary).
 //!
 //! ```
 //! # use rustypy::PyList;
 //! # use std::iter::FromIterator;
-//! PyList::from_iter(vec![1u32; 3]);
+//! PyList::from_iter(vec![1u32; 3]); // copied
+//! PyList::from(vec![1u32; 3]); // moved
 //! ```
 //!
 //! You can also use the typical vector interfaces (push, pop, remove, etc.) as long as the
@@ -145,8 +146,7 @@ macro_rules! unpack_pylist {
                     let inner = unpack_pylist!(val; $o { $($t)* });
                     list.push_front(inner);
                 },
-                Some(_) => panic!(
-                    "rustypy: expected an other type while converting pylist to vec"),
+                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
                 None => {}
             }
         };
@@ -169,8 +169,7 @@ macro_rules! unpack_pylist {
                 let e = self.pop();
                 match e {
                     Some(PyArg::$t(val)) => Some(val),
-                    Some(_) => panic!(
-                        "rustypy: expected an other type while converting pylist to vec"),
+                    Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
                     None => None
                 }
             }
@@ -195,8 +194,28 @@ impl IntoIterator for PyList {
     }
 }
 
+impl Into<Vec<PyArg>> for PyList {
+    fn into(self) -> Vec<PyArg> {
+        self.members
+    }
+}
+
+impl From<Vec<PyArg>> for PyList {
+    fn from(v: Vec<PyArg>) -> PyList {
+        PyList {
+            members: v
+        }
+    }
+}
+
 pub trait PyListPush<T> {
     fn push(&mut self, e: T);
+}
+
+impl PyListPush<PyArg> for PyList {
+    fn push(&mut self, e: PyArg) {
+        self.members.push(e);
+    }
 }
 
 impl PyListPush<i64> for PyList {
@@ -280,12 +299,6 @@ impl PyListPush<PyBool> for PyList {
 impl PyListPush<bool> for PyList {
     fn push(&mut self, e: bool) {
         self.members.push( PyArg::PyBool(PyBool::from(e)));
-    }
-}
-
-impl PyListPush<PyArg> for PyList {
-    fn push(&mut self, e: PyArg) {
-        self.members.push(e);
     }
 }
 

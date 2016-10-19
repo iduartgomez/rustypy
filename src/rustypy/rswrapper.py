@@ -8,11 +8,12 @@ import re
 import types
 import typing
 from string import Template
-from collections import deque
+from collections import deque, namedtuple
 
 ##### CFFI #####
 import ctypes
 from ctypes import POINTER, ARRAY, c_void_p
+
 global c_backend
 c_backend = None
 
@@ -40,6 +41,8 @@ RS_TYPE_CONVERSION = {
     'PyString': 'str',
     'PyList': 'list',
     'HashMap': 'dict',
+    'usize': 'POINTER',
+    'size_t': 'POINTER',
     'void': 'None',
 }
 
@@ -57,6 +60,22 @@ class PyTuple_RS(ctypes.Structure):
 
 
 class PyList_RS(ctypes.Structure):
+    pass
+
+
+class PyDict_RS(ctypes.Structure):
+    pass
+
+
+class KeyType_RS(ctypes.Structure):
+    pass
+
+
+class DrainPyDict_RS(ctypes.Structure):
+    pass
+
+
+class Raw_RS(ctypes.Structure):
     pass
 
 
@@ -125,11 +144,31 @@ def config_ctypes():
         POINTER(PyList_RS), ctypes.c_size_t)
     c_backend.pylist_get_element.restype = POINTER(PyArg_RS)
 
+    # Dict related functions
+    c_backend.pydict_new.argtypes = (POINTER(KeyType_RS), )
+    c_backend.pydict_new.restype = POINTER(PyDict_RS)
+    c_backend.pydict_free.argtypes = (POINTER(PyDict_RS), POINTER(KeyType_RS))
+    c_backend.pydict_free.restype = c_void_p
+    c_backend.pydict_get_key_type.argtypes = (ctypes.c_uint, )
+    c_backend.pydict_get_key_type.restype = POINTER(KeyType_RS)
+    c_backend.pydict_insert.argtypes = (POINTER(PyDict_RS), POINTER(
+        KeyType_RS), POINTER(PyArg_RS), POINTER(PyArg_RS))
+    c_backend.pydict_insert.restype = c_void_p
+    c_backend.pydict_get_element.restype = POINTER(PyArg_RS)
+    c_backend.pydict_get_drain.argtypes = (
+        POINTER(PyDict_RS), POINTER(KeyType_RS))
+    c_backend.pydict_get_drain.restype = POINTER(DrainPyDict_RS)
+    c_backend.pydict_drain_element.argtypes = (
+        POINTER(DrainPyDict_RS), POINTER(KeyType_RS))
+    c_backend.pydict_drain_element.restype = POINTER(PyTuple_RS)
+
     # Wrap type in PyArg enum
     c_backend.pyarg_from_str.argtypes = (ctypes.c_char_p,)
     c_backend.pyarg_from_str.restype = POINTER(PyArg_RS)
     c_backend.pyarg_from_int.argtypes = (ctypes.c_longlong,)
     c_backend.pyarg_from_int.restype = POINTER(PyArg_RS)
+    c_backend.pyarg_from_ulonglong.argtypes = (ctypes.c_ulonglong,)
+    c_backend.pyarg_from_ulonglong.restype = POINTER(PyArg_RS)
     c_backend.pyarg_from_float.argtypes = (ctypes.c_float,)
     c_backend.pyarg_from_float.restype = POINTER(PyArg_RS)
     c_backend.pyarg_from_double.argtypes = (ctypes.c_double,)
@@ -140,9 +179,13 @@ def config_ctypes():
     c_backend.pyarg_from_pytuple.restype = POINTER(PyArg_RS)
     c_backend.pyarg_from_pylist.argtypes = (POINTER(PyList_RS),)
     c_backend.pyarg_from_pylist.restype = POINTER(PyArg_RS)
+    c_backend.pyarg_from_pydict.argtypes = (POINTER(PyDict_RS),)
+    c_backend.pyarg_from_pydict.restype = POINTER(PyArg_RS)
     # Get val from enum
     c_backend.pyarg_extract_owned_int.argtypes = (POINTER(PyArg_RS),)
     c_backend.pyarg_extract_owned_int.restype = ctypes.c_longlong
+    c_backend.pyarg_extract_owned_ulonglong.argtypes = (POINTER(PyArg_RS),)
+    c_backend.pyarg_extract_owned_ulonglong.restype = ctypes.c_ulonglong
     c_backend.pyarg_extract_owned_float.argtypes = (POINTER(PyArg_RS),)
     c_backend.pyarg_extract_owned_float.restype = ctypes.c_float
     c_backend.pyarg_extract_owned_double.argtypes = (POINTER(PyArg_RS),)
@@ -155,6 +198,8 @@ def config_ctypes():
     c_backend.pyarg_extract_owned_tuple.restype = POINTER(PyTuple_RS)
     c_backend.pyarg_extract_owned_list.argtypes = (POINTER(PyArg_RS),)
     c_backend.pyarg_extract_owned_list.restype = POINTER(PyList_RS)
+    c_backend.pyarg_extract_owned_dict.argtypes = (POINTER(PyArg_RS),)
+    c_backend.pyarg_extract_owned_dict.restype = POINTER(PyDict_RS)
 
 
 def load_rust_lib(recmpl=False):
@@ -190,12 +235,10 @@ def load_rust_lib(recmpl=False):
 #   Type Wrappers      #
 # ==================== #
 
-from collections import namedtuple
-RustType = namedtuple('RustType', ['equiv', 'ref', 'mutref'])
 
 Float = type('Float', (float,), {'_definition': ctypes.c_float})
 Double = type('Double', (float,), {'_definition': ctypes.c_double})
-UnsignedLongLong = type('ULongLong', (int,), {
+UnsignedLongLong = type('UnsignedLongLong', (int,), {
                         '_definition': ctypes.c_ulonglong})
 
 
@@ -250,26 +293,33 @@ class PyBool(PythonObject):
             return c_backend.pybool_new(0)
 
 
-def _to_bool(arg):
+def _to_pybool(arg):
     if arg:
         return c_backend.pyarg_from_bool(1)
     else:
         return c_backend.pyarg_from_bool(0)
 
 
-def _to_bytes(arg):
+def _to_pystring(arg):
     return c_backend.pyarg_from_str(arg.encode("utf-8"))
 
 
-def _to_tuple(sig):
+def _to_pytuple(sig):
     def dec(arg):
         return c_backend.pyarg_from_pytuple(PyTuple.from_tuple(arg, sig))
     return dec
 
 
-def _to_list(sig):
+def _to_pylist(sig):
     def dec(arg):
         return c_backend.pyarg_from_pylist(PyList.from_list(arg, sig))
+    return dec
+
+
+def _to_pydict(sig):
+    def dec(arg):
+        d = PyDict.from_dict(arg, sig)
+        return c_backend.pyarg_from_pydict(d)
     return dec
 
 
@@ -307,6 +357,8 @@ class PyTuple(PythonObject):
                 b.free()
             elif arg_t is int:
                 pytype = c_backend.pyarg_extract_owned_int(pyarg)
+            elif arg_t is UnsignedLongLong:
+                pytype = c_backend.pyarg_extract_owned_ulonglong(pyarg)
             elif arg_t is Double or arg_t is float:
                 pytype = c_backend.pyarg_extract_owned_double(pyarg)
             elif arg_t is Float:
@@ -321,6 +373,8 @@ class PyTuple(PythonObject):
                 l = PyList(ptr, arg_t)
                 pytype = l.to_list(depth=depth + 1)
                 l.free()
+            elif issubclass(arg_t, typing.Dict):
+                raise NotImplementedError
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
@@ -336,9 +390,9 @@ class PyTuple(PythonObject):
             arg_t = sig.__tuple_params__[cnt]
             last = source[cnt]
             if arg_t is str:
-                pyarg = _to_bytes(last)
+                pyarg = _to_pystring(last)
             elif arg_t is bool:
-                pyarg = _to_bytes(last)
+                pyarg = _to_pystring(last)
             elif arg_t is int:
                 pyarg = c_backend.pyarg_from_int(last)
             elif arg_t is Double or arg_t is float:
@@ -346,9 +400,11 @@ class PyTuple(PythonObject):
             elif arg_t is Float:
                 pyarg = c_backend.pyarg_from_float(last)
             elif issubclass(arg_t, typing.Tuple):
-                pyarg = _to_tuple(arg_t)(last)
+                pyarg = _to_pytuple(arg_t)(last)
             elif issubclass(arg_t, typing.List):
-                pyarg = _to_list(arg_t)(last)
+                pyarg = _to_pylist(arg_t)(last)
+            elif issubclass(arg_t, typing.Dict):
+                raise NotImplementedError
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
@@ -423,6 +479,8 @@ class PyList(PythonObject):
                 pylist.appendleft(
                     PyList(ptr, arg_t).to_list(depth=depth + 1))
                 last -= 1
+        elif issubclass(arg_t, typing.Dict):
+            raise NotImplementedError
         else:
             raise TypeError("rustypy: subtype `{t}` of List type is \
                             not supported".format(t=arg_t))
@@ -432,9 +490,9 @@ class PyList(PythonObject):
     def from_list(source: list, sig):
         arg_t = sig.__args__[0]
         if arg_t is str:
-            fn = _to_bytes
+            fn = _to_pystring
         elif arg_t is bool:
-            fn = _to_bool
+            fn = _to_pybool
         elif arg_t is int:
             fn = c_backend.pyarg_from_int
         elif arg_t is Double or arg_t is float:
@@ -442,9 +500,9 @@ class PyList(PythonObject):
         elif arg_t is Float:
             fn = c_backend.pyarg_from_float
         elif issubclass(arg_t, typing.Tuple):
-            fn = _to_tuple(arg_t)
+            fn = _to_pytuple(arg_t)
         elif issubclass(arg_t, typing.List):
-            fn = _to_list(arg_t)
+            fn = _to_pylist(arg_t)
         else:
             raise TypeError("rustypy: subtype {t} of List type is \
                             not supported".format(t=arg_t))
@@ -454,12 +512,233 @@ class PyList(PythonObject):
             c_backend.pylist_push(pylist, fn(e))
         return pylist
 
-FIND_TYPE = re.compile("type\((.*)\)")
+import abc
+
+
+class HashableTypeABC(abc.ABCMeta):
+    __allowed = ['i64', 'i32', 'i16', 'i8',
+                 'u64', 'u32', 'u16', 'u8',
+                 'PyString', 'PyBool']
+
+    _doc = """Represents a hashable supported Rust type.
+Args:
+    t (str): String representing the type, the following are supported:
+        i64, i32, i16, i8, u32, u16, u8, PyString, PyBool
+"""
+
+    def __call__(cls, t):
+        if t not in cls.__allowed:
+            raise TypeError("rustypy: dictionary key must be one of the \
+            following types: {}".format("".join(
+                [x + ', ' for x in cls.__allowed])))
+        else:
+            if t in ['i64', 'i32', 'i16', 'i8', 'u64', 'u32', 'u16', 'u8']:
+                pytype = int
+            elif t == 'PyString':
+                pytype = str
+            elif t == 'PyBool':
+                pytype == bool
+            new = type(t, (HashableTypeABC,), {
+                       '_type': t, '_pytype': pytype, '__doc__': cls._doc})
+            return new
+
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is HashableTypeABC:
+            if hasattr(C, '_type') and C._type in cls.__allowed:
+                return True
+        else:
+            return False
+
+    def ishashable(other):
+        if issubclass(other, str):
+            return True
+        elif issubclass(other, bool):
+            return True
+        elif issubclass(other, int):
+            return True
+        else:
+            return False
+
+HashableType = HashableTypeABC('HashableType', (HashableTypeABC,), {
+                               "__doc__": HashableTypeABC._doc})
+
+
+class PyDict(PythonObject):
+
+    def __init__(self, ptr, signature, call_fn=None):
+        self._ptr = ptr
+        if not signature:
+            raise MissingTypeHint(
+                "rustypy: missing type hint for PyList unpacking in Python")
+        self.sig = signature
+        key_t = self.sig.__args__[0]
+        if not issubclass(key_t, HashableTypeABC):
+            TypeError("rustypy: the type corresponding to the key of a \
+            dictionary must be a subclass of rustypy.HashableType")
+        self.call_fn = call_fn
+
+    def free(self):
+        c_backend.pydict_free(self._ptr, self._key_type)
+
+    def to_dict(self, depth):
+        key_t = self.sig.__args__[0]._type
+        arg_t = self.sig.__args__[1]
+        key_rs_t, _, fnk, key_py_t = PyDict.get_key_type_info(key_t)
+        drain_iter = c_backend.pydict_get_drain(self._ptr, key_rs_t)
+        # get the functions for extracting the key and the value
+        if arg_t is str:
+            fnv = c_backend.pyarg_extract_owned_str
+        elif arg_t is bool:
+            fnv = c_backend.pyarg_extract_owned_bool
+        elif arg_t is int:
+            fnv = c_backend.pyarg_extract_owned_int
+        elif arg_t is Double or arg_t is float:
+            fnv = c_backend.pyarg_extract_owned_double
+        elif arg_t is Float:
+            fnv = c_backend.pyarg_extract_owned_float
+        elif issubclass(arg_t, typing.Tuple):
+            fnv = c_backend.pyarg_extract_owned_tuple
+        elif issubclass(arg_t, typing.List):
+            fnv = c_backend.pyarg_extract_owned_list
+        elif issubclass(arg_t, typing.Dict):
+            fnv = c_backend.pyarg_extract_owned_dict
+        else:
+            raise TypeError("rustypy: subtype `{t}` of Dict type is \
+                            not supported".format(t=arg_t))
+        pydict, kv_tuple = [], True
+        kv_tpl_type = typing.Tuple[key_py_t, arg_t]
+        # run the drain iterator while not a null pointer
+        while kv_tuple:
+            kv_tuple = c_backend.pydict_drain_element(
+                drain_iter, key_rs_t)
+            if not kv_tuple:
+                break
+            t = PyTuple(kv_tuple, kv_tpl_type, self.call_fn)
+            pydict.append(t.to_tuple(depth + 1))
+            t.free()
+        return dict(pydict)
+
+    @staticmethod
+    def from_dict(source: dict, sig):
+        key_t = sig.__args__[0]
+        arg_t = sig.__args__[1]
+        if not issubclass(key_t, HashableTypeABC):
+            TypeError("rustypy: the type corresponding to the key of a \
+            dictionary must be a subclass of rustypy.HashableType")
+        key_rs_t, fnk, _, _ = PyDict.get_key_type_info(key_t._type)
+        if arg_t is str:
+            fnv = _to_pystring
+        elif arg_t is bool:
+            fnv = _to_pybool
+        elif arg_t is int:
+            fnv = c_backend.pyarg_from_int
+        elif arg_t is Double or arg_t is float:
+            fnv = c_backend.pyarg_from_double
+        elif arg_t is Float:
+            fnv = c_backend.pyarg_from_float
+        elif issubclass(arg_t, typing.Tuple):
+            fnv = _to_pytuple(arg_t)
+        elif issubclass(arg_t, typing.List):
+            fnv = _to_pylist(arg_t)
+        elif issubclass(arg_t, typing.Dict):
+            fnv = _to_pydict(arg_t)
+        else:
+            raise TypeError("rustypy: subtype {t} of List type is \
+                            not supported".format(t=arg_t))
+        pydict = c_backend.pydict_new(key_rs_t)
+        for k, v in source.items():
+            c_backend.pydict_insert(pydict, key_rs_t, fnk(k), fnv(v))
+        return pydict
+
+    @staticmethod
+    def get_key_type_info(key_t):
+        if key_t == 'i8':
+            key_rs_t = c_backend.pydict_get_key_type(1)
+            fnk = c_backend.pyarg_from_int
+            fne = c_backend.pyarg_extract_owned_int
+            key_py_t = int
+        elif key_t == 'u8':
+            key_rs_t = c_backend.pydict_get_key_type(2)
+            fnk = c_backend.pyarg_from_int
+            fne = c_backend.pyarg_extract_owned_int
+            key_py_t = int
+        elif key_t == 'i16':
+            key_rs_t = c_backend.pydict_get_key_type(3)
+            fnk = c_backend.pyarg_from_int
+            fne = c_backend.pyarg_extract_owned_int
+            key_py_t = int
+        elif key_t == 'u16':
+            key_rs_t = c_backend.pydict_get_key_type(4)
+            fnk = c_backend.pyarg_from_int
+            fne = c_backend.pyarg_extract_owned_int
+            key_py_t = int
+        elif key_t == 'i32':
+            key_rs_t = c_backend.pydict_get_key_type(5)
+            fnk = c_backend.pyarg_from_int
+            fne = c_backend.pyarg_extract_owned_int
+            key_py_t = int
+        elif key_t == 'u32':
+            key_rs_t = c_backend.pydict_get_key_type(6)
+            fnk = c_backend.pyarg_from_int
+            fne = c_backend.pyarg_extract_owned_int
+            key_py_t = int
+        elif key_t == 'i64':
+            key_rs_t = c_backend.pydict_get_key_type(7)
+            fnk = c_backend.pyarg_from_int
+            fne = c_backend.pyarg_extract_owned_int
+            key_py_t = int
+        elif key_t == 'u64':
+            key_rs_t = c_backend.pydict_get_key_type(8)
+            fnk = c_backend.pyarg_from_ulonglong
+            fne = c_backend.pyarg_extract_owned_ulonglong
+            key_py_t = UnsignedLongLong
+        elif key_t == 'PyBool':
+            key_rs_t = c_backend.pydict_get_key_type(11)
+            fnk = _to_pybool
+            fne = c_backend.pyarg_extract_owned_bool
+            key_py_t = bool
+        elif key_t == 'PyString':
+            key_rs_t = c_backend.pydict_get_key_type(12)
+            fnk = _to_string
+            fne = c_backend.pyarg_extract_owned_string
+            key_py_t = str
+        return (key_rs_t, fnk, fne, key_py_t)
+
+    @property
+    def key_rs_type(self):
+        if not hasattr(self, '_key_rs_type'):
+            rst, _, _, pyt = PyDict.get_key_type_info(
+                self.sig.__args__[0]._type)
+            self._key_rs_type = rst
+            self._key_py_type = pyt
+        return self._key_rs_type
+
+    @property
+    def key_py_type(self):
+        if not hasattr(self, '_key_py_type'):
+            rst, _, _, pyt = PyDict.get_key_type_info(
+                self.sig.__args__[0]._type)
+            self._key_rs_type = rst
+            self._key_py_type = pyt
+        return self._key_py_type
 
 # ==================== #
 #   Conversion Funcs   #
 # ==================== #
 
+FIND_TYPE = re.compile("type\((.*)\)")
+
+RustType = namedtuple('RustType', ['equiv', 'ref', 'mutref'])
+
+class RAW_POINTER(object):
+
+    def __init__(self, t):
+        """Represents a raw pointer:
+            args:
+                t(str) = the string repr of the underlying type
+        """
+        self._type = t
 
 def _get_signature_types(params):
     def inner_types(t):
@@ -494,6 +773,8 @@ def _get_signature_types(params):
                 return RustType(equiv=list, ref=True, mutref=mutref)
             elif equiv == 'dict':
                 return RustType(equiv=dict, ref=True, mutref=mutref)
+            elif equiv == 'POINTER':
+                return RustType(equiv=RAW_POINTER, ref=True, mutref=mutref)
             elif equiv == 'None':
                 return RustType(equiv=None, ref=False, mutref=False)
 
@@ -526,6 +807,8 @@ def _get_ptr_to_C_obj(obj, sig=None):
             raise MissingTypeHint(
                 "rustypy: list type arguments require a type hint")
         return PyList.from_list(obj, sig)
+    elif isinstance(obj, dict):
+        raise NotImplementedError
 
 
 def _extract_pytypes(ref, sig=False, call_fn=None, depth=0, elem_num=None):
@@ -561,6 +844,8 @@ def _extract_pytypes(ref, sig=False, call_fn=None, depth=0, elem_num=None):
         if depth == 0:
             pyobj.free()
         return val
+    elif isinstance(ref, POINTER(PyDict_RS)):
+        raise NotImplementedError
     else:
         raise TypeError("rustypy: return type not supported")
 
@@ -724,6 +1009,9 @@ class RustBinds(object):
                     elif isinstance(r, POINTER(PyList_RS)):
                         arg_refs.append(_extract_pytypes(
                             r, call_fn=self, sig=self.get_argtype(x)))
+                    elif isinstance(r, POINTER(PyDict_RS)):
+                        arg_refs.append(_extract_pytypes(
+                            r, call_fn=self, sig=self.get_argtype(x)))
                     else:
                         arg_refs.append(r.value)
                 return result, arg_refs
@@ -767,6 +1055,10 @@ class RustBinds(object):
                     and not issubclass(hint, typing.List):
                 raise TypeError("rustypy: type hint for argument {n} of function {fn} \
                 must be of typing.List type")
+            elif self.argtypes[position].equiv == dict \
+                    and not issubclass(hint, typing.Dict):
+                raise TypeError("rustypy: type hint for argument {n} of function {fn} \
+                must be of typing.Dict type")
             types[position] = hint
 
         def get_argtype(self, position):
@@ -792,6 +1084,10 @@ class RustBinds(object):
                 add_p = PyTuple_RS
             elif issubclass(p.equiv, list):
                 add_p = PyList_RS
+            elif issubclass(p.equiv, dict):
+                add_p = PyDict_RS
+            elif issubclass(p.equiv, RAW_POINTER):
+                add_p = Raw_RS
             if p.mutref or p.ref:
                 add_p = POINTER(add_p)
             if x <= (len(params) - 1):

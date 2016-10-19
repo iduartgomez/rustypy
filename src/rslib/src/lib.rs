@@ -30,7 +30,7 @@ use syntax::visit::{FnKind, Visitor};
 pub mod pytypes;
 
 // re-export
-pub use self::pytypes::{PyTuple, PyList, PyString, PyBool, PyArg};
+pub use self::pytypes::{PyTuple, PyList, PyDict, PyString, PyBool, PyArg};
 
 #[doc(hidden)]
 #[no_mangle]

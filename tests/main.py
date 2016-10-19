@@ -7,7 +7,8 @@ import shutil
 
 from importlib import import_module
 from rustypy.pywrapper import RustFuncGen
-from rustypy.rswrapper import bind_rs_crate_funcs, Float, Double, load_rust_lib
+from rustypy.rswrapper import bind_rs_crate_funcs, load_rust_lib
+from rustypy.rswrapper import Float, Double
 
 
 def setUpModule():
@@ -128,8 +129,23 @@ class GenerateRustToPythonBinds(unittest.TestCase):
             f.append(tuple(l))
         self.assertEqual(f, [([3, 2, 1], 0.2), ([1, 2, 3], 0.1)])
 
+    def test_dict_conversion(self):
+        from rustypy import HashableType
+        from rustypy.rswrapper import PyDict, UnsignedLongLong
+        d = {0: "From", 1: "Python"}
+        T = typing.Dict[HashableType('u64'), str]
+        ptr = PyDict.from_dict(d, T)
+        pydict = PyDict(ptr, T)
+        d = pydict.to_dict(0)
+        self.assertEqual(len(d), 2)
+        self.assertEqual(d, {0: "From", 1: "Python"})
 
-#@unittest.skip
+        self.bindings.python_bind_dict.add_argtype(0, T)
+        self.bindings.python_bind_dict.restype(
+            typing.Dict[HashableType('i64'), str])
+
+
+@unittest.skip
 class GeneratePythonToRustBinds(unittest.TestCase):
 
     @classmethod

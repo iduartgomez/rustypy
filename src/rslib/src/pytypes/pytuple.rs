@@ -175,11 +175,6 @@ macro_rules! pytuple {
 #[macro_export]
 macro_rules! unpack_pytuple {
     ($t:ident; ($($p:tt,)+) ) => {{
-        macro_rules! _abort {
-            () => {{
-                panic!("rustypy: expected an other type while unpacking pytuple")
-            }};
-        };
         use rustypy::PyArg;
         let mut cnt = 0;
         ($(
@@ -198,7 +193,7 @@ macro_rules! unpack_pytuple {
                     unpack_pytuple!(pytuple; cnt; elem: $p)
                 ,)*)
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: {PyList{$($u:tt)*}}) => {{
@@ -210,7 +205,7 @@ macro_rules! unpack_pytuple {
                 let copied = (*val).clone();
                 unpack_pylist!(copied; PyList{$($u)*})
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: PyBool) => {{
@@ -221,7 +216,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.to_bool()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: PyString) => {{
@@ -232,7 +227,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.to_string()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: I64) => {{
@@ -243,7 +238,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: I32) => {{
@@ -254,7 +249,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: I16) => {{
@@ -265,7 +260,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: I8) => {{
@@ -276,7 +271,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: U32) => {{
@@ -287,7 +282,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: U16) => {{
@@ -298,7 +293,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: U8) => {{
@@ -309,7 +304,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: F32) => {{
@@ -320,7 +315,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: F64) => {{
@@ -331,7 +326,7 @@ macro_rules! unpack_pytuple {
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
             },
-            _ => _abort!(),
+            _ => _rustypy_abort_xtract_fail!("failed while unpacking a PyTuple"),
         }
     }};
 }

@@ -7,7 +7,7 @@ extern crate rustypy;
 
 use std::collections::HashMap;
 use std::iter::FromIterator;
-use rustypy::{PyTuple, PyString, PyBool, PyArg, PyList};
+use rustypy::{PyTuple, PyString, PyBool, PyArg, PyList, PyDict};
 
 #[no_mangle]
 pub extern "C" fn python_bind_int(num: u32) -> u32 {
@@ -133,6 +133,12 @@ pub extern "C" fn python_bind_nested2_t_n_ls(list: *mut PyList) -> *mut PyList {
 }
 
 #[no_mangle]
-pub extern "C" fn ython_bind_dict(dict: HashMap<&str, u32>) -> HashMap<&str, u32> {
-    dict
+pub extern "C" fn python_bind_dict(dict: *mut usize) -> *mut usize {
+    let mut dict = unsafe { PyDict::<u64, PyArg>::from_ptr(dict) };
+    assert_eq!(dict.get(&0_u64), Some(&PyArg::PyString(PyString::from("From"))));
+    assert_eq!(dict.get(&1_u64), Some(&PyArg::PyString(PyString::from("Python"))));
+    let mut hm = HashMap::new();
+    hm.insert(0_i64, PyArg::PyString(PyString::from("Back")));
+    hm.insert(1_i64, PyArg::PyString(PyString::from("Rust")));
+    PyDict::from(hm).as_ptr()
 }
