@@ -13,7 +13,8 @@
 //! ```
 //!
 //! You can also use the typical vector interfaces (push, pop, remove, etc.) as long as the
-//! type is supported (check [PyArg](../rustypy/pytypes/enum.PyArg.html) variants).
+//! type is supported (check [PyArg](../rustypy/pytypes/enum.PyArg.html) variants). PyList
+//! types and their content can also be implicitly converted through an special iterator type.
 //!
 //! ```
 //! # use rustypy::PyList;
@@ -21,6 +22,9 @@
 //! for e in vec![0u32, 1, 3] {
 //!     l.push(e);
 //! }
+//!
+//! let mut iter = PyList::into_iter::<u32>(l);
+//! assert_eq!(iter.collect::<Vec<u32>>(), vec![0u32, 1, 3])
 //! ```
 //!
 //! When extracting in Python with the FFI, elements are moved, not copied
@@ -35,6 +39,7 @@ use pytypes::PyArg;
 
 use std::ops::{Index, IndexMut};
 use std::iter::{FromIterator, IntoIterator};
+use std::marker::PhantomData;
 
 /// An analog of a Python list which contains an undefined number of elements of
 /// a single kind, of any [supported type](../../../rustypy/pytypes/enum.PyArg.html).
@@ -71,6 +76,12 @@ impl PyList {
     pub fn as_ptr(self) -> *mut PyList {
         Box::into_raw(Box::new(self))
     }
+    pub fn into_iter<T: From<PyArg>>(self) -> IntoIter<T> {
+        IntoIter {
+            inner: self.members.into_iter(),
+            target_type: PhantomData,
+        }
+    }
 }
 
 impl<T> FromIterator<T> for PyList
@@ -85,11 +96,25 @@ impl<T> FromIterator<T> for PyList
     }
 }
 
-impl IntoIterator for PyList {
-    type Item = PyArg;
-    type IntoIter = ::std::vec::IntoIter<PyArg>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.members.into_iter()
+pub struct IntoIter<T> {
+    target_type: PhantomData<T>,
+    inner: ::std::vec::IntoIter<PyArg>,
+}
+
+impl<T> Iterator for IntoIter<T>
+    where T: From<PyArg>
+{
+    type Item = T;
+    fn next(&mut self) -> Option<T> {
+        match self.inner.next() {
+            Some(val) => Some(<T>::from(val)),
+            None => None,
+        }
+    }
+    fn collect<B>(self) -> B
+        where B: FromIterator<Self::Item>
+    {
+        self.inner.map(|x| <T>::from(x)).collect::<B>()
     }
 }
 
@@ -125,10 +150,10 @@ impl<'a> IndexMut<usize> for PyList {
 /// Consumes a `Box<PyList<PyArg(T)>>` content and returns a `Vec<T>` from it, no copies
 /// are performed in the process.
 ///
-/// All inner elements are moved out of their containing PyArg enums, PyTuple
-/// variants are destructured into Rust tuples which contain the appropiate Rust type
+/// All inner elements are moved out if possible, if not (like with PyTuples) are copied.
+/// PyTuple variants are destructured into Rust tuples which contain the appropiate Rust types
 /// (valid syntax for [unpack_pytuple!](../rustypy/macro.unpack_pytuple!.html) macro must
-/// be provided).
+/// be provided). The same for other container types (inner PyList, PyDict, etc.).
 ///
 /// # Examples
 ///
@@ -154,8 +179,8 @@ impl<'a> IndexMut<usize> for PyList {
 /// # }
 /// ```
 ///
-/// It can contain nested containers. A PyList which contains tuples which contain a list
-/// of i64 tuples and a single f32:
+/// It can contain nested containers. A PyList which contains PyTuples which contain a list
+/// of i64 PyTuples and a single f32:
 ///
 /// ```
 /// # #[macro_use] extern crate rustypy;
@@ -169,6 +194,7 @@ impl<'a> IndexMut<usize> for PyList {
 /// #                    pytuple!(PyArg::I64(3), PyArg::I64(2), PyArg::I64(1))]))),
 /// #                 PyArg::F32(0.2))
 /// #        ]).as_ptr();
+/// // list from Python: [([(i64; 3)], f32)]
 /// let list = unsafe { Box::new(PyList::from_ptr(list)) };
 /// let unpacked = unpack_pylist!(list;
 ///     PyList{
@@ -203,32 +229,21 @@ macro_rules! unpack_pylist {
         unpack_pytuple!(unboxed; $t)
     }};
     ( $pylist:ident; PyList{$t:tt => $type_:ty} ) => {{
-        use rustypy::{PyList, PyArg};
+        use rustypy::PyArg;
         let mut unboxed = *($pylist);
-        trait PyListPop {
-            type Target;
-            fn pop_t(&mut self) -> Option<Self::Target>;
-        }
-        impl PyListPop for PyList {
-            type Target = $type_;
-            fn pop_t(&mut self) -> Option<Self::Target> {
-                let e = self.pop();
-                match e {
-                    Some(PyArg::$t(val)) => Some(val),
-                    Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
-                    None => None
-                }
-            }
-        }
         use std::collections::VecDeque;
         let mut list = VecDeque::with_capacity(unboxed.len());
         for _ in 0..unboxed.len() {
-            match unboxed.pop_t() {
-                Some(v) => list.push_front(v),
+            match unboxed.pop() {
+                Some(PyArg::$t(val)) => { list.push_front(<$type_>::from(val)); },
+                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
                 None => {}
             }
         };
         Vec::from(list)
+    }};
+    ( $pydict:ident; PyDict{$t} ) => {{
+        unpack_pydict!( $pydict; PyDict{$t} )
     }};
 }
 

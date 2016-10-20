@@ -79,6 +79,12 @@ impl From<String> for PyString {
     }
 }
 
+impl From<PyString> for String {
+    fn from(s: PyString) -> String {
+        s.to_string()
+    }
+}
+
 /// Destructs the PyString, mostly to be used from Python.
 #[no_mangle]
 pub extern "C" fn pystring_free(ptr: *mut PyString) {

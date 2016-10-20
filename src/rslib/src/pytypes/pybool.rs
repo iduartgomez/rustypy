@@ -84,6 +84,12 @@ pub extern "C" fn pybool_get_val(ptr: *mut PyBool) -> i8 {
     pybool.val
 }
 
+impl From<PyBool> for bool {
+    fn from(b: PyBool) -> bool {
+        b.to_bool()
+    }
+}
+
 impl From<bool> for PyBool {
     fn from(b: bool) -> PyBool {
         let val = match b {

@@ -62,12 +62,13 @@ impl<T> Into<HashMap<T, PyArg>> for PyDict<T, PyArg>
     }
 }
 
-impl<T> From<HashMap<T, PyArg>> for PyDict<T, PyArg>
-    where T: PyDictKey + Eq + Hash
+impl<K, V> From<HashMap<K, V>> for PyDict<K, PyArg>
+    where K: PyDictKey + Eq + Hash,
+          PyArg: From<V>
 {
-    fn from(hm: HashMap<T, PyArg>) -> PyDict<T, PyArg> {
+    fn from(mut hm: HashMap<K, V>) -> PyDict<K, PyArg> {
         PyDict {
-            table: hm
+            table: hm.drain().map(|(k, v)| (k, PyArg::from(v))).collect::<HashMap<K, PyArg>>(),
         }
     }
 }
@@ -84,6 +85,98 @@ pub enum PyDictK {
     U8,
     PyBool,
     PyString,
+}
+
+/// Consumes a `*mut PyDict<K, PyArg<T>> as *mut usize` content and returns a `HashMap<K, T>`
+/// from it, no copies are performed in the process.
+///
+/// All inner elements are moved out if possible, if not (like with PyTuples) are copied.
+/// PyTuple variants are destructured into Rust tuples which contain the appropiate Rust types
+/// (valid syntax for [unpack_pytuple!](../rustypy/macro.unpack_pytuple!.html) macro must
+/// be provided). The same for other container types (inner PyList, PyDict, etc.).
+///
+/// # Examples
+///
+/// A simple PyDict with i32 keys which contains PyString types::
+///
+/// ```
+/// # #[macro_use] extern crate rustypy;
+/// # fn main(){
+/// use rustypy::{PyDict, PyString};
+/// use std::collections::HashMap;
+///
+/// let mut hm = HashMap::new();
+/// for (k, v) in vec![(0_i32, "Hello"), (1_i32, " "), (2_i32, "World!")] {
+///     hm.insert(k, v);
+/// }
+/// let dict = PyDict::from(hm).as_ptr();
+/// let unpacked = unpack_pydict!(dict; PyDict{(i32, PyString => String)});
+/// # }
+/// ```
+///
+/// With nested container types:
+///
+/// ```
+/// # #[macro_use] extern crate rustypy;
+/// # fn main(){
+/// # use rustypy::{PyDict, PyString, PyArg};
+/// # use std::collections::HashMap;
+/// # let mut hm0 = HashMap::new();
+/// # for (k, v) in vec![(0_i32, "Hello"), (1_i32, " "), (2_i32, "World!")] {
+/// #     hm0.insert(k, v);
+/// # }
+/// # let mut hm1 = HashMap::new();
+/// # for i in 0..3_u64 {
+/// #     let k = format!("#{}", i);
+/// #     let v = PyArg::from(hm0.clone());
+/// #     let l = PyArg::from(vec![0_u64; 3]);
+/// #     hm1.insert(k, pytuple!(l, v));
+/// # }
+/// # let dict = PyDict::from(hm0).as_ptr();
+/// // dict from Python: {str: ([u64], {i32: str})} as *mut usize
+/// let unpacked = unpack_pydict!(dict;
+///     PyDict{(PyString, PyTuple{({PyList{I64 => i64}}, {PyDict{(i32, PyString => String)}},)})} );
+/// # }
+/// ```
+///
+#[macro_export]
+macro_rules! unpack_pydict {
+    ( $pydict:ident; PyDict{($kt:ty, $o:tt { $($t:tt)* })} ) => {{
+        use rustypy::{PyArg, PyDict};
+        let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt, PyArg>)) };
+        use std::collections::HashMap;
+        let mut dict = HashMap::new();
+        for (k, v) in unboxed.drain() {
+            match v {
+                PyArg::$o(val) => {
+                    let inner = unpack_pydict!(val; $o { $($t)* });
+                    dict.insert(k, inner);
+                }
+                _ => _rustypy_abort_xtract_fail!("failed while converting PyDict to HashMap")
+            }
+        }
+        dict
+    }};
+    ( $pytuple:ident; PyTuple { $t:tt } ) => {{
+        let unboxed = *($pytuple);
+        unpack_pytuple!(unboxed; $t)
+    }};
+    ( $pylist:ident; PyList{ $($u:tt)* } ) => {{
+        unpack_pylist!( $pylist; PyList{ $($u)* } )
+    }};
+    ( $pydict:ident; PyDict{($kt:ty, $t:tt => $type_:ty)} ) => {{
+        use rustypy::{PyArg, PyDict};
+        let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt, PyArg>)) };
+        use std::collections::HashMap;
+        let mut dict = HashMap::new();
+        for (k, v) in unboxed.drain() {
+            match v {
+                PyArg::$t(val) => { dict.insert(k, <$type_>::from(val)); },
+                _ => _rustypy_abort_xtract_fail!("failed while converting PyDict to HashMap"),
+            }
+        }
+        dict
+    }};
 }
 
 #[no_mangle]
@@ -118,11 +211,36 @@ mod key_bound {
     impl PyDictKey for PyBool {}
 
     use std::hash::Hash;
-    impl<T> From<PyDict<T, PyArg>> for PyArg
-        where T: Eq + Hash + PyDictKey
+    impl<K> From<PyDict<K, PyArg>> for PyArg
+        where K: Eq + Hash + PyDictKey
     {
-        fn from(a: PyDict<T, PyArg>) -> PyArg {
+        fn from(a: PyDict<K, PyArg>) -> PyArg {
             PyArg::PyDict(a.as_ptr())
+        }
+    }
+
+    impl<K> From<PyArg> for PyDict<K, PyArg>
+        where K: Eq + Hash + PyDictKey
+    {
+        fn from(a: PyArg) -> PyDict<K, PyArg> {
+            match a {
+                PyArg::PyDict(v) => unsafe { *(Box::from_raw(v as *mut PyDict<K, PyArg>)) },
+                _ => {
+                    _rustypy_abort_xtract_fail!("expected a PyDict while destructuring PyArg enum")
+                }
+            }
+        }
+    }
+
+    use std::collections::HashMap;
+
+    impl<K, V> From<HashMap<K, V>> for PyArg
+        where PyArg: From<V>,
+              K: Eq + Hash + PyDictKey
+    {
+        fn from(a: HashMap<K, V>) -> PyArg {
+            let dict = PyDict::from(a);
+            PyArg::PyDict(dict.as_ptr())
         }
     }
 }
@@ -182,7 +300,8 @@ pub unsafe extern "C" fn pydict_insert(dict: *mut size_t,
        ($p:ident; $v:tt) => {{
            match *(Box::from_raw($p as *mut PyArg)) {
                PyArg::$v(val) => { val },
-               _ => _rustypy_abort_xtract_fail!("expected different key type for PyDict while inserting"),
+               _ => _rustypy_abort_xtract_fail!("expected different key type \
+                                                for PyDict while inserting a (key, val) pair"),
            }
        }};
     }

@@ -78,11 +78,8 @@ pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
             assert_eq!(e.to_string(), String::from("Rust"));
         }
     }
-
-    let content = vec![PyString::from(String::from("Rust")),
-                       PyString::from(String::from("in")),
-                       PyString::from(String::from("Python"))];
-    let returnval = PyList::from_iter(content);
+    let content = vec!["Rust", "in", "Python"];
+    let returnval = PyList::from(content);
     returnval.as_ptr()
 }
 
