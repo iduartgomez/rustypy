@@ -63,6 +63,7 @@ class PyList_RS(ctypes.Structure):
     pass
 
 
+# Dictionary interfaces:
 class PyDict_RS(ctypes.Structure):
     pass
 
@@ -73,6 +74,7 @@ class KeyType_RS(ctypes.Structure):
 
 class DrainPyDict_RS(ctypes.Structure):
     pass
+# END dictionary interfaces
 
 
 class Raw_RS(ctypes.Structure):
@@ -336,7 +338,7 @@ class PyTuple(PythonObject):
     def free(self):
         c_backend.pytuple_free(self._ptr)
 
-    def to_tuple(self, depth):
+    def to_tuple(self, depth=0):
         arity = c_backend.pytuple_len(self._ptr)
         if arity != len(self.sig.__tuple_params__) and self.call_fn:
             raise TypeError("rustypy: the type hint for returning tuple of fn `{}` "
@@ -429,7 +431,7 @@ class PyList(PythonObject):
     def free(self):
         c_backend.pylist_free(self._ptr)
 
-    def to_list(self, depth):
+    def to_list(self, depth=0):
         arg_t = self.sig.__args__[0]
         pylist = deque()
         last = self._len - 1
@@ -579,9 +581,9 @@ class PyDict(PythonObject):
         self.call_fn = call_fn
 
     def free(self):
-        c_backend.pydict_free(self._ptr, self._key_type)
+        c_backend.pydict_free(self._ptr, self.key_rs_type)
 
-    def to_dict(self, depth):
+    def to_dict(self, depth=0):
         key_t = self.sig.__args__[0]._type
         arg_t = self.sig.__args__[1]
         key_rs_t, _, fnk, key_py_t = PyDict.get_key_type_info(key_t)
@@ -731,14 +733,10 @@ FIND_TYPE = re.compile("type\((.*)\)")
 
 RustType = namedtuple('RustType', ['equiv', 'ref', 'mutref'])
 
-class RAW_POINTER(object):
 
-    def __init__(self, t):
-        """Represents a raw pointer:
-            args:
-                t(str) = the string repr of the underlying type
-        """
-        self._type = t
+class RAW_POINTER(object):
+    pass
+
 
 def _get_signature_types(params):
     def inner_types(t):
@@ -771,8 +769,6 @@ def _get_signature_types(params):
                 return RustType(equiv=tuple, ref=True, mutref=False)
             elif equiv == 'list':
                 return RustType(equiv=list, ref=True, mutref=mutref)
-            elif equiv == 'dict':
-                return RustType(equiv=dict, ref=True, mutref=mutref)
             elif equiv == 'POINTER':
                 return RustType(equiv=RAW_POINTER, ref=True, mutref=mutref)
             elif equiv == 'None':
@@ -808,6 +804,18 @@ def _get_ptr_to_C_obj(obj, sig=None):
                 "rustypy: list type arguments require a type hint")
         return PyList.from_list(obj, sig)
     elif isinstance(obj, dict):
+        if not sig:
+            raise MissingTypeHint(
+                "rustypy: dict type arguments require a type hint")
+        if not issubclass(sig, dict):
+            raise TypeError(
+                "rustypy: the type hint must be of typing.Dict type")
+        return PyDict.from_dict(obj, sig)
+    elif isinstance(obj, RAW_POINTER):
+        if not sig:
+            raise MissingTypeHint(
+                "rustypy: raw pointer type arguments require type information \
+                 for proper conversion")
         raise NotImplementedError
 
 
@@ -845,6 +853,12 @@ def _extract_pytypes(ref, sig=False, call_fn=None, depth=0, elem_num=None):
             pyobj.free()
         return val
     elif isinstance(ref, POINTER(PyDict_RS)):
+        pyobj = PyDict(ref, sig, call_fn=call_fn)
+        val = pyobj.to_dict(depth)
+        if depth == 0:
+            pyobj.free()
+        return val
+    elif isinstance(ref, POINTER(Raw_RS)):
         raise NotImplementedError
     else:
         raise TypeError("rustypy: return type not supported")
@@ -936,7 +950,8 @@ class RustBinds(object):
                 name, params = decl.split('::', maxsplit=1)
                 name = prefix + name
                 params = _get_signature_types(params)
-                self.decl_C_args(name, params)
+                fn = getattr(self._FFI, "{}".format(name))
+                RustBinds.decl_C_args(fn, params)
                 prepared_funcs[name] = self.FnCall(name, params, self._FFI)
         for name, fn in prepared_funcs.items():
             setattr(self, name, fn)
@@ -1035,6 +1050,13 @@ class RustBinds(object):
         @restype.setter
         def restype(self, annotation):
             self.__type_hints['return'] = annotation
+            if issubclass(annotation, dict):
+                real_t = self.__type_hints['real_return']
+                self.__type_hints['real_return'] = RustType(
+                    equiv=dict, ref=True, mutref=real_t.mutref)
+                r_args = [x for x in self.__type_hints['real_argtypes']]
+                r_args.append(self.real_restype)
+                RustBinds.decl_C_args(self._rs_fn, r_args)
 
         @property
         def argtypes(self):
@@ -1051,14 +1073,18 @@ class RustBinds(object):
         def add_argtype(self, position, hint):
             types = self.__type_hints.setdefault(
                 'argtypes', [None] * len(self.argtypes))
-            if self.argtypes[position].equiv == list \
+            real_t = self.argtypes[position]
+            if real_t.equiv is list \
                     and not issubclass(hint, typing.List):
                 raise TypeError("rustypy: type hint for argument {n} of function {fn} \
                 must be of typing.List type")
-            elif self.argtypes[position].equiv == dict \
-                    and not issubclass(hint, typing.Dict):
-                raise TypeError("rustypy: type hint for argument {n} of function {fn} \
-                must be of typing.Dict type")
+            elif real_t.equiv is RAW_POINTER:
+                if issubclass(hint, dict):
+                    self.__type_hints['real_argtypes'][position] = RustType(
+                        equiv=dict, ref=True, mutref=real_t.mutref)
+                    r_args = [x for x in self.__type_hints['real_argtypes']]
+                    r_args.append(self.real_restype)
+                    RustBinds.decl_C_args(self._rs_fn, r_args)
             types[position] = hint
 
         def get_argtype(self, position):
@@ -1066,7 +1092,8 @@ class RustBinds(object):
             if hints:
                 return hints[position]
 
-    def decl_C_args(self, name, params):
+    @staticmethod
+    def decl_C_args(FFI, params):
         restype = None
         argtypes = []
         for x, p in enumerate(params, 1):
@@ -1094,10 +1121,9 @@ class RustBinds(object):
                 argtypes.append(add_p)
             else:
                 restype = add_p
-        fn = getattr(self._FFI, "{}".format(name))
-        setattr(fn, "restype", restype)
+        setattr(FFI, "restype", restype)
         if len(argtypes) > 0:
-            setattr(fn, "argtypes", tuple(argtypes))
+            setattr(FFI, "argtypes", tuple(argtypes))
 
 # WIP:
 
