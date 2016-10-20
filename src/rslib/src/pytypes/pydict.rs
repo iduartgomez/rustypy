@@ -104,7 +104,7 @@ pub extern "C" fn pydict_get_key_type(k: u32) -> *mut PyDictK {
 }
 
 mod key_bound {
-    use pytypes::{PyString, PyBool};
+    use pytypes::{PyString, PyBool, PyDict, PyArg};
     pub trait PyDictKey {}
     impl PyDictKey for i64 {}
     impl PyDictKey for i32 {}
@@ -116,6 +116,15 @@ mod key_bound {
     impl PyDictKey for u8 {}
     impl PyDictKey for PyString {}
     impl PyDictKey for PyBool {}
+
+    use std::hash::Hash;
+    impl<T> From<PyDict<T, PyArg>> for PyArg
+        where T: Eq + Hash + PyDictKey
+    {
+        fn from(a: PyDict<T, PyArg>) -> PyArg {
+            PyArg::PyDict(a.as_ptr())
+        }
+    }
 }
 
 #[no_mangle]

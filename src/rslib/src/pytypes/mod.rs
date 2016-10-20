@@ -73,6 +73,12 @@ impl From<String> for PyArg {
     }
 }
 
+impl From<PyString> for PyArg {
+    fn from(a: PyString) -> PyArg {
+        PyArg::PyString(a)
+    }
+}
+
 impl From<bool> for PyArg {
     fn from(a: bool) -> PyArg {
         PyArg::PyBool(PyBool::from(a))
@@ -85,6 +91,72 @@ impl<'a> From<&'a bool> for PyArg {
     }
 }
 
+impl From<PyBool> for PyArg {
+    fn from(a: PyBool) -> PyArg {
+        PyArg::PyBool(a)
+    }
+}
+
+impl From<i8> for PyArg {
+    fn from(a: i8) -> PyArg {
+        PyArg::I8(a)
+    }
+}
+
+impl From<u8> for PyArg {
+    fn from(a: u8) -> PyArg {
+        PyArg::U8(a)
+    }
+}
+
+impl From<i16> for PyArg {
+    fn from(a: i16) -> PyArg {
+        PyArg::I16(a)
+    }
+}
+
+impl From<u16> for PyArg {
+    fn from(a: u16) -> PyArg {
+        PyArg::U16(a)
+    }
+}
+
+impl From<i32> for PyArg {
+    fn from(a: i32) -> PyArg {
+        PyArg::I32(a)
+    }
+}
+
+impl From<u32> for PyArg {
+    fn from(a: u32) -> PyArg {
+        PyArg::U32(a)
+    }
+}
+
+impl From<i64> for PyArg {
+    fn from(a: i64) -> PyArg {
+        PyArg::I64(a)
+    }
+}
+
+impl From<u64> for PyArg {
+    fn from(a: u64) -> PyArg {
+        PyArg::U64(a)
+    }
+}
+
+impl From<f32> for PyArg {
+    fn from(a: f32) -> PyArg {
+        PyArg::F32(a)
+    }
+}
+
+impl From<f64> for PyArg {
+    fn from(a: f64) -> PyArg {
+        PyArg::F64(a)
+    }
+}
+
 impl From<PyList> for PyArg {
     fn from(a: PyList) -> PyArg {
         PyArg::PyList(Box::new(a))
@@ -94,6 +166,16 @@ impl From<PyList> for PyArg {
 impl From<PyTuple> for PyArg {
     fn from(a: PyTuple) -> PyArg {
         PyArg::PyTuple(Box::new(a))
+    }
+}
+
+// From<PyDict<K, PyArg>> is implemented in mod pydict due to private K bound
+
+impl<T> From<Vec<T>> for PyArg
+    where PyArg: From<T>
+{
+    fn from(a: Vec<T>) -> PyArg {
+        PyArg::PyList(Box::new(PyList::from(a)))
     }
 }
 

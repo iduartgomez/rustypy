@@ -376,7 +376,10 @@ class PyTuple(PythonObject):
                 pytype = l.to_list(depth=depth + 1)
                 l.free()
             elif issubclass(arg_t, typing.Dict):
-                raise NotImplementedError
+                ptr = c_backend.pyarg_extract_owned_dict(pyarg)
+                d = PyDict(ptr, arg_t)
+                pytype = d.to_dict(depth=depth + 1)
+                d.free()
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
@@ -406,7 +409,7 @@ class PyTuple(PythonObject):
             elif issubclass(arg_t, typing.List):
                 pyarg = _to_pylist(arg_t)(last)
             elif issubclass(arg_t, typing.Dict):
-                raise NotImplementedError
+                pyarg = _to_pydict(arg_t)(last)
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
@@ -471,18 +474,26 @@ class PyList(PythonObject):
             for e in range(0, self._len):
                 pyarg = c_backend.pylist_get_element(self._ptr, last)
                 ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
-                pylist.appendleft(
-                    PyTuple(ptr, arg_t).to_tuple(depth=depth + 1))
+                t = PyTuple(ptr, arg_t)
+                pylist.appendleft(t.to_tuple(depth=depth + 1))
+                t.free()
                 last -= 1
         elif issubclass(arg_t, typing.List):
             for e in range(0, self._len):
                 pyarg = c_backend.pylist_get_element(self._ptr, last)
                 ptr = c_backend.pyarg_extract_owned_list(pyarg)
-                pylist.appendleft(
-                    PyList(ptr, arg_t).to_list(depth=depth + 1))
+                l = PyList(ptr, arg_t)
+                pylist.appendleft(l.to_list(depth=depth + 1))
+                l.free()
                 last -= 1
         elif issubclass(arg_t, typing.Dict):
-            raise NotImplementedError
+            for e in range(0, self._len):
+                pyarg = c_backend.pylist_get_element(self._ptr, last)
+                ptr = c_backend.pyarg_extract_owned_dict(pyarg)
+                d = PyDict(ptr, arg_t)
+                pylist.appendleft(d.to_dict(depth=depth + 1))
+                d.free()
+                last -= 1
         else:
             raise TypeError("rustypy: subtype `{t}` of List type is \
                             not supported".format(t=arg_t))
@@ -505,6 +516,8 @@ class PyList(PythonObject):
             fn = _to_pytuple(arg_t)
         elif issubclass(arg_t, typing.List):
             fn = _to_pylist(arg_t)
+        elif issubclass(arg_t, typing.Dict):
+            fn = _to_pydict(arg_t)
         else:
             raise TypeError("rustypy: subtype {t} of List type is \
                             not supported".format(t=arg_t))

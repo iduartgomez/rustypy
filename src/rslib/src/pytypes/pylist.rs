@@ -17,9 +17,6 @@
 //!
 //! ```
 //! # use rustypy::PyList;
-//! // required to use push:
-//! use rustypy::pytypes::pylist::PyListPush;
-//!
 //! let mut l = PyList::new();
 //! for e in vec![0u32, 1, 3] {
 //!     l.push(e);
@@ -34,7 +31,7 @@
 //! Is recommended to use the [unpack_pylist!](../../macro.unpack_pylist!.html) macro in order
 //! to convert a PyList to a Rust native type. Check the macro documentation for more info.
 
-use pytypes::{PyArg, PyBool, PyString, PyTuple};
+use pytypes::PyArg;
 
 use std::ops::{Index, IndexMut};
 use std::iter::{FromIterator, IntoIterator};
@@ -61,6 +58,11 @@ impl PyList {
     pub fn len(&self) -> usize {
         self.members.len()
     }
+    pub fn push<T>(&mut self, a: T)
+        where PyArg: From<T>
+    {
+        self.members.push(PyArg::from(a))
+    }
     /// Get a PyList from a previously boxed raw pointer.
     pub unsafe fn from_ptr(ptr: *mut PyList) -> PyList {
         *(Box::from_raw(ptr))
@@ -68,6 +70,55 @@ impl PyList {
     /// Return a PyList as a raw pointer.
     pub fn as_ptr(self) -> *mut PyList {
         Box::into_raw(Box::new(self))
+    }
+}
+
+impl<T> FromIterator<T> for PyList
+    where PyArg: From<T>
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut c = PyList::new();
+        for e in iter {
+            c.push(e);
+        }
+        c
+    }
+}
+
+impl IntoIterator for PyList {
+    type Item = PyArg;
+    type IntoIter = ::std::vec::IntoIter<PyArg>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.members.into_iter()
+    }
+}
+
+impl<T> Into<Vec<T>> for PyList
+    where PyArg: Into<T>
+{
+    fn into(mut self) -> Vec<T> {
+        self.members.drain(..).map(|x| PyArg::into(x)).collect()
+    }
+}
+
+impl<T> From<Vec<T>> for PyList
+    where PyArg: From<T>
+{
+    fn from(mut v: Vec<T>) -> PyList {
+        PyList { members: v.drain(..).map(|x| PyArg::from(x)).collect() }
+    }
+}
+
+impl Index<usize> for PyList {
+    type Output = PyArg;
+    fn index(&self, index: usize) -> &PyArg {
+        &(self.members[index])
+    }
+}
+
+impl<'a> IndexMut<usize> for PyList {
+    fn index_mut(&mut self, index: usize) -> &mut PyArg {
+        &mut (self.members[index])
     }
 }
 
@@ -86,11 +137,8 @@ impl PyList {
 /// ```
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
-/// use rustypy::{PyString, PyList};
-/// use std::iter::FromIterator;
-/// let string_list = Box::new(PyList::from_iter(vec![PyString::from(String::from("Python")),
-///                                                   PyString::from(String::from("in")),
-///                                                   PyString::from(String::from("Rust"))]));
+/// use rustypy::{PyList, PyString};
+/// let string_list = Box::new(PyList::from(vec!["Python", "in", "Rust"]));
 /// let unpacked = unpack_pylist!(string_list; PyList{PyString => PyString});
 /// # }
 /// ```
@@ -100,9 +148,8 @@ impl PyList {
 /// ```
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
-/// use rustypy::{PyString, PyList};
-/// use std::iter::FromIterator;
-/// let int_list = Box::new(PyList::from_iter(vec![1i32; 5]));
+/// use rustypy::PyList;
+/// let int_list = Box::new(PyList::from(vec![1i32; 5]));
 /// let unpacked = unpack_pylist!(int_list; PyList{I32 => i32});
 /// # }
 /// ```
@@ -113,13 +160,12 @@ impl PyList {
 /// ```
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
-/// #    use rustypy::{PyArg, PyList};
-/// #    use std::iter::FromIterator;
-/// #    let list = PyList::from_iter(vec![
-/// #        pytuple!(PyArg::PyList(Box::new(PyList::from_iter(vec![
+/// #    use rustypy::{PyList, PyArg};
+/// #    let list = PyList::from(vec![
+/// #        pytuple!(PyArg::PyList(Box::new(PyList::from(vec![
 /// #                    pytuple!(PyArg::I64(1), PyArg::I64(2), PyArg::I64(3))]))),
 /// #                 PyArg::F32(0.1)),
-/// #        pytuple!(PyArg::PyList(Box::new(PyList::from_iter(vec![
+/// #        pytuple!(PyArg::PyList(Box::new(PyList::from(vec![
 /// #                    pytuple!(PyArg::I64(3), PyArg::I64(2), PyArg::I64(1))]))),
 /// #                 PyArg::F32(0.2))
 /// #        ]).as_ptr();
@@ -184,167 +230,6 @@ macro_rules! unpack_pylist {
         };
         Vec::from(list)
     }};
-}
-
-impl IntoIterator for PyList {
-    type Item = PyArg;
-    type IntoIter = ::std::vec::IntoIter<PyArg>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.members.into_iter()
-    }
-}
-
-impl Into<Vec<PyArg>> for PyList {
-    fn into(self) -> Vec<PyArg> {
-        self.members
-    }
-}
-
-impl From<Vec<PyArg>> for PyList {
-    fn from(v: Vec<PyArg>) -> PyList {
-        PyList {
-            members: v
-        }
-    }
-}
-
-pub trait PyListPush<T> {
-    fn push(&mut self, e: T);
-}
-
-impl PyListPush<PyArg> for PyList {
-    fn push(&mut self, e: PyArg) {
-        self.members.push(e);
-    }
-}
-
-impl PyListPush<i64> for PyList {
-    fn push(&mut self, e: i64) {
-        self.members.push(PyArg::I64(e));
-    }
-}
-
-impl PyListPush<i32> for PyList {
-    fn push(&mut self, e: i32) {
-        self.members.push(PyArg::I32(e));
-    }
-}
-
-impl PyListPush<i16> for PyList {
-    fn push(&mut self, e: i16) {
-        self.members.push(PyArg::I16(e));
-    }
-}
-
-impl PyListPush<i8> for PyList {
-    fn push(&mut self, e: i8) {
-        self.members.push(PyArg::I8(e));
-    }
-}
-
-impl PyListPush<u32> for PyList {
-    fn push(&mut self, e: u32) {
-        self.members.push(PyArg::U32(e));
-    }
-}
-
-impl PyListPush<u16> for PyList {
-    fn push(&mut self, e: u16) {
-        self.members.push(PyArg::U16(e));
-    }
-}
-
-impl PyListPush<u8> for PyList {
-    fn push(&mut self, e: u8) {
-        self.members.push(PyArg::U8(e));
-    }
-}
-
-impl PyListPush<f32> for PyList {
-    fn push(&mut self, e: f32) {
-        self.members.push(PyArg::F32(e));
-    }
-}
-
-impl PyListPush<f64> for PyList {
-    fn push(&mut self, e: f64) {
-        self.members.push(PyArg::F64(e));
-    }
-}
-
-impl PyListPush<PyString> for PyList {
-    fn push(&mut self, e: PyString) {
-        self.members.push(PyArg::PyString(e));
-    }
-}
-
-impl PyListPush<String> for PyList {
-    fn push(&mut self, e: String) {
-        self.members.push(PyArg::PyString(PyString::from(e)));
-    }
-}
-
-impl<'a> PyListPush<&'a str> for PyList {
-    fn push(&mut self, e: &'a str) {
-        self.members.push(PyArg::PyString(PyString::from(e)));
-    }
-}
-
-impl PyListPush<PyBool> for PyList {
-    fn push(&mut self, e: PyBool) {
-        self.members.push(PyArg::PyBool(e));
-    }
-}
-
-impl PyListPush<bool> for PyList {
-    fn push(&mut self, e: bool) {
-        self.members.push( PyArg::PyBool(PyBool::from(e)));
-    }
-}
-
-impl PyListPush<PyTuple> for PyList {
-    fn push(&mut self, e: PyTuple) {
-        self.members.push(PyArg::PyTuple(Box::new(e)));
-    }
-}
-
-impl PyListPush<PyList> for PyList {
-    fn push(&mut self, e: PyList) {
-        self.members.push(PyArg::PyList(Box::new(e)));
-    }
-}
-
-impl<T> PyListPush<Vec<T>> for PyList
-    where PyList: PyListPush<T>
-{
-    fn push(&mut self, e: Vec<T>) {
-        self.members.push(PyArg::PyList(Box::new(PyList::from_iter(e))));
-    }
-}
-
-impl<T> FromIterator<T> for PyList
-    where PyList: PyListPush<T>
-{
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut c = PyList::new();
-        for e in iter {
-            c.push(e);
-        }
-        c
-    }
-}
-
-impl Index<usize> for PyList {
-    type Output = PyArg;
-    fn index(&self, index: usize) -> &PyArg {
-        &(self.members[index])
-    }
-}
-
-impl<'a> IndexMut<usize> for PyList {
-    fn index_mut(&mut self, index: usize) -> &mut PyArg {
-        &mut (self.members[index])
-    }
 }
 
 #[no_mangle]

@@ -134,16 +134,9 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         from rustypy.rswrapper import PyDict, UnsignedLongLong
         d = {0: "From", 1: "Python"}
         T = typing.Dict[HashableType('u64'), str]
-        ptr = PyDict.from_dict(d, T)
-        pydict = PyDict(ptr, T)
-        r = pydict.to_dict()
-        pydict.free()
-        self.assertEqual(len(r), 2)
-        self.assertEqual(r, {0: "From", 1: "Python"})
-
+        R = typing.Dict[HashableType('i64'), str]
         self.bindings.python_bind_dict.add_argtype(0, T)
-        self.bindings.python_bind_dict.restype = typing.Dict[
-            HashableType('i64'), str]
+        self.bindings.python_bind_dict.restype = R
         result = self.bindings.python_bind_dict(d)
         self.assertEqual(result, {0: "Back", 1: "Rust"})
 
