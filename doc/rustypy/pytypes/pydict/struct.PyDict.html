@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `PyDict` struct in crate `rustypy`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, PyDict">
+
+    <title>rustypy::pytypes::pydict::PyDict - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a>::<wbr><a href='index.html'>pydict</a></p><script>window.sidebarCurrent = {name: 'PyDict', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a>::<wbr><a href='index.html'>pydict</a>::<wbr><a class='struct' href=''>PyDict</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-484' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#72-76' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct PyDict&lt;K,&nbsp;PyArg&gt; <span class='where'>where K: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a></span> {
+    // some fields omitted
+}</pre><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl&lt;K&gt; <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt; <span class='where'>where K: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a> + PyDictKey</span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-489' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#80-162' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Creates an empty PyDict.</p>
+</div><h4 id='method.insert' class='method'><code>fn <a href='#method.insert' class='fnname'>insert</a>(&amp;mut self, k: K, v: <a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Inserts a key-value pair into the map.</p>
+
+<p>If the map did not have this key present, None is returned.</p>
+
+<p>If the map did have this key present, the value is updated, and the old value is returned.
+The key is not updated, though; this matters for types that can be == without being
+identical. See the module-level documentation for more.</p>
+</div><h4 id='method.remove' class='method'><code>fn <a href='#method.remove' class='fnname'>remove</a>(&amp;mut self, k: &amp;K) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Removes a key from the map, returning the value at the key if the key was previously in the map.</p>
+
+<p>The key may be any borrowed form of the map&#39;s key type, but Hash and Eq on the borrowed
+form must match those for the key type.</p>
+</div><h4 id='method.get' class='method'><code>fn <a href='#method.get' class='fnname'>get</a>(&amp;mut self, k: &amp;K) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Returns a reference to the value corresponding to the key.</p>
+
+<p>The key may be any borrowed form of the map&#39;s key type, but Hash and Eq on the borrowed
+form must match those for the key type.</p>
+</div><h4 id='method.drain' class='method'><code>fn <a href='#method.drain' class='fnname'>drain</a>(&amp;mut self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/std/collections/hash/map/struct.Drain.html' title='std::collections::hash::map::Drain'>Drain</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Clears the map, returning all key-value pairs as an iterator.
+Keeps the allocated memory for reuse.</p>
+</div><h4 id='method.from_ptr' class='method'><code>unsafe fn <a href='#method.from_ptr' class='fnname'>from_ptr</a>(ptr: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Get a PyDict from a previously boxed PyDict.</p>
+
+<p>Takes two type parameters:
+    - one corresponding to the key type (check
+      <a href="../rustypy/pytypes/enum.PyArg.html">PyArg</a> variants)
+    - and PyArg, corresponding to the value type</p>
+
+<p>And a PyDict as a raw *mut usize pointer.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>dict</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>PyDict</span>::<span class='op'>&lt;</span><span class='ident'>u64</span>, <span class='ident'>PyArg</span><span class='op'>&gt;</span>::<span class='ident'>from_ptr</span>(<span class='ident'>dict</span>) };</pre>
+</div><h4 id='method.as_ptr' class='method'><code>fn <a href='#method.as_ptr' class='fnname'>as_ptr</a>(self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a></code></h4>
+<div class='docblock'><p>Returns self as raw pointer. Use this method when returning a PyTuple to Python.</p>
+</div><h4 id='method.into_hashmap' class='method'><code>fn <a href='#method.into_hashmap' class='fnname'>into_hashmap</a>&lt;V&gt;(self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/std/collections/hash/map/struct.HashMap.html' title='std::collections::hash::map::HashMap'>HashMap</a>&lt;K,&nbsp;V&gt; <span class='where'>where V: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html' title='core::convert::From'>From</a>&lt;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</span></code></h4>
+<div class='docblock'><p>Consumes self and returns a HashMap, takes one type parameter and transforms inner
+content to that type.</p>
+</div><h4 id='method.into_iter' class='method'><code>fn <a href='#method.into_iter' class='fnname'>into_iter</a>&lt;T:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html' title='core::convert::From'>From</a>&lt;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;&gt;(self) -&gt; <a class='struct' href='../../../rustypy/pytypes/pydict/struct.IntoIter.html' title='rustypy::pytypes::pydict::IntoIter'>IntoIter</a>&lt;K,&nbsp;T&gt;</code></h4>
+<div class='docblock'><p>Consume self and turn it into an iterator.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl&lt;K:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>,&nbsp;PyArg:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a>&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> for <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;PyArg&gt; <span class='where'>where K: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a></span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-451' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#71' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 class='impl'><span class='in-band'><code>impl&lt;K:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a>,&nbsp;PyArg:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a>&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;PyArg&gt; <span class='where'>where K: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a></span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-457' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#71' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;PyArg&gt;) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;PyArg&gt;) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;K:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a>,&nbsp;PyArg:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a>&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;PyArg&gt; <span class='where'>where K: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a></span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-470' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#71' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;K:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>,&nbsp;PyArg:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;PyArg&gt; <span class='where'>where K: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a></span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-478' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#71' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;PyArg&gt;</code></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;K,&nbsp;V&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/iter/traits/trait.FromIterator.html' title='core::iter::traits::FromIterator'>FromIterator</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(</a>K, V<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>)</a>&gt; for <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt; <span class='where'>where K: PyDictKey + <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a>, <a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html' title='core::convert::From'>From</a>&lt;V&gt;</span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-517' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#164-175' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from_iter' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/iter/traits/trait.FromIterator.html#tymethod.from_iter' class='fnname'>from_iter</a>&lt;I:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/iter/traits/trait.IntoIterator.html' title='core::iter::traits::IntoIterator'>IntoIterator</a>&lt;Item=<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(</a>K, V<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>)</a>&gt;&gt;(iter: I) -&gt; Self</code></h4>
+<div class='docblock'><p>Creates a value from an iterator. <a href="https://doc.rust-lang.org/nightly/core/iter/traits/trait.FromIterator.html#tymethod.from_iter">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;K,&nbsp;V&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html' title='core::convert::From'>From</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/std/collections/hash/map/struct.HashMap.html' title='std::collections::hash::map::HashMap'>HashMap</a>&lt;K,&nbsp;V&gt;&gt; for <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt; <span class='where'>where K: PyDictKey + <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a>, <a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html' title='core::convert::From'>From</a>&lt;V&gt;</span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-546' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#200-209' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html#tymethod.from' class='fnname'>from</a>(hm: <a class='struct' href='https://doc.rust-lang.org/nightly/std/collections/hash/map/struct.HashMap.html' title='std::collections::hash::map::HashMap'>HashMap</a>&lt;K,&nbsp;V&gt;) -&gt; <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Performs the conversion.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;K&gt; <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html' title='core::convert::From'>From</a>&lt;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt; for <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt; <span class='where'>where K: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a> + PyDictKey</span></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-558' class='srclink' href='../../../src/rustypy/src/pytypes/pydict.rs.html#219-228' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from-1' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html#tymethod.from' class='fnname'>from</a>(a: <a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>) -&gt; <a class='struct' href='../../../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>&lt;K,&nbsp;<a class='enum' href='../../../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>&gt;</code></h4>
+<div class='docblock'><p>Performs the conversion.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "rustypy";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

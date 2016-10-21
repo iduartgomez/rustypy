@@ -47,15 +47,15 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-69' class='srclink' href='../../../src/rustypy/src/pytypes/pybool.rs.html#1-238' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-94' class='srclink' href='../../../src/rustypy/src/pytypes/pybool.rs.html#1-243' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Analog to a Python boolean type.</p>
 
 <p>It supports &amp; and | operators, and comparison to Rust bool types.
-To return to Python use the <em>as_ptr</em> method and return a raw pointer.</p>
+To return to Python use the <code>as_ptr</code> method and return a raw pointer.</p>
 
 <h1 id='safety' class='section-header'><a href='#safety'>Safety</a></h1>
-<p>You can convert a raw pointer to a bool type with <em>from_ptr_into_bool</em> method,
-or to a &amp;PyBool with <em>from_ptr</em> method. Those operations are unsafe as they require
+<p>You can convert a raw pointer to a bool type with <code>from_ptr_into_bool</code> method,
+or to a <code>&amp;PyBool</code> with <code>from_ptr</code> method. Those operations are unsafe as they require
 dereferencing a raw pointer.</p>
 
 <h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>

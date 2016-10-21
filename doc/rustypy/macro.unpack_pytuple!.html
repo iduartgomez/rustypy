@@ -47,11 +47,12 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-788' class='srclink' href='../src/rustypy/src/pytypes/pytuple.rs.html#178-339' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-1614' class='srclink' href='../src/rustypy/src/pytypes/pytuple.rs.html#212-379' title='goto source code'>[src]</a></span></h1>
 <pre class='rust macro'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>unpack_pytuple</span> {
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>tt</span>,)<span class='op'>+</span>) ) <span class='op'>=&gt;</span> { ... };
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>tt</span>,)<span class='op'>+</span>)) <span class='op'>=&gt;</span> { ... };
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: {<span class='ident'>PyDict</span>{<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>u</span>:<span class='ident'>tt</span>}}) <span class='op'>=&gt;</span> { ... };
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: {<span class='ident'>PyList</span>{$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>u</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}}) <span class='op'>=&gt;</span> { ... };
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>PyBool</span>) <span class='op'>=&gt;</span> { ... };
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>PyString</span>) <span class='op'>=&gt;</span> { ... };
@@ -67,12 +68,25 @@
 }</pre>
 <div class='docblock'><p>Iterates over a a PyTuple and returns a corresponding Rust tuple.</p>
 
-<p>PyTuple types are inmmutable, all inner types contents are copied when destructured
-(this includes inner container types like PyList or nested PyTuples).
-Inner <code>PyList&lt;PyArg(T)&gt;</code> are converted to the respective <code>Vec&lt;T&gt;</code> and requires
-valid syntax for <a href="../rustypy/macro.unpack_pylist!.html">unpack_pytuple!</a>.</p>
+<p>Content of tuples cannot be moved out when destructured, so all inner data is copied
+except when avoidable (ie. the content of inner container types may or may not be moved),
+but when unpacked is safer to assume the PyTuple as consumed
+(that&#39;s the intetion of unpacking).</p>
 
-<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1></div></section>
+<p>Inner containers (ie. <code>PyList&lt;PyArg(T)&gt;</code>) are converted to the respective Rust analog
+(ie. <code>Vec&lt;T&gt;</code>) and require valid syntax for their respective unpack macro (ie.
+<a href="../rustypy/macro.unpack_pylist!.html">unpack_pytuple!</a>).</p>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<p>Unpack a PyTuple which contains a two PyDict types with PyString keys
+and values of PyList<i64>:</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='comment'>// tuple from Python: ({&quot;one&quot;: [0, 1, 3], &quot;two&quot;: [3, 2, 1]})</span>
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>pytuple</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='ident'>PyTuple</span>::<span class='ident'>from_ptr</span>(<span class='ident'>pytuple</span>) };
+<span class='kw'>let</span> <span class='ident'>unpacked</span> <span class='op'>=</span> <span class='macro'>unpack_pytuple</span><span class='macro'>!</span>(<span class='ident'>pytuple</span>; ({<span class='ident'>PyDict</span>{(<span class='ident'>PyString</span>, <span class='ident'>PyList</span>{<span class='ident'>I32</span> <span class='op'>=&gt;</span> <span class='ident'>i64</span>})}},
+                                         {<span class='ident'>PyDict</span>{(<span class='ident'>PyString</span>, <span class='ident'>PyList</span>{<span class='ident'>I32</span> <span class='op'>=&gt;</span> <span class='ident'>i64</span>})}},));</pre>
+</div></section>
     <section id='search' class="content hidden"></section>
 
     <section class="footer"></section>

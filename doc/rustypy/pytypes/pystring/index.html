@@ -47,16 +47,16 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-18' class='srclink' href='../../../src/rustypy/src/pytypes/pystring.rs.html#1-124' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-19' class='srclink' href='../../../src/rustypy/src/pytypes/pystring.rs.html#1-129' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>An analog of a Python String.</p>
 
-<p>To return to Python you must use as_ptr method and return a raw pointer.
-You can create them using PyString::from trait, from both &amp;str and String.</p>
+<p>To return to Python you must use <code>as_ptr</code> method and return a raw pointer.
+You can create them using the <code>from</code> trait method, from both <code>&amp;str</code> and <code>String</code>.</p>
 
 <h1 id='safety' class='section-header'><a href='#safety'>Safety</a></h1>
 <p>When passed from Python you can convert from PyString to an owned string
-(from_ptr_into_string method) or to a &amp;str slice (to_str method), or
-to a PyString reference (from_ptr method). Those operations are unsafe
+(<code>from_ptr_into_string</code> method) or to a <code>&amp;str</code> slice (to_str method), or
+to a PyString reference (<code>from_ptr</code> method). Those operations are unsafe
 as they require dereferencing a raw pointer.</p>
 
 <h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>

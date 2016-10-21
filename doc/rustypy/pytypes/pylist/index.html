@@ -47,32 +47,43 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-362' class='srclink' href='../../../src/rustypy/src/pytypes/pylist.rs.html#1-421' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-332' class='srclink' href='../../../src/rustypy/src/pytypes/pylist.rs.html#1-339' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>An analog of a Python list which contains elements of a single type, will accept an
 undefined number of one (and just one) of any other supported type (including other
 PyLists).</p>
 
 <p>PyList can be constructed from other iterable types as long as the inner type is
-supported and will own the inner content (a copy will be performed).</p>
+supported (a copy will be performed in case is necessary).</p>
 
 <pre class='rust rust-example-rendered'>
-<span class='ident'>PyList</span>::<span class='ident'>from_iter</span>(<span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>1u32</span>; <span class='number'>3</span>]);</pre>
+<span class='ident'>PyList</span>::<span class='ident'>from_iter</span>(<span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>1u32</span>; <span class='number'>3</span>]);
+<span class='ident'>PyList</span>::<span class='ident'>from</span>(<span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>1u32</span>; <span class='number'>3</span>]);</pre>
 
 <p>You can also use the typical vector interfaces (push, pop, remove, etc.) as long as the
-type is supported (check <a href="../rustypy/pytypes/enum.PyArg.html">PyArg</a> variants).</p>
+type is supported (check <a href="../rustypy/pytypes/enum.PyArg.html">PyArg</a> variants). PyList
+types and their content can also be implicitly converted through an special iterator type.</p>
 
 <pre class='rust rust-example-rendered'>
-<span class='comment'>// required to use push:</span>
-<span class='kw'>use</span> <span class='ident'>rustypy</span>::<span class='ident'>pytypes</span>::<span class='ident'>pylist</span>::<span class='ident'>PyListPush</span>;
-
 <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>l</span> <span class='op'>=</span> <span class='ident'>PyList</span>::<span class='ident'>new</span>();
 <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>0u32</span>, <span class='number'>1</span>, <span class='number'>3</span>] {
     <span class='ident'>l</span>.<span class='ident'>push</span>(<span class='ident'>e</span>);
-}</pre>
+}
 
-<p>When extracting in Python with the FFI, elements are moved, not copied
-(except for PyTuples which require an extra copy)
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>iter</span> <span class='op'>=</span> <span class='ident'>PyList</span>::<span class='ident'>into_iter</span>::<span class='op'>&lt;</span><span class='ident'>u32</span><span class='op'>&gt;</span>(<span class='ident'>l</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>iter</span>.<span class='ident'>collect</span>::<span class='op'>&lt;</span><span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>u32</span><span class='op'>&gt;&gt;</span>(), <span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>0u32</span>, <span class='number'>1</span>, <span class='number'>3</span>])</pre>
+
+<p>When extracting in Python with the FFI, elements are moved whenever is possible, not copied
 and when free&#39;d all the original elements are dropped.</p>
+
+<h1 id='safety' class='section-header'><a href='#safety'>Safety</a></h1>
+<p>PyList must be passed between Rust and Python as a raw pointer. You can get a raw pointer
+using <code>as_ptr</code> and convert from a raw pointer using the &quot;static&quot;
+method <code>PyList::from_ptr</code> which is unsafe as it requires dereferencing a raw pointer.</p>
+
+<p>For convinience there are some methods to perform conversions to Vec<T> from PyList<PyArg>,
+while none of those are unsafe per se, they require providing the expected PyArg enum variant.
+In case the expected variant is wrong, the process will abort and exit as it&#39;s not possible
+to handle errors acrosss the FFI boundary.</p>
 
 <h2 id='unpacking-pylist-from-python' class='section-header'><a href='#unpacking-pylist-from-python'>Unpacking PyList from Python</a></h2>
 <p>Is recommended to use the <a href="../../macro.unpack_pylist!.html">unpack_pylist!</a> macro in order
@@ -80,74 +91,31 @@ to convert a PyList to a Rust native type. Check the macro documentation for mor
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
+                           <td><a class='struct' href='struct.IntoIter.html'
+                                  title='rustypy::pytypes::pylist::IntoIter'>IntoIter</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
                            <td><a class='struct' href='struct.PyList.html'
                                   title='rustypy::pytypes::pylist::PyList'>PyList</a></td>
                            <td class='docblock short'>
                                 <p>An analog of a Python list which contains an undefined number of elements of
 a single kind, of any <a href="../../../rustypy/pytypes/enum.PyArg.html">supported type</a>.</p>
                            </td>
-                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
-<table>
-                       <tr class=' module-item'>
-                           <td><a class='trait' href='trait.PyListPush.html'
-                                  title='rustypy::pytypes::pylist::PyListPush'>PyListPush</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
                        </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pylist_extract_pybool.html'
-                                  title='rustypy::pytypes::pylist::pylist_extract_pybool'>pylist_extract_pybool</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pylist_extract_pydouble.html'
-                                  title='rustypy::pytypes::pylist::pylist_extract_pydouble'>pylist_extract_pydouble</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pylist_extract_pyfloat.html'
-                                  title='rustypy::pytypes::pylist::pylist_extract_pyfloat'>pylist_extract_pyfloat</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pylist_extract_pyint.html'
-                                  title='rustypy::pytypes::pylist::pylist_extract_pyint'>pylist_extract_pyint</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pylist_extract_pylist.html'
-                                  title='rustypy::pytypes::pylist::pylist_extract_pylist'>pylist_extract_pylist</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pylist_extract_pystring.html'
-                                  title='rustypy::pytypes::pylist::pylist_extract_pystring'>pylist_extract_pystring</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pylist_extract_pytuple.html'
-                                  title='rustypy::pytypes::pylist::pylist_extract_pytuple'>pylist_extract_pytuple</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
                            <td><a class='fn' href='fn.pylist_free.html'
                                   title='rustypy::pytypes::pylist::pylist_free'>pylist_free</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pylist_get_element.html'
+                                  title='rustypy::pytypes::pylist::pylist_get_element'>pylist_get_element</a></td>
                            <td class='docblock short'>
                                 
                            </td>

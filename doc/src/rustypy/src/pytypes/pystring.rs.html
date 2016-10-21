@@ -166,16 +166,21 @@
 <span id="122">122</span>
 <span id="123">123</span>
 <span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! An analog of a Python String.</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! To return to Python you must use as_ptr method and return a raw pointer.</span>
-<span class='doccomment'>//! You can create them using PyString::from trait, from both &amp;str and String.</span>
+<span class='doccomment'>//! To return to Python you must use ```as_ptr``` method and return a raw pointer.</span>
+<span class='doccomment'>//! You can create them using the ```from``` trait method, from both ```&amp;str``` and ```String```.</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Safety</span>
 <span class='doccomment'>//! When passed from Python you can convert from PyString to an owned string</span>
-<span class='doccomment'>//! (from\_ptr\_into\_string method) or to a &amp;str slice (to\_str method), or</span>
-<span class='doccomment'>//! to a PyString reference (from\_ptr method). Those operations are unsafe</span>
+<span class='doccomment'>//! (```from_ptr_into_string``` method) or to a ```&amp;str``` slice (to_str method), or</span>
+<span class='doccomment'>//! to a PyString reference (```from_ptr``` method). Those operations are unsafe</span>
 <span class='doccomment'>//! as they require dereferencing a raw pointer.</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Examples</span>
@@ -198,8 +203,7 @@
 <span class='doccomment'>/// An analog of a Python string.</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// Read the [module docs](index.html) for more information.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>)]</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>)]</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>, <span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>, <span class='ident'>Hash</span>)]</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>PyString</span> {
     <span class='ident'>_inner</span>: <span class='ident'>CString</span>,
 }
@@ -246,6 +250,12 @@
     <span class='doccomment'>/// Copies a String to a PyString.</span>
     <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>s</span>: <span class='ident'>String</span>) <span class='op'>-&gt;</span> <span class='ident'>PyString</span> {
         <span class='ident'>PyString</span> { <span class='ident'>_inner</span>: <span class='ident'>CString</span>::<span class='ident'>new</span>(<span class='ident'>s</span>).<span class='ident'>unwrap</span>() }
+    }
+}
+
+<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>PyString</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>String</span> {
+    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>s</span>: <span class='ident'>PyString</span>) <span class='op'>-&gt;</span> <span class='ident'>String</span> {
+        <span class='ident'>s</span>.<span class='ident'>to_string</span>()
     }
 }
 

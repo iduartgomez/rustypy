@@ -47,7 +47,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/rustypy/src/lib.rs.html#1-205' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-0' class='srclink' href='../src/rustypy/src/lib.rs.html#1-210' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Binding Rust with Python, both ways!</p>
 
 <p>This library will generate and handle type conversions between Python and
@@ -59,7 +59,18 @@ and information on how to use Rust in Python can also be found there.</p>
 on how to write foreign functions that are compliant with Python as well as using the custom
 types that will ease type conversion.</p>
 </div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
-<table><tr><td><code>pub use self::pytypes::{<a class='struct' href='../rustypy/pytypes/pytuple/struct.PyTuple.html' title='rustypy::pytypes::pytuple::PyTuple'>PyTuple</a>, <a class='struct' href='../rustypy/pytypes/pylist/struct.PyList.html' title='rustypy::pytypes::pylist::PyList'>PyList</a>, <a class='struct' href='../rustypy/pytypes/pystring/struct.PyString.html' title='rustypy::pytypes::pystring::PyString'>PyString</a>, <a class='struct' href='../rustypy/pytypes/pybool/struct.PyBool.html' title='rustypy::pytypes::pybool::PyBool'>PyBool</a>, <a class='enum' href='../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>};</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr><td><code>pub use self::<a class='mod'
+                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
+                                       href='./pytypes/pybool/index.html'>pybool</a>::<a class='struct' href='../rustypy/pytypes/pybool/struct.PyBool.html' title='rustypy::pytypes::pybool::PyBool'>PyBool</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
+                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
+                                       href='./pytypes/pystring/index.html'>pystring</a>::<a class='struct' href='../rustypy/pytypes/pystring/struct.PyString.html' title='rustypy::pytypes::pystring::PyString'>PyString</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
+                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
+                                       href='./pytypes/pylist/index.html'>pylist</a>::<a class='struct' href='../rustypy/pytypes/pylist/struct.PyList.html' title='rustypy::pytypes::pylist::PyList'>PyList</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
+                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
+                                       href='./pytypes/pydict/index.html'>pydict</a>::<a class='struct' href='../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
+                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
+                                       href='./pytypes/pytuple/index.html'>pytuple</a>::<a class='struct' href='../rustypy/pytypes/pytuple/struct.PyTuple.html' title='rustypy::pytypes::pytuple::PyTuple'>PyTuple</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
+                                       href='./pytypes/index.html'>pytypes</a>::<a class='enum' href='../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
                        <tr class=' module-item'>
                            <td><a class='mod' href='pytypes/index.html'
@@ -75,6 +86,14 @@ types that will ease type conversion.</p>
                            <td class='docblock short'>
                                 <p>This macro allows the construction of <a href="../rustypy/pytypes/pytuple/struct.PyTuple.html">PyTuple</a>
 types.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='macro' href='macro.unpack_pydict!.html'
+                                  title='rustypy::unpack_pydict!'>unpack_pydict!</a></td>
+                           <td class='docblock short'>
+                                <p>Consumes a <code>*mut PyDict&lt;K, PyArg&lt;T&gt;&gt; as *mut usize</code> content and returns a <code>HashMap&lt;K, T&gt;</code>
+from it, no copies are performed in the process.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>

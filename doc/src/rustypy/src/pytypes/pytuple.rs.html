@@ -461,37 +461,6 @@
 <span id="417">417</span>
 <span id="418">418</span>
 <span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! An analog of a Python tuple, will accept an undefined number of any other supported types.</span>
 <span class='doccomment'>//!</span>
@@ -507,8 +476,18 @@
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! You must pass the variety of the argument using the PyArg enum.</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! When extracting elements in Python with the FFI, elements are copied, not moved,</span>
+<span class='doccomment'>//! When extracting elements in Python with the FFI, elements are copied, not moved unless</span>
+<span class='doccomment'>//! possible (ie. content of inner containers may or may not be moved out),</span>
 <span class='doccomment'>//! and when free&#39;d all the original elements are dropped.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! PyTuples behave exactly as Python tuples: they are immutable, but provide interior mutability.</span>
+<span class='doccomment'>//! For example, you can pop elements from an inner PyList, although the PyList cannot be moved</span>
+<span class='doccomment'>//! out of a PyTuple (without completely destructuring it).</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! # Safety</span>
+<span class='doccomment'>//! PyTuple must be passed between Rust and Python as a raw pointer. You can get a</span>
+<span class='doccomment'>//! raw pointer using ```as_ptr``` and convert from a raw pointer using the &quot;static&quot;</span>
+<span class='doccomment'>//! method ```PyDict::from_ptr``` which is unsafe as it requires dereferencing a raw pointer.</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! ## Unpacking PyTuple from Python</span>
 <span class='doccomment'>//! Is recommended to use the [unpack_pytuple!](../../macro.unpack_pytuple!.html) macro in order</span>
@@ -517,15 +496,13 @@
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>iter</span>::<span class='ident'>IntoIterator</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::<span class='ident'>Deref</span>;
 
-<span class='kw'>use</span> <span class='ident'>libc</span>;
-<span class='kw'>use</span> <span class='ident'>pytypes</span>::{<span class='ident'>PyArg</span>, <span class='ident'>PyBool</span>, <span class='ident'>PyString</span>, <span class='ident'>PyList</span>};
+<span class='kw'>use</span> <span class='ident'>pytypes</span>::<span class='ident'>PyArg</span>;
 
 <span class='doccomment'>/// An analog of a Python tuple, will accept an undefined number of other</span>
 <span class='doccomment'>/// [supported types](../../../rustypy/pytypes/enum.PyArg.html).</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// Read the [module docs](index.html) for more information.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>)]</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>)]</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>, <span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>)]</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>PyTuple</span> {
     <span class='kw'>pub</span> <span class='ident'>elem</span>: <span class='ident'>PyArg</span>,
     <span class='kw'>pub</span> <span class='ident'>idx</span>: <span class='ident'>usize</span>,
@@ -537,22 +514,26 @@
     <span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>fn</span> <span class='ident'>from_ptr</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>) <span class='op'>-&gt;</span> <span class='ident'>PyTuple</span> {
         <span class='op'>*</span>(<span class='ident'>Box</span>::<span class='ident'>from_raw</span>(<span class='ident'>ptr</span>))
     }
-    <span class='kw'>fn</span> <span class='ident'>get_element</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>idx</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='ident'>PyTuple</span>, <span class='kw-2'>&amp;</span><span class='ident'>str</span><span class='op'>&gt;</span> {
+    <span class='doccomment'>/// Get a mutable reference to an inner element of the tuple, takes as argument the position</span>
+    <span class='doccomment'>/// of the element and returns a Result.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>as_mut</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>idx</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>PyArg</span>, <span class='kw-2'>&amp;</span><span class='ident'>str</span><span class='op'>&gt;</span> {
         <span class='kw'>if</span> <span class='ident'>idx</span> <span class='op'>==</span> <span class='self'>self</span>.<span class='ident'>idx</span> {
-            <span class='prelude-val'>Ok</span>(<span class='self'>self</span>)
+            <span class='prelude-val'>Ok</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>elem</span>)
         } <span class='kw'>else</span> {
             <span class='kw'>match</span> <span class='self'>self</span>.<span class='ident'>next</span> {
-                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>e</span>.<span class='ident'>get_element</span>(<span class='ident'>idx</span>),
+                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='kw-2'>mut</span> <span class='ident'>e</span>) <span class='op'>=&gt;</span> (<span class='op'>*</span><span class='op'>*</span><span class='ident'>e</span>).<span class='ident'>as_mut</span>(<span class='ident'>idx</span>),
                 <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>(<span class='string'>&quot;PyTuple index out of range.&quot;</span>),
             }
         }
     }
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>get_inner_ref</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>idx</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>, <span class='kw-2'>&amp;</span><span class='ident'>str</span><span class='op'>&gt;</span> {
+    <span class='doccomment'>/// Get a regular reference to an inner element of the tuple, takes as argument the position</span>
+    <span class='doccomment'>/// of the element and returns a Result.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>as_ref</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>idx</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>, <span class='kw-2'>&amp;</span><span class='ident'>str</span><span class='op'>&gt;</span> {
         <span class='kw'>if</span> <span class='ident'>idx</span> <span class='op'>==</span> <span class='self'>self</span>.<span class='ident'>idx</span> {
             <span class='prelude-val'>Ok</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>elem</span>)
         } <span class='kw'>else</span> {
             <span class='kw'>match</span> <span class='self'>self</span>.<span class='ident'>next</span> {
-                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>e</span>.<span class='ident'>get_inner_ref</span>(<span class='ident'>idx</span>),
+                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>e</span>) <span class='op'>=&gt;</span> (<span class='op'>*</span><span class='op'>*</span><span class='ident'>e</span>).<span class='ident'>as_ref</span>(<span class='ident'>idx</span>),
                 <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>(<span class='string'>&quot;PyTuple index out of range.&quot;</span>),
             }
         }
@@ -566,6 +547,7 @@
             <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='self'>self</span>.<span class='ident'>idx</span> <span class='op'>+</span> <span class='number'>1</span>,
         }
     }
+    <span class='doccomment'>/// Returns self as raw pointer. Use this method when returning a PyTuple to Python.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>as_ptr</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span> {
         <span class='ident'>Box</span>::<span class='ident'>into_raw</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='self'>self</span>))
     }
@@ -578,7 +560,7 @@
         <span class='kw'>let</span> <span class='ident'>l</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>len</span>();
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>iter</span> <span class='op'>=</span> <span class='ident'>Vec</span>::<span class='ident'>with_capacity</span>(<span class='ident'>l</span>);
         <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='number'>0</span>..<span class='ident'>l</span> {
-            <span class='ident'>iter</span>.<span class='ident'>push</span>(<span class='self'>self</span>.<span class='ident'>get_inner_ref</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>());
+            <span class='ident'>iter</span>.<span class='ident'>push</span>(<span class='self'>self</span>.<span class='ident'>as_ref</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>());
         }
         <span class='ident'>iter</span>.<span class='ident'>into_iter</span>()
     }
@@ -659,24 +641,40 @@
 
 <span class='doccomment'>/// Iterates over a a PyTuple and returns a corresponding Rust tuple.</span>
 <span class='doccomment'>///</span>
-<span class='doccomment'>/// PyTuple types are inmmutable, all inner types contents are copied when destructured</span>
-<span class='doccomment'>/// (this includes inner container types like PyList or nested PyTuples).</span>
-<span class='doccomment'>/// Inner `PyList&lt;PyArg(T)&gt;` are converted to the respective `Vec&lt;T&gt;` and requires</span>
-<span class='doccomment'>/// valid syntax for [unpack_pytuple!](../rustypy/macro.unpack_pylist!.html).</span>
+<span class='doccomment'>/// Content of tuples cannot be moved out when destructured, so all inner data is copied</span>
+<span class='doccomment'>/// except when avoidable (ie. the content of inner container types may or may not be moved),</span>
+<span class='doccomment'>/// but when unpacked is safer to assume the PyTuple as consumed</span>
+<span class='doccomment'>/// (that&#39;s the intetion of unpacking).</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>/// Inner containers (ie. `PyList&lt;PyArg(T)&gt;`) are converted to the respective Rust analog</span>
+<span class='doccomment'>/// (ie. `Vec&lt;T&gt;`) and require valid syntax for their respective unpack macro (ie.</span>
+<span class='doccomment'>/// [unpack_pytuple!](../rustypy/macro.unpack_pylist!.html)).</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// # Examples</span>
 <span class='doccomment'>///</span>
+<span class='doccomment'>/// Unpack a PyTuple which contains a two PyDict types with PyString keys</span>
+<span class='doccomment'>/// and values of PyList&lt;i64&gt;:</span>
+<span class='doccomment'>///</span>
 <span class='doccomment'>/// ```</span>
+<span class='doccomment'>/// # #[macro_use] extern crate rustypy;</span>
+<span class='doccomment'>/// # fn main(){</span>
+<span class='doccomment'>/// # use rustypy::{PyDict, PyList, PyTuple, PyArg, PyString};</span>
+<span class='doccomment'>/// # use std::collections::HashMap;</span>
+<span class='doccomment'>/// # let mut hm = HashMap::new();</span>
+<span class='doccomment'>/// # hm.insert(PyString::from(&quot;one&quot;), vec![0_i32, 1, 2]);</span>
+<span class='doccomment'>/// # hm.insert(PyString::from(&quot;two&quot;), vec![3_i32, 2, 1]);</span>
+<span class='doccomment'>/// # let mut pytuple = pytuple!(PyArg::PyDict(PyDict::from(hm.clone()).as_ptr()),</span>
+<span class='doccomment'>/// #                            PyArg::PyDict(PyDict::from(hm.clone()).as_ptr())).as_ptr();</span>
+<span class='doccomment'>/// // tuple from Python: ({&quot;one&quot;: [0, 1, 3], &quot;two&quot;: [3, 2, 1]})</span>
+<span class='doccomment'>/// let mut pytuple = unsafe { PyTuple::from_ptr(pytuple) };</span>
+<span class='doccomment'>/// let unpacked = unpack_pytuple!(pytuple; ({PyDict{(PyString, PyList{I32 =&gt; i64})}},</span>
+<span class='doccomment'>///                                          {PyDict{(PyString, PyList{I32 =&gt; i64})}},));</span>
+<span class='doccomment'>/// # }</span>
 <span class='doccomment'>/// ```</span>
 <span class='doccomment'>///</span>
 <span class='attribute'>#[<span class='ident'>macro_export</span>]</span>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>unpack_pytuple</span> {
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>tt</span>,)<span class='op'>+</span>) ) <span class='op'>=&gt;</span> {{
-        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>_abort</span> {
-            () <span class='op'>=&gt;</span> {{
-                <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;rustypy: expected an other type while unpacking pytuple&quot;</span>)
-            }};
-        };
         <span class='kw'>use</span> <span class='ident'>rustypy</span>::<span class='ident'>PyArg</span>;
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>cnt</span> <span class='op'>=</span> <span class='number'>0</span>;
         ($(
@@ -684,151 +682,162 @@
         ,)<span class='op'>*</span>)
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>tt</span>,)<span class='op'>+</span>))  <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='comment'>// TODO: comes from an superior tuple, avoid copying content of self</span>
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_mut</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
-            <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>PyTuple</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
+            <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>PyArg</span>::<span class='ident'>PyTuple</span>(<span class='kw-2'>ref</span> <span class='kw-2'>mut</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
-                <span class='kw'>let</span> <span class='ident'>pytuple</span> <span class='op'>=</span> <span class='ident'>val</span>.<span class='ident'>clone</span>();
                 <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>cnt</span> <span class='op'>=</span> <span class='number'>0</span>;
+                <span class='kw'>let</span> <span class='ident'>val</span> <span class='op'>=</span> <span class='op'>*</span>(<span class='ident'>val</span>).<span class='ident'>clone</span>();
                 ($(
-                    <span class='macro'>unpack_pytuple</span><span class='macro'>!</span>(<span class='ident'>pytuple</span>; <span class='ident'>cnt</span>; <span class='ident'>elem</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>)
+                    <span class='macro'>unpack_pytuple</span><span class='macro'>!</span>(<span class='ident'>deref</span>; <span class='ident'>cnt</span>; <span class='ident'>elem</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>)
                 ,)<span class='op'>*</span>)
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a PyTuple inside a PyTuple&quot;</span>),
+        }
+    }};
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: {<span class='ident'>PyDict</span>{<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>u</span>:<span class='ident'>tt</span>}}) <span class='op'>=&gt;</span> {{
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_mut</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>match</span> <span class='ident'>e</span> {
+            <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>PyArg</span>::<span class='ident'>PyDict</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> {
+                <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
+                <span class='macro'>unpack_pydict</span><span class='macro'>!</span>(<span class='ident'>val</span>; <span class='ident'>PyDict</span>{<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>u</span>})
+            },
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a PyDict inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: {<span class='ident'>PyList</span>{$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>u</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}}) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_mut</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
-            <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>PyList</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
+            <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>PyArg</span>::<span class='ident'>PyList</span>(<span class='kw-2'>ref</span> <span class='kw-2'>mut</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
-                <span class='kw'>let</span> <span class='ident'>copied</span> <span class='op'>=</span> (<span class='op'>*</span><span class='ident'>val</span>).<span class='ident'>clone</span>();
-                <span class='macro'>unpack_pylist</span><span class='macro'>!</span>(<span class='ident'>copied</span>; <span class='ident'>PyList</span>{$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>u</span>)<span class='op'>*</span>})
+                <span class='macro'>unpack_pylist</span><span class='macro'>!</span>( <span class='ident'>FROM_TUPLE</span>: <span class='ident'>val</span>; <span class='ident'>PyList</span>{$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>u</span>)<span class='op'>*</span>})
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a PyList inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>PyBool</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>PyBool</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>to_bool</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a PyBool inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>PyString</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>PyString</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>to_string</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a PyString inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>I64</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>I64</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a i64 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>I32</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>I32</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a i32 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>I16</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>I16</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a i16 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>I8</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
-            <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>I8</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
+            <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>PyArg</span>::<span class='ident'>I8</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a i8 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>U32</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>U32</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a u32 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>U16</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>U16</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a u16 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>U8</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>U8</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a u8 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>F32</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>F32</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a f32 inside a PyTuple&quot;</span>),
         }
     }};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ident</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>; <span class='ident'>elem</span>: <span class='ident'>F64</span>) <span class='op'>=&gt;</span> {{
-        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>get_inner_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>.<span class='ident'>as_ref</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>).<span class='ident'>unwrap</span>();
         <span class='kw'>match</span> <span class='ident'>e</span> {
             <span class='kw-2'>&amp;</span><span class='ident'>PyArg</span>::<span class='ident'>F64</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> {
                 <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>+=</span> <span class='number'>1</span>;
                 <span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>==</span> <span class='number'>0</span> {}; <span class='comment'>// stub to remove warning...</span>
                 <span class='ident'>val</span>.<span class='ident'>clone</span>()
             },
-            _ <span class='op'>=&gt;</span> <span class='macro'>_abort</span><span class='macro'>!</span>(),
+            _ <span class='op'>=&gt;</span> <span class='macro'>_rustypy_abort_xtract_fail</span><span class='macro'>!</span>(<span class='string'>&quot;failed while extracting a f64 inside a PyTuple&quot;</span>),
         }
     }};
 }
@@ -849,7 +858,6 @@
     <span class='ident'>prev</span>.<span class='ident'>push</span>(<span class='ident'>next</span>)
 }
 
-<span class='attribute'>#[<span class='ident'>allow</span>(<span class='ident'>non_snake_case</span>)]</span>
 <span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
 <span class='kw'>pub</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_free</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>) {
     <span class='kw'>if</span> <span class='ident'>ptr</span>.<span class='ident'>is_null</span>() {
@@ -867,81 +875,11 @@
 }
 
 <span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_extract_pyint</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='ident'>i64</span> {
-    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
-    <span class='kw'>let</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>get_element</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
-    <span class='kw'>match</span> <span class='ident'>elem</span>.<span class='ident'>elem</span> {
-        <span class='ident'>PyArg</span>::<span class='ident'>I64</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span>,
-        <span class='ident'>PyArg</span>::<span class='ident'>I32</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
-        <span class='ident'>PyArg</span>::<span class='ident'>I16</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
-        <span class='ident'>PyArg</span>::<span class='ident'>I8</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
-        <span class='ident'>PyArg</span>::<span class='ident'>U32</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
-        <span class='ident'>PyArg</span>::<span class='ident'>U16</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
-        <span class='ident'>PyArg</span>::<span class='ident'>U8</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
-        _ <span class='op'>=&gt;</span> <span class='macro'>_abort_xtract_fail</span><span class='macro'>!</span>(<span class='ident'>elem</span>),
-    }
-}
-
-<span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_extract_pybool</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyBool</span> {
-    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
-    <span class='kw'>let</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>get_element</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
-    <span class='kw'>match</span> <span class='ident'>elem</span>.<span class='ident'>elem</span> {
-        <span class='ident'>PyArg</span>::<span class='ident'>PyBool</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span>.<span class='ident'>clone</span>().<span class='ident'>as_ptr</span>(),
-        _ <span class='op'>=&gt;</span> <span class='macro'>_abort_xtract_fail</span><span class='macro'>!</span>(<span class='ident'>elem</span>),
-    }
-}
-
-<span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_extract_pyfloat</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='ident'>f32</span> {
-    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
-    <span class='kw'>let</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>get_element</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
-    <span class='kw'>match</span> <span class='ident'>elem</span>.<span class='ident'>elem</span> {
-        <span class='ident'>PyArg</span>::<span class='ident'>F32</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span>,
-        _ <span class='op'>=&gt;</span> <span class='macro'>_abort_xtract_fail</span><span class='macro'>!</span>(<span class='ident'>elem</span>),
-    }
-}
-
-<span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_extract_pydouble</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='ident'>f64</span> {
-    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
-    <span class='kw'>let</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>get_element</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
-    <span class='kw'>match</span> <span class='ident'>elem</span>.<span class='ident'>elem</span> {
-        <span class='ident'>PyArg</span>::<span class='ident'>F64</span>(<span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span>,
-        _ <span class='op'>=&gt;</span> <span class='macro'>_abort_xtract_fail</span><span class='macro'>!</span>(<span class='ident'>elem</span>),
-    }
-}
-
-<span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_extract_pystring</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>,
-                                                  <span class='ident'>index</span>: <span class='ident'>usize</span>)
-                                                  <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyString</span> {
-    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
-    <span class='kw'>let</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>get_element</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
-    <span class='kw'>match</span> <span class='ident'>elem</span>.<span class='ident'>elem</span> {
-        <span class='ident'>PyArg</span>::<span class='ident'>PyString</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> <span class='ident'>val</span>.<span class='ident'>clone</span>().<span class='ident'>as_ptr</span>(),
-        _ <span class='op'>=&gt;</span> <span class='macro'>_abort_xtract_fail</span><span class='macro'>!</span>(<span class='ident'>elem</span>),
-    }
-}
-
-<span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_extract_pytuple</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span> {
-    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
-    <span class='kw'>let</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>get_element</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
-    <span class='kw'>match</span> <span class='ident'>elem</span>.<span class='ident'>elem</span> {
-        <span class='ident'>PyArg</span>::<span class='ident'>PyTuple</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> (<span class='op'>*</span><span class='ident'>val</span>).<span class='ident'>clone</span>().<span class='ident'>as_ptr</span>(),
-        _ <span class='op'>=&gt;</span> <span class='macro'>_abort_xtract_fail</span><span class='macro'>!</span>(<span class='ident'>elem</span>),
-    }
-}
-
-<span class='attribute'>#[<span class='ident'>no_mangle</span>]</span>
-<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_extract_pylist</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyList</span> {
-    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span>;
-    <span class='kw'>let</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>get_element</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
-    <span class='kw'>match</span> <span class='ident'>elem</span>.<span class='ident'>elem</span> {
-        <span class='ident'>PyArg</span>::<span class='ident'>PyList</span>(<span class='kw-2'>ref</span> <span class='ident'>val</span>) <span class='op'>=&gt;</span> (<span class='op'>*</span><span class='ident'>val</span>).<span class='ident'>clone</span>().<span class='ident'>as_ptr</span>(),
-        _ <span class='op'>=&gt;</span> <span class='macro'>_abort_xtract_fail</span><span class='macro'>!</span>(<span class='ident'>elem</span>),
-    }
+<span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pytuple_get_element</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyTuple</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyArg</span> {
+    <span class='kw'>let</span> <span class='ident'>tuple</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='op'>*</span><span class='ident'>ptr</span>;
+    <span class='kw'>let</span> <span class='kw-2'>ref</span> <span class='ident'>elem</span> <span class='op'>=</span> <span class='ident'>PyTuple</span>::<span class='ident'>as_mut</span>(<span class='ident'>tuple</span>, <span class='ident'>index</span>).<span class='ident'>unwrap</span>();
+    <span class='kw'>let</span> <span class='ident'>copied</span>: <span class='ident'>PyArg</span> <span class='op'>=</span> (<span class='op'>*</span><span class='ident'>elem</span>).<span class='ident'>clone</span>();
+    <span class='ident'>Box</span>::<span class='ident'>into_raw</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>copied</span>))
 }
 </pre>
 </section>

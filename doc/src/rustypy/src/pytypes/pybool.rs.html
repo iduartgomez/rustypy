@@ -280,15 +280,20 @@
 <span id="236">236</span>
 <span id="237">237</span>
 <span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Analog to a Python boolean type.</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! It supports &amp; and | operators, and comparison to Rust bool types.</span>
-<span class='doccomment'>//! To return to Python use the *as_ptr* method and return a raw pointer.</span>
+<span class='doccomment'>//! To return to Python use the ```as_ptr``` method and return a raw pointer.</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Safety</span>
-<span class='doccomment'>//! You can convert a raw pointer to a bool type with *from\_ptr\_into\_bool* method,</span>
-<span class='doccomment'>//! or to a &amp;PyBool with *from\_ptr* method. Those operations are unsafe as they require</span>
+<span class='doccomment'>//! You can convert a raw pointer to a bool type with ```from_ptr_into_bool``` method,</span>
+<span class='doccomment'>//! or to a ```&amp;PyBool``` with ```from_ptr``` method. Those operations are unsafe as they require</span>
 <span class='doccomment'>//! dereferencing a raw pointer.</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Examples</span>
@@ -311,8 +316,7 @@
 <span class='doccomment'>/// Analog to a Python boolean type.</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// Read the [module docs](index.html) for more information.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>)]</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>)]</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>, <span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>, <span class='ident'>Hash</span>, <span class='ident'>Copy</span>)]</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>PyBool</span> {
     <span class='ident'>val</span>: <span class='ident'>i8</span>,
 }
@@ -366,6 +370,12 @@
 <span class='kw'>pub</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>pybool_get_val</span>(<span class='ident'>ptr</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>PyBool</span>) <span class='op'>-&gt;</span> <span class='ident'>i8</span> {
     <span class='kw'>let</span> <span class='ident'>pybool</span> <span class='op'>=</span> <span class='kw'>unsafe</span> { <span class='kw-2'>&amp;</span><span class='op'>*</span><span class='ident'>ptr</span> };
     <span class='ident'>pybool</span>.<span class='ident'>val</span>
+}
+
+<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>PyBool</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>bool</span> {
+    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>b</span>: <span class='ident'>PyBool</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
+        <span class='ident'>b</span>.<span class='ident'>to_bool</span>()
+    }
 }
 
 <span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>bool</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>PyBool</span> {

@@ -47,7 +47,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-186' class='srclink' href='../../../src/rustypy/src/pytypes/pytuple.rs.html#1-450' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-236' class='srclink' href='../../../src/rustypy/src/pytypes/pytuple.rs.html#1-419' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>An analog of a Python tuple, will accept an undefined number of any other supported types.</p>
 
 <p>You can construct it using the <a href="../../macro.pytuple!.html">pytuple!</a> macro, ie:</p>
@@ -58,8 +58,18 @@
 
 <p>You must pass the variety of the argument using the PyArg enum.</p>
 
-<p>When extracting elements in Python with the FFI, elements are copied, not moved,
+<p>When extracting elements in Python with the FFI, elements are copied, not moved unless
+possible (ie. content of inner containers may or may not be moved out),
 and when free&#39;d all the original elements are dropped.</p>
+
+<p>PyTuples behave exactly as Python tuples: they are immutable, but provide interior mutability.
+For example, you can pop elements from an inner PyList, although the PyList cannot be moved
+out of a PyTuple (without completely destructuring it).</p>
+
+<h1 id='safety' class='section-header'><a href='#safety'>Safety</a></h1>
+<p>PyTuple must be passed between Rust and Python as a raw pointer. You can get a
+raw pointer using <code>as_ptr</code> and convert from a raw pointer using the &quot;static&quot;
+method <code>PyDict::from_ptr</code> which is unsafe as it requires dereferencing a raw pointer.</p>
 
 <h2 id='unpacking-pytuple-from-python' class='section-header'><a href='#unpacking-pytuple-from-python'>Unpacking PyTuple from Python</a></h2>
 <p>Is recommended to use the <a href="../../macro.unpack_pytuple!.html">unpack_pytuple!</a> macro in order
@@ -76,57 +86,15 @@ to convert a PyTuple to a Rust native type. Check the macro documentation for mo
                        </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pytuple_extract_pybool.html'
-                                  title='rustypy::pytypes::pytuple::pytuple_extract_pybool'>pytuple_extract_pybool</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pytuple_extract_pydouble.html'
-                                  title='rustypy::pytypes::pytuple::pytuple_extract_pydouble'>pytuple_extract_pydouble</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pytuple_extract_pyfloat.html'
-                                  title='rustypy::pytypes::pytuple::pytuple_extract_pyfloat'>pytuple_extract_pyfloat</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pytuple_extract_pyint.html'
-                                  title='rustypy::pytypes::pytuple::pytuple_extract_pyint'>pytuple_extract_pyint</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pytuple_extract_pylist.html'
-                                  title='rustypy::pytypes::pytuple::pytuple_extract_pylist'>pytuple_extract_pylist</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pytuple_extract_pystring.html'
-                                  title='rustypy::pytypes::pytuple::pytuple_extract_pystring'>pytuple_extract_pystring</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pytuple_extract_pytuple.html'
-                                  title='rustypy::pytypes::pytuple::pytuple_extract_pytuple'>pytuple_extract_pytuple</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
                            <td><a class='fn' href='fn.pytuple_free.html'
                                   title='rustypy::pytypes::pytuple::pytuple_free'>pytuple_free</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.pytuple_get_element.html'
+                                  title='rustypy::pytypes::pytuple::pytuple_get_element'>pytuple_get_element</a></td>
                            <td class='docblock short'>
                                 
                            </td>
