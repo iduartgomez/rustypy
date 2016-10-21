@@ -12,8 +12,13 @@
 //!
 //! You must pass the variety of the argument using the PyArg enum.
 //!
-//! When extracting elements in Python with the FFI, elements are copied, not moved,
+//! When extracting elements in Python with the FFI, elements are copied, not moved unless
+//! possible (ie. content of inner containers may or may not be moved out),
 //! and when free'd all the original elements are dropped.
+//!
+//! PyTuples behave exactly as Python tuples: they are immutable, but provide interior mutability.
+//! For example, you can pop elements from an inner PyList, although the PyList cannot be moved
+//! out of a PyTuple (without completely destructuring it).
 //!
 //! ## Unpacking PyTuple from Python
 //! Is recommended to use the [unpack_pytuple!](../../macro.unpack_pytuple!.html) macro in order
@@ -40,22 +45,26 @@ impl<'a> PyTuple {
     pub unsafe fn from_ptr(ptr: *mut PyTuple) -> PyTuple {
         *(Box::from_raw(ptr))
     }
-    fn get_element(&self, idx: usize) -> Result<&PyTuple, &str> {
+    /// Get a mutable reference to an inner element of the tuple, takes as argument the position
+    /// of the element and returns a Result.
+    pub fn as_mut(&mut self, idx: usize) -> Result<&mut PyArg, &str> {
         if idx == self.idx {
-            Ok(self)
+            Ok(&mut self.elem)
         } else {
             match self.next {
-                Some(ref e) => e.get_element(idx),
+                Some(ref mut e) => (**e).as_mut(idx),
                 None => Err("PyTuple index out of range."),
             }
         }
     }
-    pub fn get_inner_ref(&self, idx: usize) -> Result<&PyArg, &str> {
+    /// Get a regular reference to an inner element of the tuple, takes as argument the position
+    /// of the element and returns a Result.
+    pub fn as_ref(&self, idx: usize) -> Result<&PyArg, &str> {
         if idx == self.idx {
             Ok(&self.elem)
         } else {
             match self.next {
-                Some(ref e) => e.get_inner_ref(idx),
+                Some(ref e) => (**e).as_ref(idx),
                 None => Err("PyTuple index out of range."),
             }
         }
@@ -69,6 +78,7 @@ impl<'a> PyTuple {
             None => self.idx + 1,
         }
     }
+    /// Returns self as raw pointer. Use this method when returning a PyTuple to Python.
     pub fn as_ptr(self) -> *mut PyTuple {
         Box::into_raw(Box::new(self))
     }
@@ -81,7 +91,7 @@ impl<'a> IntoIterator for &'a PyTuple {
         let l = self.len();
         let mut iter = Vec::with_capacity(l);
         for i in 0..l {
-            iter.push(self.get_inner_ref(i).unwrap());
+            iter.push(self.as_ref(i).unwrap());
         }
         iter.into_iter()
     }
@@ -162,15 +172,35 @@ macro_rules! pytuple {
 
 /// Iterates over a a PyTuple and returns a corresponding Rust tuple.
 ///
-/// PyTuple types are inmmutable, all inner types contents are copied, not moved,
-/// when unpacked (this includes inner container types like PyList or nested PyTuples).
-/// Inner containers (ie. `PyList<PyArg(T)>`) are converted to the respective (ie. `Vec<T>`)
-/// and require valid syntax for their respective unpack macro (ie.
+/// Content of tuples cannot be moved out when destructured, so all inner data is copied
+/// except when avoidable (ie. the content of inner container types may or may not be moved),
+/// but when unpacked is safer to assume the PyTuple as consumed
+/// (that's the intetion of unpacking).
+///
+/// Inner containers (ie. `PyList<PyArg(T)>`) are converted to the respective Rust analog
+/// (ie. `Vec<T>`) and require valid syntax for their respective unpack macro (ie.
 /// [unpack_pytuple!](../rustypy/macro.unpack_pylist!.html)).
 ///
 /// # Examples
 ///
+/// Unpack a PyTuple which contains a two PyDict types with PyString keys
+/// and values of PyList<i64>:
+///
 /// ```
+/// # #[macro_use] extern crate rustypy;
+/// # fn main(){
+/// # use rustypy::{PyDict, PyList, PyTuple, PyArg, PyString};
+/// # use std::collections::HashMap;
+/// # let mut hm = HashMap::new();
+/// # hm.insert(PyString::from("one"), vec![0_i32, 1, 2]);
+/// # hm.insert(PyString::from("two"), vec![3_i32, 2, 1]);
+/// # let mut pytuple = pytuple!(PyArg::PyDict(PyDict::from(hm.clone()).as_ptr()),
+/// #                            PyArg::PyDict(PyDict::from(hm.clone()).as_ptr())).as_ptr();
+/// // tuple from Python: ({"one": [0, 1, 3], "two": [3, 2, 1]})
+/// let mut pytuple = unsafe { PyTuple::from_ptr(pytuple) };
+/// let unpacked = unpack_pytuple!(pytuple; ({PyDict{(PyString, PyList{I32 => i64})}},
+///                                          {PyDict{(PyString, PyList{I32 => i64})}},));
+/// # }
 /// ```
 ///
 #[macro_export]
@@ -183,24 +213,25 @@ macro_rules! unpack_pytuple {
         ,)*)
     }};
     ($t:ident; $i:ident; elem: ($($p:tt,)+))  => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        // comes from an superior tuple, avoid copying content of self
+        let e = $t.as_mut($i).unwrap();
         match e {
-            &PyArg::PyTuple(ref val) => {
+            &mut PyArg::PyTuple(ref mut val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                let pytuple = val.clone();
                 let mut cnt = 0;
+                let val = *(val).clone();
                 ($(
-                    unpack_pytuple!(pytuple; cnt; elem: $p)
+                    unpack_pytuple!(val; cnt; elem: $p)
                 ,)*)
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a PyTuple inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: {PyDict{$u:tt}}) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_mut($i).unwrap();
         match e {
-            &PyArg::PyDict(val) => {
+            &mut PyArg::PyDict(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 unpack_pydict!(val; PyDict{$u})
@@ -209,19 +240,18 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: {PyList{$($u:tt)*}}) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_mut($i).unwrap();
         match e {
-            &PyArg::PyList(ref val) => {
+            &mut PyArg::PyList(ref mut val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                let copied = (*val).clone();
-                unpack_pylist!(copied; PyList{$($u)*})
+                unpack_pylist!( FROM_TUPLE: val; PyList{$($u)*})
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a PyList inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: PyBool) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::PyBool(ref val) => {
                 $i += 1;
@@ -232,7 +262,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: PyString) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::PyString(ref val) => {
                 $i += 1;
@@ -243,7 +273,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: I64) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::I64(ref val) => {
                 $i += 1;
@@ -254,7 +284,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: I32) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::I32(ref val) => {
                 $i += 1;
@@ -265,7 +295,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: I16) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::I16(ref val) => {
                 $i += 1;
@@ -276,9 +306,9 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: I8) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
-            &PyArg::I8(ref val) => {
+            &mut PyArg::I8(ref val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
@@ -287,7 +317,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: U32) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::U32(ref val) => {
                 $i += 1;
@@ -298,7 +328,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: U16) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::U16(ref val) => {
                 $i += 1;
@@ -309,7 +339,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: U8) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::U8(ref val) => {
                 $i += 1;
@@ -320,7 +350,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: F32) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::F32(ref val) => {
                 $i += 1;
@@ -331,7 +361,7 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: F64) => {{
-        let e = $t.get_inner_ref($i).unwrap();
+        let e = $t.as_ref($i).unwrap();
         match e {
             &PyArg::F64(ref val) => {
                 $i += 1;
@@ -377,8 +407,8 @@ pub extern "C" fn pytuple_len(ptr: *mut PyTuple) -> usize {
 
 #[no_mangle]
 pub unsafe extern "C" fn pytuple_get_element(ptr: *mut PyTuple, index: usize) -> *mut PyArg {
-    let tuple = &*ptr;
-    let ref elem = PyTuple::get_element(tuple, index).unwrap().elem;
-    let copied: PyArg = elem.clone();
+    let tuple = &mut *ptr;
+    let ref elem = PyTuple::as_mut(tuple, index).unwrap();
+    let copied: PyArg = (*elem).clone();
     Box::into_raw(Box::new(copied))
 }

@@ -9,7 +9,7 @@ macro_rules! _rustypy_abort_xtract_fail {
         use std::process;
         println!("rustypy: failed abrupty!");
         let msg = format!(
-            "rustypy: aborted process, tried to extract one type, but found an other instead:\n
+            "rustypy: aborted process, tried to extract one type, but found an other instead:\n \
             {}", $msg);
         println!("{}", msg);
         process::exit(1);
@@ -22,11 +22,10 @@ pub mod pytuple;
 pub mod pylist;
 pub mod pydict;
 
-pub use self::pystring::PyString;
-pub use self::pybool::PyBool;
-pub use self::pytuple::PyTuple;
-pub use self::pylist::PyList;
-pub use self::pydict::PyDict;
+use self::pybool::PyBool;
+use self::pystring::PyString;
+use self::pylist::PyList;
+use self::pytuple::PyTuple;
 
 /// Enum type used to construct PyTuple and PyList types. All the kinds supported in Python
 /// are included here.
@@ -275,6 +274,15 @@ impl From<PyArg> for PyString {
     fn from(a: PyArg) -> PyString {
         match a {
             PyArg::PyString(v) => v,
+            _ => _rustypy_abort_xtract_fail!("expected a PyString while destructuring PyArg enum")
+        }
+    }
+}
+
+impl From<PyArg> for String {
+    fn from(a: PyArg) -> String {
+        match a {
+            PyArg::PyString(v) => v.to_string(),
             _ => _rustypy_abort_xtract_fail!("expected a PyString while destructuring PyArg enum")
         }
     }

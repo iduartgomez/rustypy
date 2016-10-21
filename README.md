@@ -13,7 +13,7 @@ pip install rustypy
 ```
 RustyPy requires Python 3.5 or more and works with Rust stable.
 
-In Rust the package [cpython](https://github.com/dgrunwald/rust-cpython)
+To target Python from Rust the package [cpython](https://github.com/dgrunwald/rust-cpython)
 is required to initialize the package.
 
 ## Documentation

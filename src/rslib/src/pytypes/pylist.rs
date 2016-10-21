@@ -27,8 +27,7 @@
 //! assert_eq!(iter.collect::<Vec<u32>>(), vec![0u32, 1, 3])
 //! ```
 //!
-//! When extracting in Python with the FFI, elements are moved, not copied
-//! (except for PyTuples which require an extra copy)
+//! When extracting in Python with the FFI, elements are moved whenever is possible, not copied
 //! and when free'd all the original elements are dropped.
 //!
 //! ## Unpacking PyList from Python
@@ -51,35 +50,55 @@ pub struct PyList {
 }
 
 impl PyList {
+    /// Constructs a new, empty ```Vec<T>```.
+    ///
+    /// The vector will not allocate until elements are pushed onto it.
     pub fn new() -> PyList {
         PyList { members: Vec::new() }
     }
+
+    /// Removes and returns the element at position ```index``` within the vector,
+    /// shifting all elements after it to the left.
     pub fn remove(&mut self, index: usize) -> PyArg {
         self.members.remove(index)
     }
+
+    /// Removes the last element from a vector and returns it, or ```None``` if it is empty.
     pub fn pop(&mut self) -> Option<PyArg> {
         self.members.pop()
     }
+
+    /// Returns the number of elements in the PyList.
     pub fn len(&self) -> usize {
         self.members.len()
     }
+
+    /// Appends an element to the back of a collection.
+    ///
+    /// ##Panics
+    ///
+    /// Panics if the number of elements in the vector overflows a usize.
     pub fn push<T>(&mut self, a: T)
         where PyArg: From<T>
     {
         self.members.push(PyArg::from(a))
     }
+
     /// Get a PyList from a previously boxed raw pointer.
     pub unsafe fn from_ptr(ptr: *mut PyList) -> PyList {
         *(Box::from_raw(ptr))
     }
+
     /// Return a PyList as a raw pointer.
     pub fn as_ptr(self) -> *mut PyList {
         Box::into_raw(Box::new(self))
     }
+
+    /// Consume self and turn it into an iterator.
     pub fn into_iter<T: From<PyArg>>(self) -> IntoIter<T> {
         IntoIter {
             inner: self.members.into_iter(),
-            target_type: PhantomData,
+            target_t: PhantomData,
         }
     }
 }
@@ -97,7 +116,7 @@ impl<T> FromIterator<T> for PyList
 }
 
 pub struct IntoIter<T> {
-    target_type: PhantomData<T>,
+    target_t: PhantomData<T>,
     inner: ::std::vec::IntoIter<PyArg>,
 }
 
@@ -225,7 +244,7 @@ macro_rules! unpack_pylist {
         Vec::from(list)
     }};
     ( $pytuple:ident; PyTuple { $t:tt } ) => {{
-        let unboxed = *($pytuple);
+        let mut unboxed = *($pytuple);
         unpack_pytuple!(unboxed; $t)
     }};
     ( $pylist:ident; PyList{$t:tt => $type_:ty} ) => {{
@@ -244,6 +263,36 @@ macro_rules! unpack_pylist {
     }};
     ( $pydict:ident; PyDict{$t} ) => {{
         unpack_pydict!( $pydict; PyDict{$t} )
+    }};
+    ( FROM_TUPLE: $pylist:ident; PyList{$t:tt => $type_:ty} ) => {{
+        use rustypy::PyArg;
+        let mut unboxed = &mut *($pylist);
+        use std::collections::VecDeque;
+        let mut list = VecDeque::with_capacity(unboxed.len());
+        for _ in 0..unboxed.len() {
+            match unboxed.pop() {
+                Some(PyArg::$t(val)) => { list.push_front(<$type_>::from(val)); },
+                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
+                None => {}
+            }
+        };
+        Vec::from(list)
+    }};
+    ( FROM_TUPLE: $pylist:ident; PyList { $o:tt { $($t:tt)* } } ) => {{
+        let mut unboxed = &mut *($pylist);
+        use std::collections::VecDeque;
+        let mut list = VecDeque::with_capacity(unboxed.len());
+        for _ in 0..unboxed.len() {
+            match unboxed.pop() {
+                Some(PyArg::$o(val)) => {
+                    let inner = unpack_pylist!(val; $o { $($t)* });
+                    list.push_front(inner);
+                },
+                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
+                None => {}
+            }
+        };
+        Vec::from(list)
     }};
 }
 

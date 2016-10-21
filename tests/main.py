@@ -164,16 +164,13 @@ class GeneratePythonToRustBinds(unittest.TestCase):
         #
         src = os.path.join(_rs_lib_dir, 'tests', 'python', 'primitives.rs')
         dst = os.path.join(_rs_lib_dir, 'tests')
-        shutil.move(src, dst)
+        shutil.copy(src, dst)
+        self._copied = os.path.join(dst, 'primitives.rs')
         #
         p = subprocess.run(['cargo', 'test', '--test', 'primitives'],
                            cwd=_rs_lib_dir)
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `basics_primitives`')
-        #
-        src = os.path.join(_rs_lib_dir, 'tests', 'primitives.rs')
-        dst = os.path.join(_rs_lib_dir, 'tests', 'python')
-        shutil.move(src, dst)
 
     def test_basics_nested_types(self):
         set_python_path(self, 'test_package', 'basics')
@@ -182,16 +179,13 @@ class GeneratePythonToRustBinds(unittest.TestCase):
         #
         src = os.path.join(_rs_lib_dir, 'tests', 'python', 'nested_types.rs')
         dst = os.path.join(_rs_lib_dir, 'tests')
-        shutil.move(src, dst)
+        shutil.copy(src, dst)
+        self._copied = os.path.join(dst, 'nested_types.rs')
         #
         p = subprocess.run(['cargo', 'test', '--test', 'nested_types'],
                            cwd=_rs_lib_dir)
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `basics_nested_types`')
-        #
-        src = os.path.join(_rs_lib_dir, 'tests', 'nested_types.rs')
-        dst = os.path.join(_rs_lib_dir, 'tests', 'python')
-        shutil.move(src, dst)
 
     def test_nested_modules(self):
         set_python_path(self)
@@ -201,22 +195,20 @@ class GeneratePythonToRustBinds(unittest.TestCase):
         #
         src = os.path.join(_rs_lib_dir, 'tests', 'python', 'submodules.rs')
         dst = os.path.join(_rs_lib_dir, 'tests')
-        shutil.move(src, dst)
+        shutil.copy(src, dst)
+        self._copied = os.path.join(dst, 'submodules.rs')
         #
         p = subprocess.run(['cargo', 'test', '--test', 'submodules'],
                            cwd=_rs_lib_dir)
         self.assertEqual(p.returncode, 0,
                          'failed Rust integration test `nested modules`')
-        #
-        src = os.path.join(_rs_lib_dir, 'tests', 'submodules.rs')
-        dst = os.path.join(_rs_lib_dir, 'tests', 'python')
-        shutil.move(src, dst)
 
     def tearDown(self):
         if hasattr(self, '_original_path'):
             sys.path = self._original_path
         if hasattr(self, '_original_env'):
             os.putenv('PYTHONPATH', self._original_env)
+        os.remove(self._copied)
 
 
 @unittest.skip

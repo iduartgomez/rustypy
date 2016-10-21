@@ -40,7 +40,6 @@ RS_TYPE_CONVERSION = {
     'PyBool': 'bool',
     'PyString': 'str',
     'PyList': 'list',
-    'HashMap': 'dict',
     'usize': 'POINTER',
     'size_t': 'POINTER',
     'void': 'None',
