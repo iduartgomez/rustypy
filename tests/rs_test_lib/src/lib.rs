@@ -95,7 +95,6 @@ pub extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
     PyList::from_iter(v).as_ptr()
 }
 
-/*
 #[no_mangle]
 pub extern "C" fn python_bind_nested1_t_n_ls(list: *mut PyList) -> *mut PyList {
     let list = unsafe { Box::new(PyList::from_ptr(list)) };
@@ -129,7 +128,6 @@ pub extern "C" fn python_bind_nested2_t_n_ls(list: *mut PyList) -> *mut PyList {
     }
     PyList::from_iter(v0).as_ptr()
 }
-*/
 
 #[no_mangle]
 pub extern "C" fn python_bind_dict(dict: *mut usize) -> *mut usize {

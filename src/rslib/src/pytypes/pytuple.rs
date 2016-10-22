@@ -20,6 +20,11 @@
 //! For example, you can pop elements from an inner PyList, although the PyList cannot be moved
 //! out of a PyTuple (without completely destructuring it).
 //!
+//! # Safety
+//! PyTuple must be passed between Rust and Python as a raw pointer. You can get a
+//! raw pointer using ```as_ptr``` and convert from a raw pointer using the "static"
+//! method ```PyDict::from_ptr``` which is unsafe as it requires dereferencing a raw pointer.
+//!
 //! ## Unpacking PyTuple from Python
 //! Is recommended to use the [unpack_pytuple!](../../macro.unpack_pytuple!.html) macro in order
 //! to convert a PyTuple to a Rust native type. Check the macro documentation for more info.
@@ -213,7 +218,7 @@ macro_rules! unpack_pytuple {
         ,)*)
     }};
     ($t:ident; $i:ident; elem: ($($p:tt,)+))  => {{
-        // comes from an superior tuple, avoid copying content of self
+        // TODO: comes from an superior tuple, avoid copying content of self
         let e = $t.as_mut($i).unwrap();
         match e {
             &mut PyArg::PyTuple(ref mut val) => {

@@ -1,11 +1,11 @@
 //! Analog to a Python boolean type.
 //!
 //! It supports & and | operators, and comparison to Rust bool types.
-//! To return to Python use the *as_ptr* method and return a raw pointer.
+//! To return to Python use the ```as_ptr``` method and return a raw pointer.
 //!
 //! # Safety
-//! You can convert a raw pointer to a bool type with *from\_ptr\_into\_bool* method,
-//! or to a &PyBool with *from\_ptr* method. Those operations are unsafe as they require
+//! You can convert a raw pointer to a bool type with ```from_ptr_into_bool``` method,
+//! or to a ```&PyBool``` with ```from_ptr``` method. Those operations are unsafe as they require
 //! dereferencing a raw pointer.
 //!
 //! # Examples

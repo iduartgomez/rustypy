@@ -8,8 +8,8 @@
 //! ```
 //! # use rustypy::PyList;
 //! # use std::iter::FromIterator;
-//! PyList::from_iter(vec![1u32; 3]); // copied
-//! PyList::from(vec![1u32; 3]); // moved
+//! PyList::from_iter(vec![1u32; 3]);
+//! PyList::from(vec![1u32; 3]);
 //! ```
 //!
 //! You can also use the typical vector interfaces (push, pop, remove, etc.) as long as the
@@ -29,6 +29,16 @@
 //!
 //! When extracting in Python with the FFI, elements are moved whenever is possible, not copied
 //! and when free'd all the original elements are dropped.
+//!
+//! # Safety
+//! PyList must be passed between Rust and Python as a raw pointer. You can get a raw pointer
+//! using ```as_ptr``` and convert from a raw pointer using the "static"
+//! method ```PyList::from_ptr``` which is unsafe as it requires dereferencing a raw pointer.
+//!
+//! For convinience there are some methods to perform conversions to Vec<T> from PyList<PyArg>,
+//! while none of those are unsafe per se, they require providing the expected PyArg enum variant.
+//! In case the expected variant is wrong, the process will abort and exit as it's not possible
+//! to handle errors acrosss the FFI boundary.
 //!
 //! ## Unpacking PyList from Python
 //! Is recommended to use the [unpack_pylist!](../../macro.unpack_pylist!.html) macro in order

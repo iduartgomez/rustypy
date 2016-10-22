@@ -1,16 +1,18 @@
 //! An analog of a Python dict which contains pairs of (key, values) each of a single type,
 //! will accept an undefined number of one (and just one) of any other supported type
 //! (including other PyDict) as value and a corresponding key of a single supported hashable
-//! type (check [PyDictK](/enum.PyDictK.html to see which ones are supported)).
+//! type (check [PyDictK](../pydict/enum.PyDictK.html) to see which ones are supported).
 //!
 //! PyDict can be constructed from other iterable types as long as the inner type is
 //! supported (a copy will be performed in case is necessary).
 //!
 //! ```
-//! # use rustypy::PyList;
-//! # use std::iter::FromIterator;
-//! PyList::from_iter(vec![1u32; 3]); // copied
-//! PyList::from(vec![1u32; 3]); // moved
+//! # use rustypy::PyDict;
+//! # use std::collections::HashMap;
+//! use std::iter::FromIterator;
+//! let mut hm = HashMap::from_iter(vec![(0u32, "Hi"), (1, "Rust")]);
+//! PyDict::from_iter(hm.clone().into_iter());
+//! PyDict::from(hm);
 //! ```
 //!
 //! You can also use the typical hashmap interfaces (insert, get, remove, etc.) as long as the
@@ -18,12 +20,14 @@
 //! types and their content can be converted back to a HashMap or into a (K, V) iterator.
 //!
 //! ```
-//! # use rustypy::PyDict;
+//! # use rustypy::{PyDict, PyArg};
 //! # use std::collections::HashMap;
 //! use std::iter::FromIterator;
 //! let hm = HashMap::from_iter(vec![(0u32, "Hello"), (1, "from"), (3, "Rust")]);
 //!
-//! let mut d = PyDict::from(hm);
+//! let ptr = PyDict::from(hm).as_ptr();
+//! // to get a PyDict from a raw pointer we need to provide the key type:
+//! let d = unsafe { PyDict::<u32, PyArg>::from_ptr(ptr) };
 //! let hm_from_pd = PyDict::into_hashmap::<String>(d.clone());
 //! assert_eq!(hm_from_pd.get(&0).unwrap(), "Hello");
 //!
@@ -33,6 +37,19 @@
 //!
 //! When extracting in Python with the FFI, elements are moved, not copied
 //! and when free'd all the original elements are dropped.
+//!
+//! # Safety
+//! PyList must be passed between Rust and Python as a ```usize``` raw pointer. You can get a
+//! raw pointer using ```as_ptr``` and convert from a raw pointer using the "static"
+//! method ```PyDict::from_ptr``` which is unsafe as it requires dereferencing a raw pointer.
+//! PyDict also require providing the key type, in case the key type is not the expected one
+//! undefined behaviour will happen.
+//!
+//! For convinience there are some methods to perform conversions to ```HashMap<K,V>```
+//! from ```PyDict<K,PyArg>```, while none of those are unsafe per se,
+//! they require providing the expected PyArg enum variant.
+//! In case the expected variant is wrong, the process will abort and exit as it's not possible
+//! to handle errors acrosss the FFI boundary.
 //!
 //! ## Unpacking PyDict from Python
 //! Is recommended to use the [unpack_pydict!](../../macro.unpack_pydict!.html) macro in order

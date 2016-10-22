@@ -1,12 +1,12 @@
 //! An analog of a Python String.
 //!
-//! To return to Python you must use as_ptr method and return a raw pointer.
-//! You can create them using PyString::from trait, from both &str and String.
+//! To return to Python you must use ```as_ptr``` method and return a raw pointer.
+//! You can create them using the ```from``` trait method, from both ```&str``` and ```String```.
 //!
 //! # Safety
 //! When passed from Python you can convert from PyString to an owned string
-//! (from\_ptr\_into\_string method) or to a &str slice (to\_str method), or
-//! to a PyString reference (from\_ptr method). Those operations are unsafe
+//! (```from_ptr_into_string``` method) or to a ```&str``` slice (to_str method), or
+//! to a PyString reference (```from_ptr``` method). Those operations are unsafe
 //! as they require dereferencing a raw pointer.
 //!
 //! # Examples
