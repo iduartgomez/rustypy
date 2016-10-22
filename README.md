@@ -40,8 +40,9 @@ all the information to generate bindings succesfully.
 It also includes functions to generate bindings dynamically. In Python use:
 ```
 from rustypy.pywrapper import bind_py_pckg_funcs
-
-bind_py_pckg_funcs()
+# default prefix is "rust_bind_"
+optional = ["my_bind_prefix_", "other_prefix_"]
+bind_py_pckg_funcs(prefixes=optional)
 ```
 This function will generate the bindings for the package from which is
 called from (so the package must be initiated placing an  \__init__.py file in
@@ -60,9 +61,11 @@ from rustypy.rswrapper import bind_rs_crate_funcs
 source_path = "/home/user/workspace/rs_test_lib"
 compiled_lib = "/home/user/workspace/rs_test_lib/target/debug/libtest_lib.so"
 
-lib_binds = bind_rs_crate_funcs(source_path, compiled_lib)
+# default prefix is "python_bind_"
+optional = ["my_bind_prefix_", "other_prefix_"]
+lib_binds = bind_rs_crate_funcs(source_path, compiled_lib, prefixes=optional)
 
-lib_binds.python_bind_my_function("Hello from Python!")
+lib_binds.my_bind_prefix__ffi_function("Hello from Python!")
 ```
 
 There is no concept of 'module' in C (which is the language used for interfacing)
