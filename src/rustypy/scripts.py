@@ -25,6 +25,12 @@ def cli():
         "path",
         help="absolute path or name of the package/module (must be available \
         from the Python or Cargo, in case of Rust, path")
+    parser.add_argument(
+        "--prefixes",
+        help="optional function prefixes argument (only the functions with \
+        those prefixes) will be parsed (check the documentation for more \
+        information about default behaviour)",
+        nargs="*")
     group1 = parser.add_mutually_exclusive_group(required=True)
     group1.add_argument("-m", "--module", action="store_true",
                         help="it's a single module, default is a package")
@@ -37,13 +43,16 @@ def cli():
         ismodule = False
     lang = args.lang
     path = args.path
-    prefix = None
+    prefixes = args.prefixes
     # run script
     if os.sep in path and not os.path.exists(path):
         SystemExit("rustypy: error: the path does not exist")
     if lang == 'rust':
         raise NotImplementedError(
-            "rustypy: rust bind generator not implemented")
+            """\
+rustypy: rust bind generator from the command line not implemented, use
+the dynamic generator instead (check the library documentation for more
+information).""")
     else:
         ext = ".py"
     pckg, module = False, False
@@ -61,12 +70,11 @@ def cli():
             pckg, is_path = True, True
         else:
             pckg, is_path = path, False
-
     if lang == 'python':
         if is_path and pckg:
-            RustFuncGen(with_path=path, prefix=prefix)
+            RustFuncGen(with_path=path, prefixes=prefixes)
         elif is_path and module:
-            RustFuncGen(with_path=path, module=True, prefix=prefix)
+            RustFuncGen(with_path=path, module=True, prefixes=prefixes)
         elif pckg:
             location = None
             for x in pip.get_installed_distributions(local_only=True):
@@ -75,10 +83,10 @@ def cli():
                     break
             if not location:
                 raise SystemExit(_not_found_err)
-            RustFuncGen(with_path=location, prefix=prefix)
+            RustFuncGen(with_path=location, prefixes=prefixes)
         elif module:
             mod = import_module(module)
-            RustFuncGen(module=mod, prefix=prefix)
+            RustFuncGen(module=mod, prefixes=prefixes)
     if ismodule:
         print("rustypy: binds for module `{}` generated".format(path))
     else:

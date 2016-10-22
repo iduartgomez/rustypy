@@ -381,12 +381,13 @@ class RustFuncGen(object):
         def __init__(self, param):
             self.p = param
 
-    def __init__(self, module=False, with_path=None, prefix=None):
-        if prefix:
-            self.prefix = prefix
+    def __init__(self, module=False, with_path=None, prefixes=None):
+        if isinstance(prefixes, list):
+            self.prefixes = prefixes
+        elif isinstance(prefixes, str):
+            self.prefixes = [prefixes]
         else:
-            self.prefix = 'rust_bind'
-
+            self.prefixes = ['rust_bind_']
         # get package root for parsing
         if not with_path:
             caller = inspect.stack()[1]
@@ -448,10 +449,13 @@ class RustFuncGen(object):
             functions, klasses = [], []
             # find out functions and classes for the module
             for name, obj in module.items():
-                if inspect.isfunction(obj) and (name[:pl] == self.prefix
-                                                or hasattr(obj, '_bind_to_rust')):
-                    functions.append(name)
-                    self.__no_funcs = False
+                for prefix in self.prefixes:
+                    pl = len(prefix)
+                    if inspect.isfunction(obj) \
+                    and (name[:pl] == prefix or hasattr(obj, '_bind_to_rust')) \
+                    and name not in functions:
+                        functions.append(name)
+                        self.__no_funcs = False
             if self.__no_funcs:
                 del m_dict[imp_statement]
                 return
@@ -492,7 +496,6 @@ class RustFuncGen(object):
                 )
                 module_objs.append(rust_sig)
 
-        pl = len(self.prefix)
         self.m_dict = m_dict = {}
         if inspect.ismodule(self.root):
             module = self.root.__dict__
@@ -862,9 +865,9 @@ def rnd_var_name(self=None, cmp=[]):
     return var_name
 
 
-def bind_py_pckg_funcs():
+def bind_py_pckg_funcs(prefixes=None):
     caller = inspect.stack()[1]
     info = dict(inspect.getmembers(caller.frame))
     path = info["f_globals"]["__file__"]
     path = os.path.abspath(path)
-    RustFuncGen(with_path=path)
+    RustFuncGen(with_path=path, prefixes=prefixes)

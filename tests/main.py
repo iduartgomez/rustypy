@@ -47,7 +47,8 @@ class GenerateRustToPythonBinds(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.bindings = bind_rs_crate_funcs(lib_test_entry, lib_test)
+        prefixes = ["python_bind_", "other_prefix_"]
+        cls.bindings = bind_rs_crate_funcs(lib_test_entry, lib_test, prefixes)
 
     def test_basics_primitives(self):
         # non ref int
@@ -135,13 +136,13 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         d = {0: "From", 1: "Python"}
         T = typing.Dict[HashableType('u64'), str]
         R = typing.Dict[HashableType('i64'), str]
-        self.bindings.python_bind_dict.add_argtype(0, T)
-        self.bindings.python_bind_dict.restype = R
-        result = self.bindings.python_bind_dict(d)
+        self.bindings.other_prefix_dict.add_argtype(0, T)
+        self.bindings.other_prefix_dict.restype = R
+        result = self.bindings.other_prefix_dict(d)
         self.assertEqual(result, {0: "Back", 1: "Rust"})
 
 
-@unittest.skip
+#@unittest.skip
 class GeneratePythonToRustBinds(unittest.TestCase):
 
     @classmethod
@@ -160,7 +161,8 @@ class GeneratePythonToRustBinds(unittest.TestCase):
     def test_basics_primitives(self):
         set_python_path(self, 'test_package', 'basics')
         import primitives as test
-        self.gen = RustFuncGen(module=test)
+        prefixes = ["rust_bind_", "other_prefix_"]
+        self.gen = RustFuncGen(module=test, prefixes=prefixes)
         #
         src = os.path.join(_rs_lib_dir, 'tests', 'python', 'primitives.rs')
         dst = os.path.join(_rs_lib_dir, 'tests')

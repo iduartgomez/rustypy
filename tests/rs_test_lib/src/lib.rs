@@ -130,7 +130,7 @@ pub extern "C" fn python_bind_nested2_t_n_ls(list: *mut PyList) -> *mut PyList {
 }
 
 #[no_mangle]
-pub extern "C" fn python_bind_dict(dict: *mut usize) -> *mut usize {
+pub extern "C" fn other_prefix_dict(dict: *mut usize) -> *mut usize {
     let mut dict = unsafe { PyDict::<u64, PyArg>::from_ptr(dict) };
     assert_eq!(dict.get(&0_u64), Some(&PyArg::PyString(PyString::from("From"))));
     assert_eq!(dict.get(&1_u64), Some(&PyArg::PyString(PyString::from("Python"))));

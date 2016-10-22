@@ -23,7 +23,7 @@ def rust_bind_bool_func(bool_arg: bool) -> bool:
     return rval
 
 
-def rust_bind_tuple1(tup_arg: typ.Tuple[str, int]) -> typ.Tuple[str, int]:
+def other_prefix_tuple1(tup_arg: typ.Tuple[str, int]) -> typ.Tuple[str, int]:
     output = list(tup_arg)
     output[0] += "added this in Python!"
     output[1] += 10
@@ -33,7 +33,7 @@ def rust_bind_tuple1(tup_arg: typ.Tuple[str, int]) -> typ.Tuple[str, int]:
 K = typ.Tuple[str, bool]
 
 
-def rust_bind_tuple2(tup_arg: K) -> K:
+def other_prefix_tuple2(tup_arg: K) -> K:
     output = list(tup_arg)
     output[0] += "added this in Python!"
     if not output[1]:
@@ -46,7 +46,7 @@ def rust_bind_tuple2(tup_arg: K) -> K:
 J = typ.Tuple[float, bool]
 
 
-def rust_bind_tuple3(tup_arg1: float, tup_arg2: bool) -> J:
+def other_prefix_tuple3(tup_arg1: float, tup_arg2: bool) -> J:
     out_arg1 = tup_arg1 + 0.5
     if not tup_arg2:
         raise AssertionError(tup_arg2)

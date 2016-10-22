@@ -34,16 +34,16 @@ fn basics_primitives() {
 
     let arg1 = String::from("String from Rust, ");
     let arg2 = 10;
-    let answ = basics.rust_bind_tuple1((arg1, arg2));
+    let answ = basics.other_prefix_tuple1((arg1, arg2));
     assert_eq!((String::from("String from Rust, added this in Python!"), 20),
                answ);
 
     let arg1 = String::from("String from Rust, ");
     let arg2 = true;
-    let answ = basics.rust_bind_tuple2((arg1, arg2));
+    let answ = basics.other_prefix_tuple2((arg1, arg2));
     assert_eq!((String::from("String from Rust, added this in Python!"), false),
                answ);
 
-    let answ = basics.rust_bind_tuple3(0.5, true);
+    let answ = basics.other_prefix_tuple3(0.5, true);
     assert_eq!((1.0, false), answ);
 }

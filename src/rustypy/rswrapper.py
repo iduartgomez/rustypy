@@ -914,24 +914,25 @@ def get_crate_entry(mod, manifest):
     return os.path.join(mod, entry)
 
 
-def bind_rs_crate_funcs(mod, lib, cargo=False, ismodule=False, prefix=None):
+def bind_rs_crate_funcs(mod, lib, prefixes=None):
     if not c_backend:
         load_rust_lib()
-    if not isinstance(mod, str):
-        # type checking is necessary as it will be passed to Rust
-        raise TypeError('rustypy: `mod` parameter must be a valid string')
-    if not cargo:
-        manifest = os.path.join(mod, 'Cargo.toml')
-        if not os.path.exists(manifest):
-            raise OSError("rustypy: no Cargo(.toml) manifest found")
-        entry_point = get_crate_entry(mod, manifest)
-    return RustBinds(entry_point, lib, prefix=prefix)
+    if not os.path.exists(mod):
+        raise OSError('rustypy: the specified `{}` Rust crate does not exist')
+    elif not os.path.exists(lib):
+        raise OSError(
+            'rustypy: the specified `{}` compiled library file does not exist')
+    manifest = os.path.join(mod, 'Cargo.toml')
+    if not os.path.exists(manifest):
+        raise OSError("rustypy: no Cargo(.toml) manifest found for this crate")
+    entry_point = get_crate_entry(mod, manifest)
+    return RustBinds(entry_point, lib, prefixes=prefixes)
 
 
 class KrateData(object):
 
-    def __init__(self):
-        self.obj = c_backend.krate_data_new()
+    def __init__(self, prefixes):
+        self.obj = c_backend.krate_data_new(prefixes)
 
     def __enter__(self):
         return self
@@ -956,24 +957,33 @@ class KrateData(object):
 class RustBinds(object):
     """Main binding generator class."""
 
-    def __init__(self, entry_point, compiled_lib, prefix=None):
+    def __init__(self, entry_point, compiled_lib, prefixes=None):
         self._FFI = ctypes.cdll.LoadLibrary(compiled_lib)
-        self._krate_data = KrateData()
-        p = PyString.from_str(entry_point)
-        signal = c_backend.parse_src(p, self._krate_data.obj)
+        if isinstance(prefixes, str):
+            p = [prefixes]
+        elif isinstance(prefixes, list):
+            p = prefixes
+        else:
+            p = ["python_bind_"]
+        p = PyList.from_list(p, typing.List[str])
+        self._krate_data = KrateData(p)
+        entry = PyString.from_str(entry_point)
+        signal = c_backend.parse_src(entry, self._krate_data.obj)
         if signal == 1:
             raise Exception(
                 "rustypy: failed to generate Rust bindings, the source "
                 "code didn't parse, checkout if your library compiles!")
-        if prefix is None:
-            prefix = "python_bind_"
         prepared_funcs = {}
         with self._krate_data as krate:
             for e in krate:
                 decl = e.to_str()
                 if decl == "NO_IDX_ERROR":
                     break
-                path, decl = decl.split(prefix)
+                for prefix in prefixes:
+                    s = decl.split(prefix)
+                    if len(s) == 2:
+                        name, decl = s[0], s[1]
+                        break
                 name, params = decl.split('::', maxsplit=1)
                 name = prefix + name
                 params = _get_signature_types(params)

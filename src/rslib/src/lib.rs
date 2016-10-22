@@ -71,13 +71,15 @@ fn parse<'a, T: ?Sized + AsRef<Path>>(path: &T,
 pub struct KrateData {
     functions: HashMap<codemap::Span, FnDef>,
     collected: Vec<String>,
+    prefixes: Vec<String>,
 }
 
 impl KrateData {
-    fn new() -> KrateData {
+    fn new(prefixes: Vec<String>) -> KrateData {
         KrateData {
             functions: HashMap::new(),
             collected: vec![],
+            prefixes: prefixes
         }
     }
     fn get_types(&mut self, span: codemap::Span, fndecl: &ast::FnDecl) {
@@ -150,8 +152,10 @@ impl Visitor for KrateData {
         }
     }
     fn visit_name(&mut self, span: codemap::Span, name: ast::Name) {
-        if name.as_str().contains("python_bind_") {
-            self.functions.insert(span, FnDef::new(name.as_str()));
+        for prefix in &self.prefixes {
+            if name.as_str().contains(prefix) {
+                self.functions.insert(span, FnDef::new(name.as_str()));
+            }
         }
     }
 }
@@ -181,8 +185,10 @@ impl FnDef {
 // C FFI for KrateData objects:
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn krate_data_new() -> *mut KrateData {
-    Box::into_raw(Box::new(KrateData::new()))
+pub extern "C" fn krate_data_new(ptr: *mut PyList) -> *mut KrateData {
+    let p = unsafe { PyList::from_ptr(ptr) };
+    let p: Vec<String> = PyList::into(p);
+    Box::into_raw(Box::new(KrateData::new(p)))
 }
 
 #[doc(hidden)]

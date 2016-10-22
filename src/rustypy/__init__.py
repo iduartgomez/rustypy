@@ -1,4 +1,4 @@
 from .pywrapper import rust_bind
 from .rswrapper import HashableType
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
