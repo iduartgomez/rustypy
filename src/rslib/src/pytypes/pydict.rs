@@ -480,14 +480,14 @@ fn drain_dict() {
 
         let e2 = pydict_drain_element(iter, &k_type);
         assert!(!e2.is_null());
-        let e2: &[*mut PyArg; 2] = &*(e2 as *const [*mut PyArg; 2]);
-        let e2_key = *(Box::from_raw(e2[0]));
-        let e2_var = *(Box::from_raw(e2[1]));
+        let e2_key = *(Box::from_raw(pydict_get_kv(0, e2) as *mut usize as *mut PyArg));
+        let e2_var = *(Box::from_raw(pydict_get_kv(1, e2) as *mut usize as *mut PyArg));
         if e2_key ==  PyArg::U16(0) {
             assert_eq!(e2_var, PyArg::PyString(PyString::from("zero")));
         } else {
             assert_eq!(e2_var, PyArg::PyString(PyString::from("one")));
         }
+        pydict_free_kv(e2);
 
         let e3 = pydict_drain_element(iter, &k_type);
         assert!(e3.is_null());

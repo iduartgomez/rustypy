@@ -31,6 +31,7 @@
 
 use std::iter::IntoIterator;
 use std::ops::Deref;
+use std::mem;
 
 use pytypes::PyArg;
 
@@ -58,6 +59,18 @@ impl<'a> PyTuple {
         } else {
             match self.next {
                 Some(ref mut e) => (**e).as_mut(idx),
+                None => Err("PyTuple index out of range."),
+            }
+        }
+    }
+    #[doc(hidden)]
+    pub fn replace_elem(&mut self, idx: usize) -> Result<PyArg, &str> {
+        if idx == self.idx {
+            let e = mem::replace(&mut self.elem, PyArg::None);
+            Ok(e)
+        } else {
+            match self.next {
+                Some(ref mut e) => (**e).replace_elem(idx),
                 None => Err("PyTuple index out of range."),
             }
         }
@@ -218,14 +231,13 @@ macro_rules! unpack_pytuple {
         ,)*)
     }};
     ($t:ident; $i:ident; elem: ($($p:tt,)+))  => {{
-        // TODO: comes from an superior tuple, avoid copying content of self
-        let e = $t.as_mut($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &mut PyArg::PyTuple(ref mut val) => {
+            PyArg::PyTuple(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 let mut cnt = 0;
-                let val = *(val).clone();
+                let val = *(val); // move out of box
                 ($(
                     unpack_pytuple!(val; cnt; elem: $p)
                 ,)*)
