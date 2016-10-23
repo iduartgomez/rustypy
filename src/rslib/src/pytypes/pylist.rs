@@ -274,36 +274,6 @@ macro_rules! unpack_pylist {
     ( $pydict:ident; PyDict{$t} ) => {{
         unpack_pydict!( $pydict; PyDict{$t} )
     }};
-    ( FROM_TUPLE: $pylist:ident; PyList{$t:tt => $type_:ty} ) => {{
-        use rustypy::PyArg;
-        let mut unboxed = &mut *($pylist);
-        use std::collections::VecDeque;
-        let mut list = VecDeque::with_capacity(unboxed.len());
-        for _ in 0..unboxed.len() {
-            match unboxed.pop() {
-                Some(PyArg::$t(val)) => { list.push_front(<$type_>::from(val)); },
-                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
-                None => {}
-            }
-        };
-        Vec::from(list)
-    }};
-    ( FROM_TUPLE: $pylist:ident; PyList { $o:tt { $($t:tt)* } } ) => {{
-        let mut unboxed = &mut *($pylist);
-        use std::collections::VecDeque;
-        let mut list = VecDeque::with_capacity(unboxed.len());
-        for _ in 0..unboxed.len() {
-            match unboxed.pop() {
-                Some(PyArg::$o(val)) => {
-                    let inner = unpack_pylist!(val; $o { $($t)* });
-                    list.push_front(inner);
-                },
-                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
-                None => {}
-            }
-        };
-        Vec::from(list)
-    }};
 }
 
 #[no_mangle]

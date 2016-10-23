@@ -190,10 +190,8 @@ macro_rules! pytuple {
 
 /// Iterates over a a PyTuple and returns a corresponding Rust tuple.
 ///
-/// Content of tuples cannot be moved out when destructured, so all inner data is copied
-/// except when avoidable (ie. the content of inner container types may or may not be moved),
-/// but when unpacked is safer to assume the PyTuple as consumed
-/// (that's the intetion of unpacking).
+/// When destructured all inner data is moved out of the tuple which will retain the structure
+/// but will point to PyArg::None variant, so is safe to assume the PyTuple as consumed.
 ///
 /// Inner containers (ie. `PyList<PyArg(T)>`) are converted to the respective Rust analog
 /// (ie. `Vec<T>`) and require valid syntax for their respective unpack macro (ie.
@@ -237,7 +235,7 @@ macro_rules! unpack_pytuple {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 let mut cnt = 0;
-                let val = *(val); // move out of box
+                let mut val = *(val); // move out of box
                 ($(
                     unpack_pytuple!(val; cnt; elem: $p)
                 ,)*)
@@ -246,9 +244,9 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: {PyDict{$u:tt}}) => {{
-        let e = $t.as_mut($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &mut PyArg::PyDict(val) => {
+            PyArg::PyDict(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 unpack_pydict!(val; PyDict{$u})
@@ -257,20 +255,20 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: {PyList{$($u:tt)*}}) => {{
-        let e = $t.as_mut($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &mut PyArg::PyList(ref mut val) => {
+            PyArg::PyList(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                unpack_pylist!( FROM_TUPLE: val; PyList{$($u)*})
+                unpack_pylist!(val; PyList{$($u)*})
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a PyList inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: PyBool) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::PyBool(ref val) => {
+            PyArg::PyBool(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 val.to_bool()
@@ -279,9 +277,9 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: PyString) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::PyString(ref val) => {
+            PyArg::PyString(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 val.to_string()
@@ -290,20 +288,20 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: I64) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::I64(ref val) => {
+            PyArg::I64(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a i64 inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: I32) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::I32(ref val) => {
+            PyArg::I32(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
                 val.clone()
@@ -312,78 +310,78 @@ macro_rules! unpack_pytuple {
         }
     }};
     ($t:ident; $i:ident; elem: I16) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::I16(ref val) => {
+            PyArg::I16(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a i16 inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: I8) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &mut PyArg::I8(ref val) => {
+            PyArg::I8(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a i8 inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: U32) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::U32(ref val) => {
+            PyArg::U32(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a u32 inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: U16) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::U16(ref val) => {
+            PyArg::U16(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a u16 inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: U8) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::U8(ref val) => {
+            PyArg::U8(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a u8 inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: F32) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::F32(ref val) => {
+            PyArg::F32(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a f32 inside a PyTuple"),
         }
     }};
     ($t:ident; $i:ident; elem: F64) => {{
-        let e = $t.as_ref($i).unwrap();
+        let e = $t.replace_elem($i).unwrap();
         match e {
-            &PyArg::F64(ref val) => {
+            PyArg::F64(val) => {
                 $i += 1;
                 if $i == 0 {}; // stub to remove warning...
-                val.clone()
+                val
             },
             _ => _rustypy_abort_xtract_fail!("failed while extracting a f64 inside a PyTuple"),
         }

@@ -23,7 +23,7 @@ fn test_pytuple_macros() {
                        PyArg::I64(55i64))
         .as_ptr();
 
-    let pytuple = unsafe { PyTuple::from_ptr(ptr) };
+    let mut pytuple = unsafe { PyTuple::from_ptr(ptr) };
     let unpacked = unpack_pytuple!(pytuple; (PyBool, PyString, I64,));
     assert_eq!((false, String::from("test"), 55i64), unpacked);
 }
