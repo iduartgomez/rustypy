@@ -72,7 +72,7 @@ use std::ptr;
 pub struct PyDict<K, PyArg>
     where K: Eq + Hash
 {
-    table: HashMap<K, PyArg>,
+    _inner: HashMap<K, PyArg>,
 }
 
 use self::key_bound::PyDictKey;
@@ -82,7 +82,7 @@ impl<K> PyDict<K,PyArg>
 {
     /// Creates an empty PyDict.
     pub fn new() -> PyDict<K, PyArg> {
-        PyDict { table: HashMap::new() }
+        PyDict { _inner: HashMap::new() }
     }
 
     /// Inserts a key-value pair into the map.
@@ -93,7 +93,7 @@ impl<K> PyDict<K,PyArg>
     /// The key is not updated, though; this matters for types that can be == without being
     /// identical. See the module-level documentation for more.
     pub fn insert(&mut self, k: K, v: PyArg) -> Option<PyArg> {
-        self.table.insert(k, v)
+        self._inner.insert(k, v)
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
@@ -101,7 +101,7 @@ impl<K> PyDict<K,PyArg>
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
     pub fn remove(&mut self, k: &K) -> Option<PyArg> {
-        self.table.remove(k)
+        self._inner.remove(k)
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -109,13 +109,13 @@ impl<K> PyDict<K,PyArg>
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
     pub fn get(&mut self, k: &K) -> Option<&PyArg> {
-        self.table.get(k)
+        self._inner.get(k)
     }
 
     /// Clears the map, returning all key-value pairs as an iterator.
     /// Keeps the allocated memory for reuse.
     pub fn drain(&mut self) -> Drain<K, PyArg> {
-        self.table.drain()
+        self._inner.drain()
     }
 
     /// Get a PyDict from a previously boxed PyDict.
@@ -150,12 +150,12 @@ impl<K> PyDict<K,PyArg>
     pub fn into_hashmap<V>(mut self) -> HashMap<K, V>
         where V: From<PyArg>
     {
-        HashMap::from_iter(self.table.drain().map(|(k, v)| (k, <V>::from(v))))
+        HashMap::from_iter(self._inner.drain().map(|(k, v)| (k, <V>::from(v))))
     }
     /// Consume self and turn it into an iterator.
     pub fn into_iter<T: From<PyArg>>(self) -> IntoIter<K, T> {
         IntoIter {
-            inner: self.table.into_iter(),
+            inner: self._inner.into_iter(),
             target_t: PhantomData,
         }
     }
@@ -203,7 +203,7 @@ impl<K, V> From<HashMap<K, V>> for PyDict<K, PyArg>
 {
     fn from(mut hm: HashMap<K, V>) -> PyDict<K, PyArg> {
         PyDict {
-            table: hm.drain().map(|(k, v)| (k, PyArg::from(v))).collect::<HashMap<K, PyArg>>(),
+            _inner: hm.drain().map(|(k, v)| (k, PyArg::from(v))).collect::<HashMap<K, PyArg>>(),
         }
     }
 }

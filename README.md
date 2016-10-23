@@ -1,10 +1,14 @@
 # RustyPy
 RustyPy is a code generator for generating binding functions between Rust and
-Python files.
+Python files. In addition it provides a series of types for interfacing from
+Python with Rust, with automatic type conversion handling for primitives and
+other basic types (like vectors, hash maps and tuples) and an API for working
+with those (both from Rust and Python).
 
 ## Features
 - Generate bindings in Rust targetting Python functions.
 - Generate bindings in Python targetting Rust functions.
+- Provides types for interfacing between Rust and Python.
 
 ## Installation
 To install RustyPy just use pip:

@@ -56,7 +56,7 @@ use std::marker::PhantomData;
 /// Read the [module docs](index.html) for more information.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PyList {
-    members: Vec<PyArg>,
+    _inner: Vec<PyArg>,
 }
 
 impl PyList {
@@ -64,23 +64,23 @@ impl PyList {
     ///
     /// The vector will not allocate until elements are pushed onto it.
     pub fn new() -> PyList {
-        PyList { members: Vec::new() }
+        PyList { _inner: Vec::new() }
     }
 
     /// Removes and returns the element at position ```index``` within the vector,
     /// shifting all elements after it to the left.
     pub fn remove(&mut self, index: usize) -> PyArg {
-        self.members.remove(index)
+        self._inner.remove(index)
     }
 
     /// Removes the last element from a vector and returns it, or ```None``` if it is empty.
     pub fn pop(&mut self) -> Option<PyArg> {
-        self.members.pop()
+        self._inner.pop()
     }
 
     /// Returns the number of elements in the PyList.
     pub fn len(&self) -> usize {
-        self.members.len()
+        self._inner.len()
     }
 
     /// Appends an element to the back of a collection.
@@ -91,7 +91,7 @@ impl PyList {
     pub fn push<T>(&mut self, a: T)
         where PyArg: From<T>
     {
-        self.members.push(PyArg::from(a))
+        self._inner.push(PyArg::from(a))
     }
 
     /// Get a PyList from a previously boxed raw pointer.
@@ -107,7 +107,7 @@ impl PyList {
     /// Consume self and turn it into an iterator.
     pub fn into_iter<T: From<PyArg>>(self) -> IntoIter<T> {
         IntoIter {
-            inner: self.members.into_iter(),
+            inner: self._inner.into_iter(),
             target_t: PhantomData,
         }
     }
@@ -151,7 +151,7 @@ impl<T> Into<Vec<T>> for PyList
     where PyArg: Into<T>
 {
     fn into(mut self) -> Vec<T> {
-        self.members.drain(..).map(|x| PyArg::into(x)).collect()
+        self._inner.drain(..).map(|x| PyArg::into(x)).collect()
     }
 }
 
@@ -159,20 +159,20 @@ impl<T> From<Vec<T>> for PyList
     where PyArg: From<T>
 {
     fn from(mut v: Vec<T>) -> PyList {
-        PyList { members: v.drain(..).map(|x| PyArg::from(x)).collect() }
+        PyList { _inner: v.drain(..).map(|x| PyArg::from(x)).collect() }
     }
 }
 
 impl Index<usize> for PyList {
     type Output = PyArg;
     fn index(&self, index: usize) -> &PyArg {
-        &(self.members[index])
+        &(self._inner[index])
     }
 }
 
 impl<'a> IndexMut<usize> for PyList {
     fn index_mut(&mut self, index: usize) -> &mut PyArg {
-        &mut (self.members[index])
+        &mut (self._inner[index])
     }
 }
 
@@ -308,7 +308,7 @@ macro_rules! unpack_pylist {
 
 #[no_mangle]
 pub unsafe extern "C" fn pylist_new(len: usize) -> *mut PyList {
-    let list = PyList { members: Vec::with_capacity(len) };
+    let list = PyList { _inner: Vec::with_capacity(len) };
     list.as_ptr()
 }
 
