@@ -7,8 +7,9 @@ import typing
 from collections import deque, namedtuple
 
 global c_backend
-from .ffi_defs import get_rs_lib
+from .ffi_defs import *
 c_backend = get_rs_lib()
+
 
 class MissingTypeHint(TypeError):
     pass
@@ -102,6 +103,41 @@ def _to_pydict(sig):
     return dec
 
 
+def _extract_value(pyarg, arg_t, depth=0):
+    pytype = None
+    if arg_t is str:
+        content = c_backend.pyarg_extract_owned_str(pyarg)
+        pytype = c_backend.pystring_get_str(content).decode("utf-8")
+    elif arg_t is bool:
+        b = PyBool(c_backend.pyarg_extract_owned_bool(pyarg))
+        pytype = b.to_bool()
+        b.free()
+    elif arg_t is int:
+        pytype = c_backend.pyarg_extract_owned_int(pyarg)
+    elif arg_t is UnsignedLongLong:
+        pytype = c_backend.pyarg_extract_owned_ulonglong(pyarg)
+    elif arg_t is Double or arg_t is float:
+        pytype = c_backend.pyarg_extract_owned_double(pyarg)
+    elif arg_t is Float:
+        pytype = c_backend.pyarg_extract_owned_float(pyarg)
+    elif issubclass(arg_t, typing.Tuple):
+        ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
+        t = PyTuple(ptr, arg_t)
+        pytype = t.to_tuple(depth=depth + 1)
+        t.free()
+    elif issubclass(arg_t, typing.List):
+        ptr = c_backend.pyarg_extract_owned_list(pyarg)
+        l = PyList(ptr, arg_t)
+        pytype = l.to_list(depth=depth + 1)
+        l.free()
+    elif issubclass(arg_t, typing.Dict):
+        ptr = c_backend.pyarg_extract_owned_dict(pyarg)
+        d = PyDict(ptr, arg_t)
+        pytype = d.to_dict(depth=depth + 1)
+        d.free()
+    return pytype
+
+
 class PyTuple(PythonObject):
 
     def __init__(self, ptr, signature, call_fn=None):
@@ -129,37 +165,8 @@ class PyTuple(PythonObject):
         tuple_elems = []
         for last, arg_t in enumerate(self.sig.__tuple_params__):
             pyarg = c_backend.pytuple_get_element(self._ptr, last)
-            if arg_t is str:
-                content = c_backend.pyarg_extract_owned_str(pyarg)
-                pytype = c_backend.pystring_get_str(content).decode("utf-8")
-            elif arg_t is bool:
-                b = PyBool(c_backend.pyarg_extract_owned_bool(pyarg))
-                pytype = b.to_bool()
-                b.free()
-            elif arg_t is int:
-                pytype = c_backend.pyarg_extract_owned_int(pyarg)
-            elif arg_t is UnsignedLongLong:
-                pytype = c_backend.pyarg_extract_owned_ulonglong(pyarg)
-            elif arg_t is Double or arg_t is float:
-                pytype = c_backend.pyarg_extract_owned_double(pyarg)
-            elif arg_t is Float:
-                pytype = c_backend.pyarg_extract_owned_float(pyarg)
-            elif issubclass(arg_t, typing.Tuple):
-                ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
-                t = PyTuple(ptr, arg_t)
-                pytype = t.to_tuple(depth=depth + 1)
-                t.free()
-            elif issubclass(arg_t, typing.List):
-                ptr = c_backend.pyarg_extract_owned_list(pyarg)
-                l = PyList(ptr, arg_t)
-                pytype = l.to_list(depth=depth + 1)
-                l.free()
-            elif issubclass(arg_t, typing.Dict):
-                ptr = c_backend.pyarg_extract_owned_dict(pyarg)
-                d = PyDict(ptr, arg_t)
-                pytype = d.to_dict(depth=depth + 1)
-                d.free()
-            else:
+            pytype = _extract_value(pyarg, arg_t, depth=depth + 1)
+            if pytype is None:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
             tuple_elems.append(pytype)
@@ -402,16 +409,18 @@ class PyDict(PythonObject):
             raise TypeError("rustypy: subtype `{t}` of Dict type is \
                             not supported".format(t=arg_t))
         pydict, kv_tuple = [], True
-        kv_tpl_type = typing.Tuple[key_py_t, arg_t]
         # run the drain iterator while not a null pointer
         while kv_tuple:
             kv_tuple = c_backend.pydict_drain_element(
                 drain_iter, key_rs_t)
             if not kv_tuple:
                 break
-            t = PyTuple(kv_tuple, kv_tpl_type, self.call_fn)
-            pydict.append(t.to_tuple(depth + 1))
-            t.free()
+            key = c_backend.pydict_get_kv(0, kv_tuple)
+            val = c_backend.pydict_get_kv(1, kv_tuple)
+            t = (fnk(key),
+                 _extract_value(val, arg_t))
+            c_backend.pydict_free_kv(kv_tuple)
+            pydict.append(t)
         return dict(pydict)
 
     @staticmethod
@@ -495,7 +504,7 @@ class PyDict(PythonObject):
             key_py_t = bool
         elif key_t == 'PyString':
             key_rs_t = c_backend.pydict_get_key_type(12)
-            fnk = _to_string
+            fnk = _to_pystring
             fne = c_backend.pyarg_extract_owned_string
             key_py_t = str
         return (key_rs_t, fnk, fne, key_py_t)

@@ -7,7 +7,7 @@ use libc::{size_t, c_char};
 macro_rules! _rustypy_abort_xtract_fail {
     ( $msg:expr ) => {{
         use std::process;
-        println!("rustypy: failed abrupty!");
+        println!("\nrustypy: failed abrupty!");
         let msg = format!(
             "rustypy: aborted process, tried to extract one type, but found an other instead:\n \
             {}", $msg);
@@ -58,6 +58,12 @@ pub enum PyArg {
     PyList(Box<PyList>),
     PyDict(*mut size_t),
     None,
+}
+
+impl PyArg {
+    pub fn as_ptr(self) -> *mut PyArg {
+        Box::into_raw(Box::new(self))
+    }
 }
 
 // Conversions from <T> to PyArg

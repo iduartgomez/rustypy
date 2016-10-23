@@ -59,7 +59,6 @@ use libc::size_t;
 use super::PyArg;
 use super::pybool::PyBool;
 use super::pystring::PyString;
-use super::pytuple::PyTuple;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Drain;
@@ -77,7 +76,7 @@ pub struct PyDict<K, PyArg>
 
 use self::key_bound::PyDictKey;
 
-impl<K> PyDict<K,PyArg>
+impl<K> PyDict<K, PyArg>
     where K: Eq + Hash + PyDictKey
 {
     /// Creates an empty PyDict.
@@ -96,7 +95,8 @@ impl<K> PyDict<K,PyArg>
         self._inner.insert(k, v)
     }
 
-    /// Removes a key from the map, returning the value at the key if the key was previously in the map.
+    /// Removes a key from the map, returning the value at the key if the key was previously
+    /// in the map.
     ///
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
@@ -285,7 +285,9 @@ impl<K, V> From<HashMap<K, V>> for PyArg
 /// # let dict = PyDict::from(hm0).as_ptr();
 /// // dict from Python: {str: ([u64], {i32: str})} as *mut usize
 /// let unpacked = unpack_pydict!(dict;
-///     PyDict{(PyString, PyTuple{({PyList{I64 => i64}}, {PyDict{(i32, PyString => String)}},)})} );
+///     PyDict{(PyString, PyTuple{({PyList{I64 => i64}},
+///                                {PyDict{(i32, PyString => String)}},)})}
+///     );
 /// # }
 /// ```
 ///
@@ -467,28 +469,24 @@ fn drain_dict() {
 
         let e1 = pydict_drain_element(iter, &k_type);
         assert!(!e1.is_null());
-        let e1: &PyTuple = &*(e1 as *const PyTuple);
-        let v = match e1.next {
-            Some(ref v) => &(v.elem),
-            _ => panic!(),
-        };
-        if e1.elem == PyArg::U16(0) {
-            assert_eq!(v, &PyArg::PyString(PyString::from("zero")));
+        let e1: &[*mut PyArg; 2] = &*(e1 as *const [*mut PyArg; 2]);
+        let e1_key = *(Box::from_raw(e1[0]));
+        let e1_var = *(Box::from_raw(e1[1]));
+        if e1_key ==  PyArg::U16(0) {
+            assert_eq!(e1_var, PyArg::PyString(PyString::from("zero")));
         } else {
-            assert_eq!(v, &PyArg::PyString(PyString::from("one")));
+            assert_eq!(e1_var, PyArg::PyString(PyString::from("one")));
         }
 
         let e2 = pydict_drain_element(iter, &k_type);
         assert!(!e2.is_null());
-        let e2: &PyTuple = &*(e2 as *const PyTuple);
-        let v = match e2.next {
-            Some(ref v) => &(v.elem),
-            _ => panic!(),
-        };
-        if e2.elem == PyArg::U16(0) {
-            assert_eq!(v, &PyArg::PyString(PyString::from("zero")));
+        let e2: &[*mut PyArg; 2] = &*(e2 as *const [*mut PyArg; 2]);
+        let e2_key = *(Box::from_raw(e2[0]));
+        let e2_var = *(Box::from_raw(e2[1]));
+        if e2_key ==  PyArg::U16(0) {
+            assert_eq!(e2_var, PyArg::PyString(PyString::from("zero")));
         } else {
-            assert_eq!(v, &PyArg::PyString(PyString::from("one")));
+            assert_eq!(e2_var, PyArg::PyString(PyString::from("one")));
         }
 
         let e3 = pydict_drain_element(iter, &k_type);
@@ -542,24 +540,39 @@ pub unsafe extern "C" fn pydict_get_drain(dict: *mut size_t, k_type: &PyDictK) -
     }
 }
 
-fn kv_return_tuple(k: PyArg, v: PyArg) -> *mut PyTuple {
-    let ret = PyTuple {
-        elem: k,
-        idx: 0_usize,
-        next: Some(Box::new(PyTuple {
-            elem: v,
-            idx: 1_usize,
-            next: None,
-        })),
-    };
-    Box::into_raw(Box::new(ret))
+fn kv_return_tuple(k: PyArg, v: PyArg) -> *mut usize {
+    Box::into_raw(Box::new([
+        Box::into_raw(Box::new(k)),
+        Box::into_raw(Box::new(v)),
+    ])) as *mut usize
+}
+
+#[doc(hidden)]
+#[no_mangle]
+pub unsafe extern "C" fn pydict_get_kv(a: i32, pair: *const usize) -> *mut PyArg {
+    let pair = &*(pair as *const [*mut PyArg; 2]);
+    match a {
+        0 => {
+            pair[0]
+        }
+        1 => {
+            pair[1]
+        }
+        _ => panic!(),
+    }
+}
+
+#[doc(hidden)]
+#[no_mangle]
+pub unsafe extern "C" fn pydict_free_kv(pair: *mut usize) {
+    Box::from_raw(pair as *mut [*mut PyArg; 2]);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t, k_type: &PyDictK) -> *mut PyTuple {
-    fn _get_null() -> *mut PyTuple {
-        let p: *const PyTuple = ptr::null();
-        p as *mut PyTuple
+pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t, k_type: &PyDictK) -> *mut usize {
+    fn _get_null() -> *mut usize {
+        let p: *const usize = ptr::null();
+        p as *mut usize
     }
     match *(k_type) {
         PyDictK::I8 => {

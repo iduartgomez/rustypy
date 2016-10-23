@@ -39,6 +39,14 @@ RS_TYPE_CONVERSION = {
 }
 
 
+class Raw_RS(ctypes.Structure):
+    pass
+
+
+class PyArg_RS(ctypes.Structure):
+    pass
+
+
 class PyString_RS(ctypes.Structure):
     pass
 
@@ -55,7 +63,7 @@ class PyList_RS(ctypes.Structure):
     pass
 
 
-# Dictionary interfaces:
+# BEGIN dictionary interfaces
 class PyDict_RS(ctypes.Structure):
     pass
 
@@ -67,14 +75,6 @@ class KeyType_RS(ctypes.Structure):
 class DrainPyDict_RS(ctypes.Structure):
     pass
 # END dictionary interfaces
-
-
-class Raw_RS(ctypes.Structure):
-    pass
-
-
-class PyArg_RS(ctypes.Structure):
-    pass
 
 
 class KrateData_RS(ctypes.Structure):
@@ -154,7 +154,10 @@ def config_ctypes():
     c_backend.pydict_get_drain.restype = POINTER(DrainPyDict_RS)
     c_backend.pydict_drain_element.argtypes = (
         POINTER(DrainPyDict_RS), POINTER(KeyType_RS))
-    c_backend.pydict_drain_element.restype = POINTER(PyTuple_RS)
+    c_backend.pydict_drain_element.restype = POINTER(PyArg_RS)
+    c_backend.pydict_get_kv.argtypes = (ctypes.c_int, POINTER(PyArg_RS))
+    c_backend.pydict_get_kv.restype = POINTER(PyArg_RS)
+    c_backend.pydict_free_kv.argtypes = (POINTER(PyArg_RS),)
 
     # Wrap type in PyArg enum
     c_backend.pyarg_from_str.argtypes = (ctypes.c_char_p,)
@@ -213,7 +216,7 @@ def _load_rust_lib(recmpl=False):
         if os.path.exists(lib):
             os.remove(lib)
         shutil.copy(cp, path)
-        load_rust_lib()
+        _load_rust_lib()
     else:
         from ..__init__ import __version__ as curr_ver
         # check that is the same version
@@ -224,6 +227,7 @@ def _load_rust_lib(recmpl=False):
         else:
             globals()['c_backend'] = ctypes.cdll.LoadLibrary(lib)
             config_ctypes()
+
 
 def get_rs_lib():
     if not c_backend:
