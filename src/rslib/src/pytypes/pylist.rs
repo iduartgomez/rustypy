@@ -60,7 +60,7 @@ pub struct PyList {
 }
 
 impl PyList {
-    /// Constructs a new, empty ```Vec<T>```.
+    /// Constructs a new, empty ```PyList<T>```.
     ///
     /// The vector will not allocate until elements are pushed onto it.
     pub fn new() -> PyList {

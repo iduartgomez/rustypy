@@ -51,6 +51,7 @@ impl<'a> PyTuple {
     pub unsafe fn from_ptr(ptr: *mut PyTuple) -> PyTuple {
         *(Box::from_raw(ptr))
     }
+
     /// Get a mutable reference to an inner element of the tuple, takes as argument the position
     /// of the element and returns a Result.
     pub fn as_mut(&mut self, idx: usize) -> Result<&mut PyArg, &str> {
@@ -63,6 +64,7 @@ impl<'a> PyTuple {
             }
         }
     }
+
     #[doc(hidden)]
     pub fn replace_elem(&mut self, idx: usize) -> Result<PyArg, &str> {
         if idx == self.idx {
@@ -75,6 +77,7 @@ impl<'a> PyTuple {
             }
         }
     }
+
     /// Get a regular reference to an inner element of the tuple, takes as argument the position
     /// of the element and returns a Result.
     pub fn as_ref(&self, idx: usize) -> Result<&PyArg, &str> {
@@ -87,15 +90,19 @@ impl<'a> PyTuple {
             }
         }
     }
+
     fn push(&mut self, next: PyTuple) {
         self.next = Some(Box::new(next));
     }
+
+    /// Returns the length of the tuple.
     pub fn len(&self) -> usize {
         match self.next {
             Some(ref e) => e.len(),
             None => self.idx + 1,
         }
     }
+
     /// Returns self as raw pointer. Use this method when returning a PyTuple to Python.
     pub fn as_ptr(self) -> *mut PyTuple {
         Box::into_raw(Box::new(self))

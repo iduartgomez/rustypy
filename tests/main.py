@@ -13,8 +13,7 @@ from rustypy.rswrapper.ffi_defs import _load_rust_lib
 
 
 def setUpModule():
-    # uncomment to recompile rust lib
-    _load_rust_lib(recmpl=True)
+    _load_rust_lib(recmpl=True)  # uncomment to recompile rust lib
     global _py_test_dir
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     global _rs_lib_dir
