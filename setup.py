@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import subprocess
@@ -34,7 +35,8 @@ with open(ori_toml, 'r') as f:
     for l in f:
         ver = re.match(old_ver, l)
         if ver:
-            new_file.write('version = "{}"\n'.format(rustypy.__version__))
+            version = 'version = "{}"\n'.format(rustypy.__version__)
+            new_file.write(version)
         else:
             new_file.write(l)
 f = open(new_toml, 'w')
@@ -65,8 +67,8 @@ setup(
     package_data={'rslib': ['*/*']},
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    #setup_requires=['cffi'],
-    #install_requires=['cffi'],
+    # setup_requires=['cffi'],
+    # install_requires=['cffi'],
     entry_points={
         'console_scripts': [
             'rustypy=rustypy.scripts:cli',

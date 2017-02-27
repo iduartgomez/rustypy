@@ -97,7 +97,7 @@ def get_version():
     import pkg_resources
     try:
         rustypy_ver = pkg_resources.require("rustypy")[0].version
-    except ImportError:
+    except:
         import os
         import re
         p = os.path.join(os.path.dirname(__file__), '__init__.py')

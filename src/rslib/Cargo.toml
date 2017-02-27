@@ -1,6 +1,6 @@
 [package]
 name = "rustypy"
-version = "0.1.2"
+version = "0.1.12"
 authors = ["IDG <iduartgomez@gmail.com>"]
 
 [dependencies]
