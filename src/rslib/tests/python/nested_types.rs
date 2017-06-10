@@ -1,7 +1,6 @@
 extern crate libc;
 extern crate cpython;
 
-#[macro_use]
 extern crate rustypy;
 
 use std::collections::HashMap;

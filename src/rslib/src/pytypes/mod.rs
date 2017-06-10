@@ -7,11 +7,20 @@ use libc::{size_t, c_char};
 macro_rules! _rustypy_abort_xtract_fail {
     ( $msg:expr ) => {{
         use std::process;
-        println!("\nrustypy: failed abrupty!");
-        let msg = format!(
-            "rustypy: aborted process, tried to extract one type, but found an other instead:\n \
-            {}", $msg);
-        println!("{}", msg);
+        use std::io::{Write, stderr, stdout};
+
+        fn write<T: Write>(mut handle: T) {
+            write!(&mut handle, "\nrustypy: failed abrupty!").unwrap();
+            write!(&mut handle,
+                "rustypy: aborted process, tried to extract one type, but found an other instead:\n \
+                {}\n", $msg).unwrap();
+            handle.flush().unwrap();
+        }
+
+        let err = stderr();
+        write(err);
+        let out = stdout();
+        write(out);
         process::exit(1);
     }}
 }

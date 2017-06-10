@@ -4,8 +4,8 @@ version = "0.1.12"
 authors = ["IDG <iduartgomez@gmail.com>"]
 
 [dependencies]
-cpython = { git="https://github.com/dgrunwald/rust-cpython.git", features=["python-3-5"]}
-libc = "*"
+cpython = { version="~0.1.0", features=["python-3-5"] }
+libc = "~0.2"
 syntex_syntax = "0.45.0"
 syntex_errors = "0.45.0"
 

@@ -34,7 +34,7 @@ class PyString(PythonObject):
     def free(self):
         c_backend.pystring_free(self._ptr)
         delattr(self, '_ptr')
-        setattr(self, 'to_dict', _dangling_pointer)
+        setattr(self, 'to_str', _dangling_pointer)
 
     def to_str(self):
         """Consumes the wrapper and returns a raw c_char pointer.
@@ -53,7 +53,7 @@ class PyBool(PythonObject):
     def free(self):
         c_backend.pybool_free(self._ptr)
         delattr(self, '_ptr')
-        setattr(self, 'to_dict', _dangling_pointer)
+        setattr(self, 'to_bool', _dangling_pointer)
 
     def to_bool(self):
         val = c_backend.pybool_get_val(self._ptr)
@@ -151,7 +151,7 @@ class PyTuple(PythonObject):
     def free(self):
         c_backend.pytuple_free(self._ptr)
         delattr(self, '_ptr')
-        setattr(self, 'to_dict', _dangling_pointer)
+        setattr(self, 'to_tuple', _dangling_pointer)
 
     def to_tuple(self, depth=0):
         arity = c_backend.pytuple_len(self._ptr)
@@ -220,7 +220,7 @@ class PyList(PythonObject):
     def free(self):
         c_backend.pylist_free(self._ptr)
         delattr(self, '_ptr')
-        setattr(self, 'to_dict', _dangling_pointer)
+        setattr(self, 'to_list', _dangling_pointer)
 
     def to_list(self, depth=0):
         arg_t = self.sig.__args__[0]

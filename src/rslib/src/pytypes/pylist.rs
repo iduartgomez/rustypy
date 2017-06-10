@@ -271,7 +271,7 @@ macro_rules! unpack_pylist {
         };
         Vec::from(list)
     }};
-    ( $pydict:ident; PyDict{$t} ) => {{
+    ( $pydict:ident; PyDict{$t:tt} ) => {{
         unpack_pydict!( $pydict; PyDict{$t} )
     }};
 }

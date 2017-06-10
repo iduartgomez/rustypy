@@ -269,11 +269,12 @@ impl<K, V> From<HashMap<K, V>> for PyArg
 ///
 /// ```
 /// # #[macro_use] extern crate rustypy;
+/// # #[allow(unused_variables)]
 /// # fn main(){
 /// # use rustypy::{PyDict, PyString, PyArg};
 /// # use std::collections::HashMap;
 /// # let mut hm0 = HashMap::new();
-/// # for (k, v) in vec![(0_i32, "Hello"), (1, " "), (2, "World!")] {
+/// # for &(k, v) in &[(0_i32, "Hello"), (1, " "), (2, "World!")] {
 /// #     hm0.insert(k, v);
 /// # }
 /// # let mut hm1 = HashMap::new();
@@ -281,9 +282,9 @@ impl<K, V> From<HashMap<K, V>> for PyArg
 /// #     let k = format!("#{}", i);
 /// #     let v = PyArg::from(hm0.clone());
 /// #     let l = PyArg::from(vec![0_i64; 3]);
-/// #     hm1.insert(k, pytuple!(l, v));
+/// #     hm1.insert(PyString::from(k), pytuple!(l, v));
 /// # }
-/// # let dict = PyDict::from(hm0).as_ptr();
+/// # let dict = PyDict::from(hm1).as_ptr();
 /// // dict from Python: {str: ([u64], {i32: str})} as *mut size_t
 /// let unpacked = unpack_pydict!(dict;
 ///     PyDict{(PyString, PyTuple{({PyList{I64 => i64}},
@@ -459,6 +460,18 @@ pub unsafe extern "C" fn pydict_insert(dict: *mut size_t,
 #[test]
 fn drain_dict() {
     unsafe {
+        let match_kv = |kv: *mut PyDictPair| {
+            match *Box::from_raw((kv as *mut PyDictPair)) {
+                PyDictPair { key: PyArg::U16(0), val: PyArg::PyString(val)  } => {
+                    assert_eq!(val, PyString::from("zero"));
+                }
+                PyDictPair { key: PyArg::U16(1), val: PyArg::PyString(val)  } => {
+                    assert_eq!(val, PyString::from("one"));
+                }
+                _ => panic!()
+            }
+        };
+
         let mut hm = HashMap::new();
         hm.insert(0u16, PyArg::PyString(PyString::from("zero")));
         hm.insert(1u16, PyArg::PyString(PyString::from("one")));
@@ -467,31 +480,16 @@ fn drain_dict() {
         let k_type = PyDictK::U16;
         let iter = pydict_get_drain(dict, &k_type);
 
+        let e0 = pydict_drain_element(iter, &k_type);
+        assert!(!e0.is_null());
+        match_kv(e0);
 
         let e1 = pydict_drain_element(iter, &k_type);
         assert!(!e1.is_null());
-        let e1: &[*mut PyArg; 2] = &*(e1 as *const [*mut PyArg; 2]);
-        let e1_key = *(Box::from_raw(e1[0]));
-        let e1_var = *(Box::from_raw(e1[1]));
-        if e1_key == PyArg::U16(0) {
-            assert_eq!(e1_var, PyArg::PyString(PyString::from("zero")));
-        } else {
-            assert_eq!(e1_var, PyArg::PyString(PyString::from("one")));
-        }
+        match_kv(e1);
 
-        let e2 = pydict_drain_element(iter, &k_type);
-        assert!(!e2.is_null());
-        let e2_key = *(Box::from_raw(pydict_get_kv(0, e2) as *mut size_t as *mut PyArg));
-        let e2_var = *(Box::from_raw(pydict_get_kv(1, e2) as *mut size_t as *mut PyArg));
-        if e2_key == PyArg::U16(0) {
-            assert_eq!(e2_var, PyArg::PyString(PyString::from("zero")));
-        } else {
-            assert_eq!(e2_var, PyArg::PyString(PyString::from("one")));
-        }
-        pydict_free_kv(e2);
-
-        let e3 = pydict_drain_element(iter, &k_type);
-        assert!(e3.is_null());
+        let none = pydict_drain_element(iter, &k_type);
+        assert!(none.is_null());
     }
 }
 
@@ -856,7 +854,7 @@ pub enum PyDictK {
     PyString,
 }
 
-mod key_bound {
+pub(crate) mod key_bound {
     use pytypes::pystring::PyString;
     use pytypes::pybool::PyBool;
 
