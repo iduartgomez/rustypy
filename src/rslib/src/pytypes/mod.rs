@@ -333,57 +333,66 @@ impl From<PyArg> for PyList {
 
 // From types:
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_int(e: i64) -> *mut PyArg {
     Box::into_raw(Box::new(PyArg::I64(e)))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_ulonglong(e: u64) -> *mut PyArg {
     Box::into_raw(Box::new(PyArg::U64(e)))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_float(e: f32) -> *mut PyArg {
     Box::into_raw(Box::new(PyArg::F32(e)))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_double(e: f64) -> *mut PyArg {
     Box::into_raw(Box::new(PyArg::F64(e)))
 }
 
-
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_bool(e: i8) -> *mut PyArg {
     let e = PyBool::from(e);
     Box::into_raw(Box::new(PyArg::PyBool(e)))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_str(e: *const c_char) -> *mut PyArg {
     let e = unsafe { PyString::from_raw(e) };
     Box::into_raw(Box::new(PyArg::PyString(e)))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_pytuple(e: *mut PyTuple) -> *mut PyArg {
     let e = unsafe { PyTuple::from_ptr(e) };
     Box::into_raw(Box::new(PyArg::PyTuple(Box::new(e))))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_pylist(e: *mut PyList) -> *mut PyArg {
     let e = unsafe { PyList::from_ptr(e) };
     Box::into_raw(Box::new(PyArg::PyList(Box::new(e))))
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_from_pydict(e: *mut size_t) -> *mut PyArg {
     Box::into_raw(Box::new(PyArg::PyDict(e)))
 }
 
 // Extract owned args, no copies:
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_int(e: *mut PyArg) -> i64 {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -397,11 +406,12 @@ pub extern "C" fn pyarg_extract_owned_int(e: *mut PyArg) -> i64 {
         PyArg::U8(val) => val as i64,
         _ => {
             _rustypy_abort_xtract_fail!("failed while trying to extract an integer type of i64 or \
-                                         less")
+                                        less")
         }
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_ulonglong(e: *mut PyArg) -> u64 {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -411,6 +421,7 @@ pub extern "C" fn pyarg_extract_owned_ulonglong(e: *mut PyArg) -> u64 {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_float(e: *mut PyArg) -> f32 {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -420,6 +431,7 @@ pub extern "C" fn pyarg_extract_owned_float(e: *mut PyArg) -> f32 {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_double(e: *mut PyArg) -> f64 {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -429,6 +441,7 @@ pub extern "C" fn pyarg_extract_owned_double(e: *mut PyArg) -> f64 {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_bool(e: *mut PyArg) -> *mut PyBool {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -438,6 +451,7 @@ pub extern "C" fn pyarg_extract_owned_bool(e: *mut PyArg) -> *mut PyBool {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_str(e: *mut PyArg) -> *mut PyString {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -447,6 +461,7 @@ pub extern "C" fn pyarg_extract_owned_str(e: *mut PyArg) -> *mut PyString {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_tuple(e: *mut PyArg) -> *mut PyTuple {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -456,6 +471,7 @@ pub extern "C" fn pyarg_extract_owned_tuple(e: *mut PyArg) -> *mut PyTuple {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_list(e: *mut PyArg) -> *mut PyList {
     let e = unsafe { *(Box::from_raw(e)) };
@@ -465,6 +481,7 @@ pub extern "C" fn pyarg_extract_owned_list(e: *mut PyArg) -> *mut PyList {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pyarg_extract_owned_dict(e: *mut PyArg) -> *mut size_t {
     unsafe {

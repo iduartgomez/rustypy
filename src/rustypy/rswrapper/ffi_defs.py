@@ -93,7 +93,7 @@ def config_ctypes():
     c_backend.krate_data_iter.restype = POINTER(PyString_RS)
     c_backend.parse_src.argtypes = (
         POINTER(PyString_RS), POINTER(KrateData_RS))
-    c_backend.parse_src.restype = ctypes.c_uint
+    c_backend.parse_src.restype = POINTER(PyString_RS)
 
     # String related functions
     c_backend.pystring_new.argtypes = (ctypes.c_char_p, )
@@ -202,17 +202,18 @@ def config_ctypes():
 def _load_rust_lib(recmpl=False):
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
-    lib = pkg_resources.resource_filename(
-        'rslib', "{}rustypy{}".format(pre, ext))
+    libfile = "{}rustypy{}".format(pre, ext)
+    lib = pkg_resources.resource_filename('rslib', libfile)
     if (not os.path.exists(lib)) or recmpl:
         print("   library not found at: {}".format(lib))
         print("   compiling with Cargo")
         import subprocess
         path = os.path.dirname(lib)
-        subprocess.run(['cargo', 'build', '--release'], cwd=path)
+        #subprocess.run(['cargo', 'build', '--release'], cwd=path)
+        subprocess.run(['cargo', 'build'], cwd=path)
         import shutil
-        cp = os.path.join(path, 'target', 'release',
-                          "librustypy{}".format(ext))
+        #cp = os.path.join(path, 'target', 'release', lib)
+        cp = os.path.join(path, 'target', 'debug', libfile)
         if os.path.exists(lib):
             os.remove(lib)
         shutil.copy(cp, path)

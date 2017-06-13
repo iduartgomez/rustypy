@@ -37,7 +37,7 @@ pub struct PyString {
 impl PyString {
     /// Get a PyString from a previously boxed raw pointer.
     pub unsafe fn from_ptr(ptr: *mut PyString) -> PyString {
-        *(Box::from_raw(ptr))
+        *Box::from_raw(ptr)
     }
     /// Constructs an owned String from a PyString.
     pub fn to_string(&self) -> String {
@@ -86,6 +86,7 @@ impl From<PyString> for String {
 }
 
 /// Destructs the PyString, mostly to be used from Python.
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pystring_free(ptr: *mut PyString) {
     if ptr.is_null() {
@@ -98,6 +99,7 @@ pub extern "C" fn pystring_free(ptr: *mut PyString) {
 
 use std::ffi::CStr;
 /// Creates a PyString wrapper from a raw c_char pointer
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pystring_new(ptr: *const c_char) -> *mut PyString {
     let pystr = PyString { _inner: unsafe { CStr::from_ptr(ptr).to_owned() } };
@@ -106,6 +108,7 @@ pub extern "C" fn pystring_new(ptr: *const c_char) -> *mut PyString {
 
 /// Consumes the wrapper and returns a raw c_char pointer. Afterwards is not necessary
 /// to destruct it as it has already been consumed.
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pystring_get_str(ptr: *mut PyString) -> *const c_char {
     let pystr: PyString = unsafe { PyString::from_ptr(ptr) };

@@ -18,6 +18,7 @@ def setUpModule():
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     global _rs_lib_dir
     _rs_lib_dir = os.path.join(os.path.dirname(_py_test_dir), 'src', 'rslib')
+    os.remove(os.path.join(_rs_lib_dir, 'librustypy.so'))
     # load sample lib
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
@@ -125,44 +126,6 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.bindings.other_prefix_dict.restype = R
         result = self.bindings.other_prefix_dict(d)
         self.assertEqual(result, {0: "Back", 1: "Rust"})
-
-
-class ExtractionFailures(unittest.TestCase):
-
-    def setUp(self):
-        f = open(self._basics, 'w')
-        f.close()
-        f = open(self._mod, 'w')
-        f.close()
-
-    @classmethod
-    def setUpClass(cls):
-        cls._basics = os.path.join(_rs_lib_dir, 'tests',
-                                   'test_package', 'basics', 'rustypy_pybind.rs')
-        cls._mod = os.path.join(_rs_lib_dir, 'tests',
-                                'test_package', 'rustypy_pybind.rs')
-
-    def test_failure(self):
-        set_python_path(self, 'test_package', 'basics')
-        import nested_types as test
-        self.gen = RustFuncGen(module=test)
-        p = subprocess.run(['cargo', 'test', '--test', 'common/nested_types',
-                            '--', '--nocapture'],
-                           cwd=_rs_lib_dir, universal_newlines=True,
-                           stderr=subprocess.STDOUT)
-        print("stdout:\n", p.stdout)
-        self.assertEqual(p.returncode, 0,
-                         'failed Rust integration test `nested types`')
-
-    def tearDown(self):
-        if hasattr(self, '_original_path'):
-            sys.path = self._original_path
-        if hasattr(self, '_original_env'):
-            os.putenv('PYTHONPATH', self._original_env)
-        f = open(self._basics, 'w')
-        f.close()
-        f = open(self._mod, 'w')
-        f.close()
 
 if __name__ == "__main__":
     unittest.main()

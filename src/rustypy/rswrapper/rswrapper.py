@@ -4,6 +4,7 @@
 import re
 import types
 import typing
+import os.path
 
 from string import Template
 from collections import deque, namedtuple
@@ -47,7 +48,7 @@ def _get_signature_types(params):
         try:
             equiv = RS_TYPE_CONVERSION[type_]
         except:
-            raise TypeError('rustypy: type not supported: {}'.format(type_))
+            raise TypeError("rustypy: type not supported: {}".format(type_))
         else:
             if equiv == 'int':
                 return RustType(equiv=int, ref=ref, mutref=mutref)
@@ -58,7 +59,7 @@ def _get_signature_types(params):
             elif equiv == 'str':
                 return RustType(equiv=str, ref=True, mutref=False)
             elif equiv == 'bool':
-                return RustType(equiv=bool, ref=True, mutref=False)
+                return RustType(equiv=bool, ref=ref, mutref=mutref)
             elif equiv == 'tuple':
                 return RustType(equiv=tuple, ref=True, mutref=False)
             elif equiv == 'list':
@@ -109,7 +110,7 @@ def _get_ptr_to_C_obj(obj, sig=None):
         if not sig:
             raise MissingTypeHint(
                 "rustypy: raw pointer type arguments require type information \
-                 for proper conversion")
+                 for proper type coercion")
         raise NotImplementedError
 
 
@@ -127,8 +128,6 @@ def _extract_pytypes(ref, sig=False, call_fn=None, depth=0, elem_num=None):
     elif isinstance(ref, POINTER(PyTuple_RS)):
         pyobj = PyTuple(ref, sig, call_fn=call_fn)
         val = pyobj.to_tuple(depth)
-        if depth == 0:
-            pyobj.free()
         return val
     elif isinstance(ref, POINTER(PyString_RS)):
         pyobj = PyString(ref)
@@ -137,20 +136,14 @@ def _extract_pytypes(ref, sig=False, call_fn=None, depth=0, elem_num=None):
     elif isinstance(ref, POINTER(PyBool_RS)):
         pyobj = PyBool(ref)
         val = pyobj.to_bool()
-        if depth == 0:
-            pyobj.free()
         return val
     elif isinstance(ref, POINTER(PyList_RS)):
         pyobj = PyList(ref, sig, call_fn=call_fn)
         val = pyobj.to_list(depth)
-        if depth == 0:
-            pyobj.free()
         return val
     elif isinstance(ref, POINTER(PyDict_RS)):
         pyobj = PyDict(ref, sig, call_fn=call_fn)
         val = pyobj.to_dict(depth)
-        if depth == 0:
-            pyobj.free()
         return val
     elif isinstance(ref, POINTER(Raw_RS)):
         raise NotImplementedError
@@ -162,37 +155,46 @@ def _extract_pytypes(ref, sig=False, call_fn=None, depth=0, elem_num=None):
 # ============================= #
 
 
-def get_crate_entry(mod, manifest):
-    rgx_lib = re.compile(r'\[lib\]')
-    rgx_path = re.compile(r'path(\W+|)=(\W+|)[\'\"](?P<entry>.*)[\'\"]')
-    inlibsection, entry = False, None
-    with open(manifest, 'r') as f:
-        for l in f:
-            if inlibsection:
-                entry = re.match(rgx_path, l)
-                if entry:
-                    entry = entry.group('entry')
-                    entry = os.path.join(*entry.split('/'))
-                    break
-            elif not inlibsection and re.search(rgx_lib, l):
-                inlibsection = True
-    if not entry:
-        entry = os.path.join('src', 'lib.rs')
-    return os.path.join(mod, entry)
+def get_crate_entry(mod):
+    manifest = os.path.join(mod, 'Cargo.toml')
+    if os.path.exists(manifest):
+        rgx_lib = re.compile(r'\[lib\]')
+        rgx_path = re.compile(r'path(\W+|)=(\W+|)[\'\"](?P<entry>.*)[\'\"]')
+        inlibsection, entry = False, None
+        with open(manifest, 'r') as f:
+            for l in f:
+                if inlibsection:
+                    entry = re.match(rgx_path, l)
+                    if entry:
+                        entry = entry.group('entry')
+                        entry = os.path.join(*entry.split('/'))
+                        break
+                elif not inlibsection and re.search(rgx_lib, l):
+                    inlibsection = True
+        if not entry:
+            entry = os.path.join('src', 'lib.rs')
+        return os.path.join(mod, entry)
+    else:
+        if os.path.isfile(mod) and os.path.basename(mod).endswith('.rs'):
+            return mod
+        else:
+            default = os.path.join(mod, 'lib.rs')
+            if os.path.exists(default):
+                return default
+            else:
+                raise OSError(
+                    "rustypy: couldn't find lib.rs in the specified directory")
 
 
 def bind_rs_crate_funcs(mod, lib, prefixes=None):
     if not c_backend:
         load_rust_lib()
     if not os.path.exists(mod):
-        raise OSError('rustypy: the specified `{}` Rust crate does not exist')
+        raise OSError('rustypy: `{}` path does not exist')
     elif not os.path.exists(lib):
         raise OSError(
-            'rustypy: the specified `{}` compiled library file does not exist')
-    manifest = os.path.join(mod, 'Cargo.toml')
-    if not os.path.exists(manifest):
-        raise OSError("rustypy: no Cargo(.toml) manifest found for this crate")
-    entry_point = get_crate_entry(mod, manifest)
+            'rustypy: `{}` compiled library file does not exist')
+    entry_point = get_crate_entry(mod)
     return RustBinds(entry_point, lib, prefixes=prefixes)
 
 
@@ -235,11 +237,11 @@ class RustBinds(object):
         p = PyList.from_list(p, typing.List[str])
         self._krate_data = KrateData(p)
         entry = PyString.from_str(entry_point)
-        signal = c_backend.parse_src(entry, self._krate_data.obj)
-        if signal == 1:
+        ret_msg = c_backend.parse_src(entry, self._krate_data.obj)
+        if ret_msg:
             raise Exception(
-                "rustypy: failed to generate Rust bindings, the source "
-                "code didn't parse, checkout if your library compiles!")
+                "rustypy: failed to generate Rust bindings, failed with error:\n"
+                "{}".format(PyString(ret_msg).to_str()))
         prepared_funcs = {}
         with self._krate_data as krate:
             for e in krate:

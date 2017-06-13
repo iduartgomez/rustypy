@@ -572,6 +572,7 @@ pub unsafe extern "C" fn pydict_free_kv(pair: *mut PyDictPair) {
     Box::from_raw(pair);
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t,
                                               k_type: &PyDictK)
@@ -654,6 +655,7 @@ pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t,
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pydict_get_element(dict: *mut size_t,
                                             k_type: &PyDictK,
@@ -801,6 +803,7 @@ pub unsafe extern "C" fn pydict_get_element(dict: *mut size_t,
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pydict_free(dict: *mut size_t, k_type: &PyDictK) {
     if dict.is_null() {
@@ -871,6 +874,7 @@ pub(crate) mod key_bound {
     impl PyDictKey for PyBool {}
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pydict_get_key_type(k: u32) -> *mut PyDictK {
     match k {

@@ -4,8 +4,8 @@ version = "0.0.1"
 authors = ["IDG <iduartgomez@gmail.com>"]
 
 [dependencies]
-libc = "*"
-rustypy = {path="../../src/rslib"}
+libc = "~0.2"
+rustypy = { version="^0.1", path="../../src/rslib" }
 
 [lib]
 name = "test_lib"

@@ -276,22 +276,26 @@ macro_rules! unpack_pylist {
     }};
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pylist_new(len: usize) -> *mut PyList {
     let list = PyList { _inner: Vec::with_capacity(len) };
     list.as_ptr()
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pylist_push(list: &mut PyList, e: *mut PyArg) {
     list.push(*(Box::from_raw(e)));
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pylist_len(list: &mut PyList) -> usize {
     list.len()
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pylist_free(ptr: *mut PyList) {
     if ptr.is_null() {
@@ -302,6 +306,7 @@ pub extern "C" fn pylist_free(ptr: *mut PyList) {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pylist_get_element(ptr: *mut PyList, index: usize) -> *mut PyArg {
     let list = &mut *ptr;

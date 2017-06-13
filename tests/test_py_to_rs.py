@@ -111,5 +111,43 @@ class GeneratePythonToRustBinds(unittest.TestCase):
             os.putenv('PYTHONPATH', self._original_env)
         os.remove(self._copied)
 
+
+class ExtractionFailures(unittest.TestCase):
+
+    def setUp(self):
+        f = open(self._basics, 'w')
+        f.close()
+        f = open(self._mod, 'w')
+        f.close()
+
+    @classmethod
+    def setUpClass(cls):
+        cls._basics = os.path.join(_rs_lib_dir, 'tests',
+                                   'test_package', 'basics', 'rustypy_pybind.rs')
+        cls._mod = os.path.join(_rs_lib_dir, 'tests',
+                                'test_package', 'rustypy_pybind.rs')
+
+    def test_failure(self):
+        set_python_path(self, 'test_package', 'basics')
+        import nested_types as test
+        self.gen = RustFuncGen(module=test)
+        p = subprocess.run(['cargo', 'test', '--test', 'common/nested_types',
+                            '--', '--nocapture'],
+                           cwd=_rs_lib_dir, universal_newlines=True,
+                           stderr=subprocess.STDOUT)
+        print("stdout:\n", p.stdout)
+        self.assertEqual(p.returncode, 0,
+                         'failed Rust integration test `nested types`')
+
+    def tearDown(self):
+        if hasattr(self, '_original_path'):
+            sys.path = self._original_path
+        if hasattr(self, '_original_env'):
+            os.putenv('PYTHONPATH', self._original_env)
+        f = open(self._basics, 'w')
+        f.close()
+        f = open(self._mod, 'w')
+        f.close()
+
 if __name__ == "__main__":
     unittest.main()

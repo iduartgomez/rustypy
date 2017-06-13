@@ -37,10 +37,12 @@ class PyString(PythonObject):
         setattr(self, 'to_str', _dangling_pointer)
 
     def to_str(self):
-        """Consumes the wrapper and returns a raw c_char pointer.
+        """Consumes the wrapper and returns a Python string.
         Afterwards is not necessary to destruct it as it has already
         been consumed."""
         val = c_backend.pystring_get_str(self._ptr)
+        delattr(self, '_ptr')
+        setattr(self, 'to_str', _dangling_pointer)
         return val.decode("utf-8")
 
     @staticmethod
@@ -61,12 +63,11 @@ class PyBool(PythonObject):
             val = False
         else:
             val = True
+        self.free()
         return val
 
     @staticmethod
     def from_bool(val: bool):
-        if not c_backend:
-            load_rust_lib()
         if val is True:
             return c_backend.pybool_new(1)
         else:
@@ -111,7 +112,6 @@ def _extract_value(pyarg, arg_t, depth=0):
     elif arg_t is bool:
         b = PyBool(c_backend.pyarg_extract_owned_bool(pyarg))
         pytype = b.to_bool()
-        b.free()
     elif arg_t is int:
         pytype = c_backend.pyarg_extract_owned_int(pyarg)
     elif arg_t is UnsignedLongLong:
@@ -124,17 +124,14 @@ def _extract_value(pyarg, arg_t, depth=0):
         ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
         t = PyTuple(ptr, arg_t)
         pytype = t.to_tuple(depth=depth + 1)
-        t.free()
     elif issubclass(arg_t, typing.List):
         ptr = c_backend.pyarg_extract_owned_list(pyarg)
         l = PyList(ptr, arg_t)
         pytype = l.to_list(depth=depth + 1)
-        l.free()
     elif issubclass(arg_t, typing.Dict):
         ptr = c_backend.pyarg_extract_owned_dict(pyarg)
         d = PyDict(ptr, arg_t)
         pytype = d.to_dict(depth=depth + 1)
-        d.free()
     return pytype
 
 
@@ -170,6 +167,7 @@ class PyTuple(PythonObject):
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
             tuple_elems.append(pytype)
+        self.free()
         return tuple(tuple_elems)
 
     @staticmethod
@@ -238,7 +236,6 @@ class PyList(PythonObject):
                 pyarg = c_backend.pylist_get_element(self._ptr, last)
                 b = PyBool(c_backend.pyarg_extract_owned_bool(pyarg))
                 pylist.appendleft(b.to_bool())
-                b.free()
                 last -= 1
         elif arg_t is int:
             for e in range(0, self._len):
@@ -264,7 +261,6 @@ class PyList(PythonObject):
                 ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
                 t = PyTuple(ptr, arg_t)
                 pylist.appendleft(t.to_tuple(depth=depth + 1))
-                t.free()
                 last -= 1
         elif issubclass(arg_t, typing.List):
             for e in range(0, self._len):
@@ -272,7 +268,6 @@ class PyList(PythonObject):
                 ptr = c_backend.pyarg_extract_owned_list(pyarg)
                 l = PyList(ptr, arg_t)
                 pylist.appendleft(l.to_list(depth=depth + 1))
-                l.free()
                 last -= 1
         elif issubclass(arg_t, typing.Dict):
             for e in range(0, self._len):
@@ -280,11 +275,11 @@ class PyList(PythonObject):
                 ptr = c_backend.pyarg_extract_owned_dict(pyarg)
                 d = PyDict(ptr, arg_t)
                 pylist.appendleft(d.to_dict(depth=depth + 1))
-                d.free()
                 last -= 1
         else:
             raise TypeError("rustypy: subtype `{t}` of List type is \
                             not supported".format(t=arg_t))
+        self.free()
         return list(pylist)
 
     @staticmethod
@@ -421,6 +416,7 @@ class PyDict(PythonObject):
                  _extract_value(val, arg_t))
             c_backend.pydict_free_kv(kv_tuple)
             pydict.append(t)
+        self.free()
         return dict(pydict)
 
     @staticmethod

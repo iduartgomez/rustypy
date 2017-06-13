@@ -11,21 +11,15 @@
 #![crate_type = "cdylib"]
 
 extern crate cpython;
-extern crate syntex_syntax as syntax;
-extern crate syntex_errors;
+extern crate syn;
 extern crate libc;
+extern crate walkdir;
 
-use std::collections::HashMap;
-use std::path::Path;
+use std::io::Read;
+use std::fs::File;
+use std::ptr;
 
-use libc::{c_uint, size_t};
-
-use syntex_errors::DiagnosticBuilder;
-use syntax::ast;
-use syntax::codemap;
-use syntax::parse::{self, ParseSess};
-use syntax::parse::token::InternedString;
-use syntax::visit::{FnKind, Visitor};
+use libc::{size_t};
 
 pub mod pytypes;
 
@@ -39,37 +33,30 @@ pub use self::pytypes::PyArg;
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> c_uint {
-    // parse and walk
+pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> *mut PyString {
     let path = unsafe { PyString::from_ptr_to_string(path) };
-    let mut parse_session = ParseSess::new();
-    let krate = match parse(&path, &mut parse_session) {
-        Ok(krate) => krate,
-        Err(None) => return 1 as c_uint,
-        Err(Some(_)) => return 2 as c_uint,
+    let mut f =  match File::open(&path) {
+        Ok(file) => file,
+        Err(_) => return PyString::from(format!("path not found: {}", path)).as_ptr(),
     };
-    // prepare data for Python
-    krate_data.visit_mod(&krate.module, krate.span, ast::CRATE_NODE_ID);
-    krate_data.collect_values();
-    return 0 as c_uint;
-}
-
-fn parse<'a, T: ?Sized + AsRef<Path>>(path: &T,
-                                      parse_session: &'a mut ParseSess)
-                                      -> Result<ast::Crate, Option<DiagnosticBuilder<'a>>> {
-    let path = path.as_ref();
-    let cfgs = vec![];
-    match parse::parse_crate_from_file(path, cfgs, parse_session) {
-        Ok(_) if parse_session.span_diagnostic.has_errors() => Err(None),
-        Ok(krate) => Ok(krate),
-        Err(e) => Err(Some(e)),
+    let mut src = String::new();
+    if f.read_to_string(&mut src).is_err() {
+        return PyString::from(format!("failed to read the source file: {}", path)).as_ptr();
     }
+    match syn::parse_crate(&src) {
+        Ok(krate) => {
+            syn::visit::walk_crate(krate_data, &krate);
+            krate_data.collect_values();
+        }
+        Err(err) => return PyString::from(err).as_ptr(),
+    };
+    return ptr::null_mut::<PyString>()
 }
 
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct KrateData {
-    functions: HashMap<codemap::Span, FnDef>,
+    functions: Vec<FnDef>,
     collected: Vec<String>,
     prefixes: Vec<String>,
 }
@@ -77,37 +64,66 @@ pub struct KrateData {
 impl KrateData {
     fn new(prefixes: Vec<String>) -> KrateData {
         KrateData {
-            functions: HashMap::new(),
+            functions: vec![],
             collected: vec![],
             prefixes: prefixes
         }
     }
-    fn get_types(&mut self, span: codemap::Span, fndecl: &ast::FnDecl) {
-        let work_fn = self.functions.get_mut(&span).unwrap();
-        for arg in &fndecl.inputs {
-            let type_str = format!("{:?}", &arg.ty);
-            work_fn.add_type(type_str);
-        }
-        let return_type = match &fndecl.output {
-            &ast::FunctionRetTy::Ty(ref s) => format!("{:?}", s),
-            &ast::FunctionRetTy::Default(_) => String::from("type(void)"),
-        };
-        work_fn.add_type(return_type);
-    }
+
     fn collect_values(&mut self) {
-        for (_, v) in self.functions.drain() {
-            let mut fndef = String::from(v.name.as_str());
-            if v.args.len() > 0 {
+        let mut add = true;
+        for v in self.functions.drain(..) {
+            let FnDef { name: mut fndef, args, output } = v;
+            if !args.is_empty() {
                 fndef.push_str("::");
-                v.args.iter().fold(&mut fndef, |mut acc, x| {
-                    acc.push_str(&x);
-                    acc.push(';');
+                args.iter().fold(&mut fndef, |mut acc, arg| {
+                    if let Ok(repr) = type_repr(arg, None) {
+                        acc.push_str(&repr);
+                        acc.push(';');
+                    } else {
+                        add = false;
+                    }
                     acc
                 });
             }
-            self.collected.push(fndef);
+            if add {
+                match output {
+                    syn::FunctionRetTy::Default => fndef.push_str("type(void)"),
+                    syn::FunctionRetTy::Ty(ty) => if let Ok(ty) = type_repr(&ty, None) {
+                        fndef.push_str(&ty)
+                    } else { 
+                        continue 
+                    },
+                }
+                self.collected.push(fndef);
+            } else {
+                add = true
+            }
         }
     }
+
+    fn add_fn(&mut self, name: String, fn_decl: &syn::FnDecl) {
+        for prefix in &self.prefixes {
+            if name.starts_with(prefix) {
+                let syn::FnDecl { inputs, output, .. } = fn_decl.clone();
+                let mut args = vec![];
+                for arg in inputs {
+                    match arg {
+                        syn::FnArg::Captured(_, ty) => args.push(ty),
+                        syn::FnArg::Ignored(ty) => args.push(ty),
+                        _ => continue,
+                    }
+                }
+                self.functions.push(FnDef {
+                    name,
+                    args: args, 
+                    output: output,
+                });
+                break;
+            }
+        }
+    }
+
     fn iter_krate(&self, idx: usize) -> Option<&str> {
         if self.collected.len() >= (idx + 1) {
             Some(&self.collected[idx])
@@ -117,44 +133,74 @@ impl KrateData {
     }
 }
 
-impl Visitor for KrateData {
-    fn visit_fn(&mut self,
-                fnkind: FnKind,
-                fndecl: &ast::FnDecl,
-                _: &ast::Block,
-                span: codemap::Span,
-                _: ast::NodeId) {
-        let process;
-        let vis_: Option<&ast::Visibility>;
-        match fnkind {
-            FnKind::Closure => {
-                vis_ = None;
-                process = false;
-            }
-            FnKind::ItemFn(_, _, _, _, _, vis) => {
-                vis_ = Some(vis);
-                process = true;
-            }
-            FnKind::Method(_, _, _) => {
-                vis_ = None;
-                process = false;
+fn type_repr(ty: &syn::Ty, r: Option<&str>) -> Result<String, ()> {
+    let mut repr = String::new();
+    match *ty {
+        syn::Ty::Path(_, ref path) => {
+            let syn::Path { ref segments, .. } = *path;
+            if let Some(ty) = segments.last() {
+                if r.is_some() {
+                    Ok(format!("type({} {})", r.unwrap(), ty.ident))
+                } else {
+                    Ok(format!("type({})", ty.ident))
+                }                
+            } else {
+                Err(())
             }
         }
-        if process && self.functions.contains_key(&span) == true {
-            match vis_ {
-                Some(&ast::Visibility::Public) => self.get_types(span, fndecl),
-                _ => {
-                    println!("warning: function `{}` must be public",
-                             self.functions.get(&span).unwrap().name);
-                    self.functions.remove(&span);
-                }
+        syn::Ty::Ptr(ref ty) => {
+            let syn::MutTy { ref ty, ref mutability } = **ty;
+            let m = match *mutability {
+                syn::Mutability::Immutable => "*const",
+                syn::Mutability::Mutable => "*mut",
             };
+            repr.push_str(&type_repr(&*ty, Some(m))?);
+            Ok(repr)
         }
+        syn::Ty::Rptr(_, ref ty) => {
+            let syn::MutTy { ref ty, ref mutability } = **ty;
+            let m = match *mutability {
+                syn::Mutability::Immutable => "&",
+                syn::Mutability::Mutable => "&mut",
+            };
+            repr.push_str(&type_repr(&*ty, Some(m))?);
+            Ok(repr)
+        }
+        _ => Err(()),
     }
-    fn visit_name(&mut self, span: codemap::Span, name: ast::Name) {
-        for prefix in &self.prefixes {
-            if name.as_str().contains(prefix) {
-                self.functions.insert(span, FnDef::new(name.as_str()));
+}
+
+impl syn::visit::Visitor for KrateData {
+    fn visit_item(&mut self, item: &syn::Item) {
+        match item.node {
+            syn::ItemKind::Fn(ref fn_decl, ..) => {
+                if let syn::Visibility::Public = item.vis {
+                    let name = format!("{}", item.ident);
+                    self.add_fn(name, &*fn_decl)
+                }
+            }
+            syn::ItemKind::Mod(Some(ref items)) => {
+                for item in items {
+                    self.visit_item(item);
+                }
+            }
+            _ => {
+                /*
+                ignored:
+                ExternCrate(Option<Ident>),
+                Use(Box<ViewPath>),
+                Static(Box<Ty>, Mutability, Box<Expr>),
+                Const(Box<Ty>, Box<Expr>),
+                ForeignMod(ForeignMod),
+                Ty(Box<Ty>, Generics),
+                Enum(Vec<Variant>, Generics),
+                Struct(VariantData, Generics),
+                Union(VariantData, Generics),
+                Trait(Unsafety, Generics, Vec<TyParamBound>, Vec<TraitItem>),
+                DefaultImpl(Unsafety, Path),
+                Impl(Unsafety, ImplPolarity, Generics, Option<Path>, Box<Ty>, Vec<ImplItem>),
+                Mac(Mac),
+                */
             }
         }
     }
@@ -163,23 +209,8 @@ impl Visitor for KrateData {
 #[derive(Debug)]
 struct FnDef {
     name: String,
-    process: bool,
-    args: Vec<String>,
-}
-
-impl FnDef {
-    fn new(name: InternedString) -> FnDef {
-        let mut n = String::with_capacity(name.len());
-        n.push_str(&name);
-        FnDef {
-            name: n,
-            process: true,
-            args: Vec::new(),
-        }
-    }
-    fn add_type(&mut self, ty: String) {
-        self.args.push(ty);
-    }
+    output: syn::FunctionRetTy,
+    args: Vec<syn::Ty>,
 }
 
 // C FFI for KrateData objects:

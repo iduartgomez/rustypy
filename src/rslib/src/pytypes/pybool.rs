@@ -38,6 +38,7 @@ impl PyBool {
     pub unsafe fn from_ptr(ptr: *mut PyBool) -> PyBool {
         *(Box::from_raw(ptr))
     }
+
     /// Creates a bool from a raw pointer to a PyBool.
     pub unsafe fn from_ptr_into_bool(ptr: *mut PyBool) -> bool {
         let ptr: &PyBool = &*ptr;
@@ -46,6 +47,7 @@ impl PyBool {
             _ => true,
         }
     }
+
     /// Conversion from PyBool to bool.
     pub fn to_bool(&self) -> bool {
         match self.val {
@@ -53,13 +55,23 @@ impl PyBool {
             _ => true,
         }
     }
+
     /// Returns PyBool as a raw pointer. Use this whenever you want to return
     /// a PyBool to Python.
     pub fn as_ptr(self) -> *mut PyBool {
         Box::into_raw(Box::new(self))
     }
+
+    /// Sets value of the underlying bool
+    pub fn load(&mut self, v: bool) {
+        match v {
+            true => self.val = 1,
+            false => self.val = 0,
+        }
+    }                                                                                                                           
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pybool_free(ptr: *mut PyBool) {
     if ptr.is_null() {
@@ -68,6 +80,7 @@ pub extern "C" fn pybool_free(ptr: *mut PyBool) {
     unsafe { Box::from_raw(ptr) };
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pybool_new(val: c_char) -> *mut PyBool {
     let val = match val {
@@ -78,6 +91,7 @@ pub extern "C" fn pybool_new(val: c_char) -> *mut PyBool {
     pystr.as_ptr()
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pybool_get_val(ptr: *mut PyBool) -> i8 {
     let pybool = unsafe { &*ptr };

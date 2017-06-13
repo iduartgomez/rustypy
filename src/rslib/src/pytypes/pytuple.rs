@@ -54,7 +54,7 @@ impl<'a> PyTuple {
 
     /// Get a mutable reference to an inner element of the tuple, takes as argument the position
     /// of the element and returns a Result.
-    pub fn as_mut(&mut self, idx: usize) -> Result<&mut PyArg, &str> {
+    pub(crate) fn as_mut(&mut self, idx: usize) -> Result<&mut PyArg, &str> {
         if idx == self.idx {
             Ok(&mut self.elem)
         } else {
@@ -80,7 +80,7 @@ impl<'a> PyTuple {
 
     /// Get a regular reference to an inner element of the tuple, takes as argument the position
     /// of the element and returns a Result.
-    pub fn as_ref(&self, idx: usize) -> Result<&PyArg, &str> {
+    pub(crate) fn as_ref(&self, idx: usize) -> Result<&PyArg, &str> {
         if idx == self.idx {
             Ok(&self.elem)
         } else {
@@ -395,6 +395,7 @@ macro_rules! unpack_pytuple {
     }};
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pytuple_new(idx: usize, elem: *mut PyArg) -> *mut PyTuple {
     let tuple = PyTuple {
@@ -405,12 +406,14 @@ pub unsafe extern "C" fn pytuple_new(idx: usize, elem: *mut PyArg) -> *mut PyTup
     tuple.as_ptr()
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pytuple_push(next: *mut PyTuple, prev: &mut PyTuple) {
     let next: PyTuple = *(Box::from_raw(next));
     prev.push(next)
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pytuple_free(ptr: *mut PyTuple) {
     if ptr.is_null() {
@@ -421,12 +424,14 @@ pub extern "C" fn pytuple_free(ptr: *mut PyTuple) {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pytuple_len(ptr: *mut PyTuple) -> usize {
     let tuple = unsafe { &*ptr };
     tuple.len()
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pytuple_get_element(ptr: *mut PyTuple, index: usize) -> *mut PyArg {
     let tuple = &mut *ptr;
