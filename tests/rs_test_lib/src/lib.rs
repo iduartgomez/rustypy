@@ -9,30 +9,34 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use rustypy::{PyTuple, PyString, PyBool, PyArg, PyList, PyDict};
 
-#[no_mangle]
-pub extern "C" fn python_bind_int(num: u32) -> u32 {
-    num + 1
-}
+pub mod primitives {
+    use super::*;
 
-#[no_mangle]
-pub extern "C" fn python_bind_ref_int(num: &mut u32) {
-    *num += 1;
-}
+    #[no_mangle]
+    pub extern "C" fn python_bind_int(num: u32) -> u32 {
+        num + 1
+    }
 
-#[no_mangle]
-pub extern "C" fn python_bind_str(pystr: *mut PyString) -> *mut PyString {
-    let mut string = unsafe { PyString::from_ptr_to_string(pystr) };
-    assert_eq!(string, "From Python.");
-    string.push_str(" Added in Rust.");
+    #[no_mangle]
+    pub extern "C" fn python_bind_ref_int(num: &mut u32) {
+        *num += 1;
+    }
 
-    PyString::from(string).as_ptr()
-}
+    #[no_mangle]
+    pub extern "C" fn python_bind_str(pystr: *mut PyString) -> *mut PyString {
+        let mut string = unsafe { PyString::from_ptr_to_string(pystr) };
+        assert_eq!(string, "From Python.");
+        string.push_str(" Added in Rust.");
 
-#[no_mangle]
-pub extern "C" fn python_bind_bool(ptr: *mut PyBool) -> *mut PyBool {
-    let bool_t = unsafe { PyBool::from_ptr_into_bool(ptr) };
-    assert!(bool_t);
-    PyBool::from(false).as_ptr()
+        PyString::from(string).as_ptr()
+    }
+
+    #[no_mangle]
+    pub extern "C" fn python_bind_bool(ptr: *mut PyBool) -> *mut PyBool {
+        let bool_t = unsafe { PyBool::from_ptr_into_bool(ptr) };
+        assert!(bool_t);
+        PyBool::from(false).as_ptr()
+    }
 }
 
 #[no_mangle]
@@ -131,7 +135,7 @@ pub extern "C" fn python_bind_nested2_t_n_ls(list: *mut PyList) -> *mut PyList {
 
 #[no_mangle]
 pub extern "C" fn other_prefix_dict(dict: *mut usize) -> *mut usize {
-    let mut dict = unsafe { PyDict::<u64, PyArg>::from_ptr(dict) };
+    let mut dict = unsafe { PyDict::<u64>::from_ptr(dict) };
     assert_eq!(dict.get(&0_u64), Some(&PyArg::PyString(PyString::from("From"))));
     assert_eq!(dict.get(&1_u64), Some(&PyArg::PyString(PyString::from("Python"))));
     let mut hm = HashMap::new();

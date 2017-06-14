@@ -27,7 +27,7 @@
 //!
 //! let ptr = PyDict::from(hm).as_ptr();
 //! // to get a PyDict from a raw pointer we need to provide the key type:
-//! let d = unsafe { PyDict::<u32, PyArg>::from_ptr(ptr) };
+//! let d = unsafe { PyDict::<u32>::from_ptr(ptr) };
 //! let hm_from_pd = PyDict::into_hashmap::<String>(d.clone());
 //! assert_eq!(hm_from_pd.get(&0).unwrap(), "Hello");
 //!
@@ -56,9 +56,7 @@
 //! to convert a PyDict to a Rust native type. Check the macro documentation for more info.
 
 use libc::size_t;
-use super::PyArg;
-use super::pybool::PyBool;
-use super::pystring::PyString;
+use super::{PyArg, PyBool, PyString, PyList, PyTuple};
 
 use std::collections::HashMap;
 use std::collections::hash_map::Drain;
@@ -68,20 +66,20 @@ use std::iter::FromIterator;
 use std::ptr;
 use std::mem;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PyDict<K, PyArg>
-    where K: Eq + Hash
+#[derive(Clone, Debug, PartialEq)]
+pub struct PyDict<K>
+    where K: Eq + Hash + PyDictKey
 {
     _inner: HashMap<K, PyArg>,
 }
 
-use self::key_bound::PyDictKey;
+pub(crate) use self::key_bound::PyDictKey;
 
-impl<K> PyDict<K, PyArg>
+impl<K> PyDict<K>
     where K: Eq + Hash + PyDictKey
 {
     /// Creates an empty PyDict.
-    pub fn new() -> PyDict<K, PyArg> {
+    pub fn new() -> PyDict<K> {
         PyDict { _inner: HashMap::new() }
     }
 
@@ -92,8 +90,15 @@ impl<K> PyDict<K, PyArg>
     /// If the map did have this key present, the value is updated, and the old value is returned.
     /// The key is not updated, though; this matters for types that can be == without being
     /// identical. See the module-level documentation for more.
-    pub fn insert(&mut self, k: K, v: PyArg) -> Option<PyArg> {
-        self._inner.insert(k, v)
+    pub fn insert<V>(&mut self, k: K, v: V) -> Option<V> 
+        where PyArg: From<V>,
+              V: From<PyArg>
+    {
+        if let Some(val) = self._inner.insert(k, PyArg::from(v)) {
+            Some(V::from(val))
+        } else {
+            None
+        }
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously
@@ -101,20 +106,37 @@ impl<K> PyDict<K, PyArg>
     ///
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
-    pub fn remove(&mut self, k: &K) -> Option<PyArg> {
-        self._inner.remove(k)
+    pub fn remove<V>(&mut self, k: &K) -> Option<V> 
+        where V: From<PyArg>
+    {
+        if let Some(val) = self._inner.remove(k) {
+            Some(V::from(val))
+        } else {
+            None
+        }
     }
 
     /// Returns a reference to the value corresponding to the key.
     ///
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
-    pub fn get(&mut self, k: &K) -> Option<&PyArg> {
-        self._inner.get(k)
+    pub fn get<'a, V>(&'a mut self, k: &K) -> Option<V> 
+        where V: From<&'a PyArg>
+    {
+        if let Some(rval) = self._inner.get(k) {
+            Some(V::from(rval))
+        } else {
+            None
+        }
+    }
+
+    fn get_mut_pyarg(&mut self, k: &K) -> Option<&mut PyArg> {
+        self._inner.get_mut(k)
     }
 
     /// Clears the map, returning all key-value pairs as an iterator.
     /// Keeps the allocated memory for reuse.
+    #[doc(hidden)]
     pub fn drain(&mut self) -> Drain<K, PyArg> {
         self._inner.drain()
     }
@@ -134,11 +156,11 @@ impl<K> PyDict<K, PyArg>
     /// # use std::iter::FromIterator;
     /// # let hm = HashMap::from_iter(vec![(0_u64, "some"), (1, "string")]);
     /// # let dict = PyDict::from(hm).as_ptr();
-    /// let dict = unsafe { PyDict::<u64, PyArg>::from_ptr(dict) };
+    /// let dict = unsafe { PyDict::<u64>::from_ptr(dict) };
     /// ```
     ///
-    pub unsafe fn from_ptr(ptr: *mut size_t) -> PyDict<K, PyArg> {
-        *(Box::from_raw(ptr as *mut PyDict<K, PyArg>))
+    pub unsafe fn from_ptr(ptr: *mut size_t) -> PyDict<K> {
+        *(Box::from_raw(ptr as *mut PyDict<K>))
     }
 
     /// Returns self as raw pointer. Use this method when returning a PyTuple to Python.
@@ -154,7 +176,7 @@ impl<K> PyDict<K, PyArg>
         HashMap::from_iter(self._inner.drain().map(|(k, v)| (k, <V>::from(v))))
     }
     /// Consume self and turn it into an iterator.
-    pub fn into_iter<T: From<PyArg>>(self) -> IntoIter<K, T> {
+    pub fn into_iter<V: From<PyArg>>(self) -> IntoIter<K, V> {
         IntoIter {
             inner: self._inner.into_iter(),
             target_t: PhantomData,
@@ -162,16 +184,29 @@ impl<K> PyDict<K, PyArg>
     }
 }
 
-impl<K, V> FromIterator<(K, V)> for PyDict<K, PyArg>
+impl<K, V> FromIterator<(K, V)> for PyDict<K>
     where K: PyDictKey + Eq + Hash,
           PyArg: From<V>
 {
     fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
-        let mut c = PyDict::new();
-        for (k, v) in iter {
-            c.insert(k, PyArg::from(v));
+        let mut hm = HashMap::new();
+        for (k, v) in iter.into_iter() {
+            hm.insert(k, PyArg::from(v));
         }
-        c
+        PyDict { _inner: hm }
+    }
+}
+
+impl<K, V> From<HashMap<K, V>> for PyDict<K>
+    where K: PyDictKey + Eq + Hash,
+          PyArg: From<V>
+{
+    fn from(mut hm: HashMap<K, V>) -> PyDict<K> {
+        PyDict {
+            _inner: hm.drain().map(|(k, v)| {
+                (k, PyArg::from(v))
+            }).collect::<HashMap<K, PyArg>>(),
+        }
     }
 }
 
@@ -198,47 +233,7 @@ impl<K, V> Iterator for IntoIter<K, V>
     }
 }
 
-impl<K, V> From<HashMap<K, V>> for PyDict<K, PyArg>
-    where K: PyDictKey + Eq + Hash,
-          PyArg: From<V>
-{
-    fn from(mut hm: HashMap<K, V>) -> PyDict<K, PyArg> {
-        PyDict {
-            _inner: hm.drain().map(|(k, v)| (k, PyArg::from(v))).collect::<HashMap<K, PyArg>>(),
-        }
-    }
-}
-
-impl<K> From<PyDict<K, PyArg>> for PyArg
-    where K: Eq + Hash + PyDictKey
-{
-    fn from(a: PyDict<K, PyArg>) -> PyArg {
-        PyArg::PyDict(a.as_ptr())
-    }
-}
-
-impl<K> From<PyArg> for PyDict<K, PyArg>
-    where K: Eq + Hash + PyDictKey
-{
-    fn from(a: PyArg) -> PyDict<K, PyArg> {
-        match a {
-            PyArg::PyDict(v) => unsafe { *(Box::from_raw(v as *mut PyDict<K, PyArg>)) },
-            _ => _rustypy_abort_xtract_fail!("expected a PyDict while destructuring PyArg enum"),
-        }
-    }
-}
-
-impl<K, V> From<HashMap<K, V>> for PyArg
-    where PyArg: From<V>,
-          K: Eq + Hash + PyDictKey
-{
-    fn from(a: HashMap<K, V>) -> PyArg {
-        let dict = PyDict::from(a);
-        PyArg::PyDict(dict.as_ptr())
-    }
-}
-
-/// Consumes a `*mut PyDict<K, PyArg<T>> as *mut size_t` content and returns a `HashMap<K, T>`
+/// Consumes a `*mut PyDict<K, T> as *mut size_t` content and returns a `HashMap<K, T>`
 /// from it, no copies are performed in the process.
 ///
 /// All inner elements are moved out if possible, if not (like with PyTuples) are copied.
@@ -297,7 +292,7 @@ impl<K, V> From<HashMap<K, V>> for PyArg
 macro_rules! unpack_pydict {
     ( $pydict:ident; PyDict{($kt:ty, $o:tt { $($t:tt)* })} ) => {{
         use rustypy::{PyArg, PyDict};
-        let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt, PyArg>)) };
+        let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt>)) };
         use std::collections::HashMap;
         let mut dict = HashMap::new();
         for (k, v) in unboxed.drain() {
@@ -320,7 +315,7 @@ macro_rules! unpack_pydict {
     }};
     ( $pydict:ident; PyDict{($kt:ty, $t:tt => $type_:ty)} ) => {{
         use rustypy::{PyArg, PyDict};
-        let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt, PyArg>)) };
+        let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt>)) };
         use std::collections::HashMap;
         let mut dict = HashMap::new();
         for (k, v) in unboxed.drain() {
@@ -337,43 +332,43 @@ macro_rules! unpack_pydict {
 pub extern "C" fn pydict_new(k_type: &PyDictK) -> *mut size_t {
     match *(k_type) {
         PyDictK::I8 => {
-            let d: PyDict<i8, PyArg> = PyDict::new();
+            let d: PyDict<i8> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::I16 => {
-            let d: PyDict<i16, PyArg> = PyDict::new();
+            let d: PyDict<i16> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::I32 => {
-            let d: PyDict<i32, PyArg> = PyDict::new();
+            let d: PyDict<i32> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::I64 => {
-            let d: PyDict<i64, PyArg> = PyDict::new();
+            let d: PyDict<i64> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::U8 => {
-            let d: PyDict<u8, PyArg> = PyDict::new();
+            let d: PyDict<u8> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::U16 => {
-            let d: PyDict<u16, PyArg> = PyDict::new();
+            let d: PyDict<u16> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::U32 => {
-            let d: PyDict<u32, PyArg> = PyDict::new();
+            let d: PyDict<u32> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::U64 => {
-            let d: PyDict<u64, PyArg> = PyDict::new();
+            let d: PyDict<u64> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::PyString => {
-            let d: PyDict<PyString, PyArg> = PyDict::new();
+            let d: PyDict<PyString> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
         PyDictK::PyBool => {
-            let d: PyDict<PyBool, PyArg> = PyDict::new();
+            let d: PyDict<PyBool> = PyDict::new();
             d.as_ptr() as *mut size_t
         }
     }
@@ -395,61 +390,61 @@ pub unsafe extern "C" fn pydict_insert(dict: *mut size_t,
     }
     match *(k_type) {
         PyDictK::I8 => {
-            let mut dict = &mut *(dict as *mut PyDict<i8, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i8>);
             let key = _match_pyarg_in!(key; I8);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::I16 => {
-            let mut dict = &mut *(dict as *mut PyDict<i16, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i16>);
             let key = _match_pyarg_in!(key; I16);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::I32 => {
-            let mut dict = &mut *(dict as *mut PyDict<i32, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i32>);
             let key = _match_pyarg_in!(key; I32);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::I64 => {
-            let mut dict = &mut *(dict as *mut PyDict<i64, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i64>);
             let key = _match_pyarg_in!(key; I64);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::U8 => {
-            let mut dict = &mut *(dict as *mut PyDict<u8, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u8>);
             let key = _match_pyarg_in!(key; U8);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::U16 => {
-            let mut dict = &mut *(dict as *mut PyDict<u16, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u16>);
             let key = _match_pyarg_in!(key; U16);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::U32 => {
-            let mut dict = &mut *(dict as *mut PyDict<u32, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u32>);
             let key = _match_pyarg_in!(key; U32);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::U64 => {
-            let mut dict = &mut *(dict as *mut PyDict<u64, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u64>);
             let key = _match_pyarg_in!(key; U64);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::PyString => {
-            let mut dict = &mut *(dict as *mut PyDict<PyString, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<PyString>);
             let key = _match_pyarg_in!(key; PyString);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
         }
         PyDictK::PyBool => {
-            let mut dict = &mut *(dict as *mut PyDict<PyBool, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<PyBool>);
             let key = _match_pyarg_in!(key; PyBool);
             let value = *(Box::from_raw(value));
             dict.insert(key, value);
@@ -497,56 +492,58 @@ fn drain_dict() {
 pub unsafe extern "C" fn pydict_get_drain(dict: *mut size_t, k_type: &PyDictK) -> *mut size_t {
     match *(k_type) {
         PyDictK::I8 => {
-            let mut dict = &mut *(dict as *mut PyDict<i8, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i8>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::I16 => {
-            let mut dict = &mut *(dict as *mut PyDict<i16, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i16>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::I32 => {
-            let mut dict = &mut *(dict as *mut PyDict<i32, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i32>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::I64 => {
-            let mut dict = &mut *(dict as *mut PyDict<i64, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i64>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::U8 => {
-            let mut dict = &mut *(dict as *mut PyDict<u8, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u8>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::U16 => {
-            let mut dict = &mut *(dict as *mut PyDict<u16, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u16>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::U32 => {
-            let mut dict = &mut *(dict as *mut PyDict<u32, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u32>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::U64 => {
-            let mut dict = &mut *(dict as *mut PyDict<u64, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u64>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::PyString => {
-            let mut dict = &mut *(dict as *mut PyDict<PyString, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<PyString>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
         PyDictK::PyBool => {
-            let mut dict = &mut *(dict as *mut PyDict<PyBool, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<PyBool>);
             Box::into_raw(Box::new(dict.drain())) as *mut size_t
         }
     }
-}
-
-fn kv_return_tuple(k: PyArg, v: PyArg) -> *mut PyDictPair {
-    Box::into_raw(Box::new(PyDictPair { key: k, val: v }))
 }
 
 #[doc(hidden)]
 pub struct PyDictPair {
     key: PyArg,
     val: PyArg,
+}
+
+impl PyDictPair {
+    fn kv_return_tuple(k: PyArg, v: PyArg) -> *mut PyDictPair {
+        Box::into_raw(Box::new(PyDictPair { key: k, val: v }))
+    }
 }
 
 #[doc(hidden)]
@@ -585,70 +582,70 @@ pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t,
         PyDictK::I8 => {
             let mut iter = &mut *(iter as *mut Drain<i8, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::I8(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::I8(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::I16 => {
             let mut iter = &mut *(iter as *mut Drain<i16, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::I16(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::I16(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::I32 => {
             let mut iter = &mut *(iter as *mut Drain<i32, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::I32(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::I32(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::I64 => {
             let mut iter = &mut *(iter as *mut Drain<i64, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::I64(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::I64(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::U8 => {
             let mut iter = &mut *(iter as *mut Drain<u8, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::U8(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::U8(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::U16 => {
             let mut iter = &mut *(iter as *mut Drain<u16, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::U16(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::U16(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::U32 => {
             let mut iter = &mut *(iter as *mut Drain<u32, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::U32(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::U32(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::U64 => {
             let mut iter = &mut *(iter as *mut Drain<u64, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::U64(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::U64(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::PyString => {
             let mut iter = &mut *(iter as *mut Drain<PyString, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::PyString(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::PyString(val.0), val.1),
                 None => _get_null(),
             }
         }
         PyDictK::PyBool => {
             let mut iter = &mut *(iter as *mut Drain<PyBool, PyArg>);
             match iter.next() {
-                Some(val) => kv_return_tuple(PyArg::PyBool(val.0), val.1),
+                Some(val) => PyDictPair::kv_return_tuple(PyArg::PyBool(val.0), val.1),
                 None => _get_null(),
             }
         }
@@ -657,30 +654,27 @@ pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t,
 
 #[doc(hidden)]
 #[no_mangle]
-pub unsafe extern "C" fn pydict_get_element(dict: *mut size_t,
+pub unsafe extern "C" fn pydict_get_mut_element(dict: *mut size_t,
                                             k_type: &PyDictK,
                                             key: *mut size_t)
                                             -> *mut size_t {
     macro_rules! _match_pyarg_out {
         ($p:ident) => {{
-            fn _get_null() -> *mut PyArg {
-                let p: *mut PyArg = ptr::null_mut();
-                p
-            }
-            match $p {
-                PyArg::I64(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::I32(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::I16(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::I8(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::U32(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::U16(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::U8(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::F32(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::F64(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::PyBool(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::PyString(val) => { Box::into_raw(Box::new(val)) as *mut size_t },
-                PyArg::PyTuple(val) => { Box::into_raw(val) as *mut size_t },
-                PyArg::PyList(val) => { Box::into_raw(val) as *mut size_t },
+            match *$p {
+                PyArg::I64(ref mut val) => { val as *mut i64 as *mut size_t },
+                PyArg::I32(ref mut val) => { val as *mut i32 as *mut size_t },
+                PyArg::I16(ref mut val) => { val as *mut i16 as *mut size_t },
+                PyArg::I8(ref mut val) => { val as *mut i8 as *mut size_t },
+                PyArg::U32(ref mut val) => { val as *mut u32 as *mut size_t },
+                PyArg::U16(ref mut val) => { val as *mut u16 as *mut size_t },
+                PyArg::U8(ref mut val) => { val as *mut u8 as *mut size_t },
+                PyArg::F32(ref mut val) => { val as *mut f32 as *mut size_t },
+                PyArg::F64(ref mut val) => { val as *mut f64 as *mut size_t },
+                PyArg::PyBool(ref mut val) => { val as *mut PyBool as *mut size_t },
+                PyArg::PyString(ref mut val) => { val as *mut PyString as *mut size_t },
+                PyArg::PyTuple(ref mut val) => { &mut **val as *mut PyTuple as *mut size_t },
+                PyArg::PyList(ref mut val) => { &mut **val as *mut PyList as *mut size_t },
+                PyArg::PyDict(rval) => rval,
                 _ => { _get_null() as *mut size_t },
             }
         }};
@@ -691,112 +685,82 @@ pub unsafe extern "C" fn pydict_get_element(dict: *mut size_t,
     };
     match *(k_type) {
         PyDictK::I8 => {
-            let mut dict = &mut *(dict as *mut PyDict<i8, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i8>);
             let key = *(Box::from_raw(key as *mut i8));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::I16 => {
-            let mut dict = &mut *(dict as *mut PyDict<i16, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i16>);
             let key = *(Box::from_raw(key as *mut i16));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::I32 => {
-            let mut dict = &mut *(dict as *mut PyDict<i32, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i32>);
             let key = *(Box::from_raw(key as *mut i32));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::I64 => {
-            let mut dict = &mut *(dict as *mut PyDict<i64, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<i64>);
             let key = *(Box::from_raw(key as *mut i64));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::U8 => {
-            let mut dict = &mut *(dict as *mut PyDict<u8, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u8>);
             let key = *(Box::from_raw(key as *mut u8));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::U16 => {
-            let mut dict = &mut *(dict as *mut PyDict<u16, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u16>);
             let key = *(Box::from_raw(key as *mut u16));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::U32 => {
-            let mut dict = &mut *(dict as *mut PyDict<u32, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u32>);
             let key = *(Box::from_raw(key as *mut u32));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::U64 => {
-            let mut dict = &mut *(dict as *mut PyDict<u64, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<u64>);
             let key = *(Box::from_raw(key as *mut u64));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::PyString => {
-            let mut dict = &mut *(dict as *mut PyDict<PyString, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<PyString>);
             let key = *(Box::from_raw(key as *mut PyString));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
         PyDictK::PyBool => {
-            let mut dict = &mut *(dict as *mut PyDict<PyBool, PyArg>);
+            let mut dict = &mut *(dict as *mut PyDict<PyBool>);
             let key = *(Box::from_raw(key as *mut PyBool));
-            match dict.get(&key) {
-                Some(ref val) => {
-                    let v = (*val).clone();
-                    _match_pyarg_out!(v)
-                }
+            match dict.get_mut_pyarg(&key) {
+                Some(val) => _match_pyarg_out!(val),
                 None => _get_null() as *mut size_t,
             }
         }
@@ -811,34 +775,34 @@ pub unsafe extern "C" fn pydict_free(dict: *mut size_t, k_type: &PyDictK) {
     }
     match *(k_type) {
         PyDictK::I8 => {
-            Box::from_raw(dict as *mut PyDict<i8, PyArg>);
+            Box::from_raw(dict as *mut PyDict<i8>);
         }
         PyDictK::I16 => {
-            Box::from_raw(dict as *mut PyDict<i16, PyArg>);
+            Box::from_raw(dict as *mut PyDict<i16>);
         }
         PyDictK::I32 => {
-            Box::from_raw(dict as *mut PyDict<i32, PyArg>);
+            Box::from_raw(dict as *mut PyDict<i32>);
         }
         PyDictK::I64 => {
-            Box::from_raw(dict as *mut PyDict<i64, PyArg>);
+            Box::from_raw(dict as *mut PyDict<i64>);
         }
         PyDictK::U8 => {
-            Box::from_raw(dict as *mut PyDict<u8, PyArg>);
+            Box::from_raw(dict as *mut PyDict<u8>);
         }
         PyDictK::U16 => {
-            Box::from_raw(dict as *mut PyDict<u16, PyArg>);
+            Box::from_raw(dict as *mut PyDict<u16>);
         }
         PyDictK::U32 => {
-            Box::from_raw(dict as *mut PyDict<u16, PyArg>);
+            Box::from_raw(dict as *mut PyDict<u16>);
         }
         PyDictK::U64 => {
-            Box::from_raw(dict as *mut PyDict<u16, PyArg>);
+            Box::from_raw(dict as *mut PyDict<u16>);
         }
         PyDictK::PyString => {
-            Box::from_raw(dict as *mut PyDict<PyString, PyArg>);
+            Box::from_raw(dict as *mut PyDict<PyString>);
         }
         PyDictK::PyBool => {
-            Box::from_raw(dict as *mut PyDict<PyBool, PyArg>);
+            Box::from_raw(dict as *mut PyDict<PyBool>);
         }
     }
 }

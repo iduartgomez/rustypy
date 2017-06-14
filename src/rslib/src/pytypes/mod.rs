@@ -2,6 +2,9 @@
 
 use libc::{size_t, c_char};
 
+use std::hash::Hash;
+use std::collections::HashMap;
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! _rustypy_abort_xtract_fail {
@@ -33,8 +36,9 @@ pub mod pydict;
 
 use self::pybool::PyBool;
 use self::pystring::PyString;
-use self::pylist::PyList;
 use self::pytuple::PyTuple;
+use self::pylist::PyList;
+use self::pydict::{PyDict, PyDictKey};
 
 /// Enum type used to construct PyTuple and PyList types. All the kinds supported in Python
 /// are included here.
@@ -172,25 +176,41 @@ impl From<f64> for PyArg {
     }
 }
 
-impl From<PyList> for PyArg {
-    fn from(a: PyList) -> PyArg {
-        PyArg::PyList(Box::new(a))
-    }
-}
-
 impl From<PyTuple> for PyArg {
     fn from(a: PyTuple) -> PyArg {
         PyArg::PyTuple(Box::new(a))
     }
 }
 
-// From<PyDict<K, PyArg>> is implemented in mod pydict due to private K bound
+impl From<PyList> for PyArg {
+    fn from(a: PyList) -> PyArg {
+        PyArg::PyList(Box::new(a))
+    }
+}
 
 impl<T> From<Vec<T>> for PyArg
     where PyArg: From<T>
 {
     fn from(a: Vec<T>) -> PyArg {
         PyArg::PyList(Box::new(PyList::from(a)))
+    }
+}
+
+impl<K> From<PyDict<K>> for PyArg
+    where K: Eq + Hash + PyDictKey
+{
+    fn from(a: PyDict<K>) -> PyArg {
+        PyArg::PyDict(a.as_ptr())
+    }
+}
+
+impl<K, V> From<HashMap<K, V>> for PyArg
+    where PyArg: From<V>,
+          K: Eq + Hash + PyDictKey
+{
+    fn from(a: HashMap<K, V>) -> PyArg {
+        let dict = PyDict::from(a);
+        PyArg::PyDict(dict.as_ptr())
     }
 }
 
@@ -330,6 +350,16 @@ impl From<PyArg> for PyList {
     }
 }
 
+impl<K> From<PyArg> for PyDict<K>
+    where K: Eq + Hash + PyDictKey
+{
+    fn from(a: PyArg) -> PyDict<K> {
+        match a {
+            PyArg::PyDict(v) => unsafe { *(Box::from_raw(v as *mut PyDict<K>)) },
+            _ => _rustypy_abort_xtract_fail!("expected a PyDict while destructuring PyArg enum"),
+        }
+    }
+}
 
 // From types:
 

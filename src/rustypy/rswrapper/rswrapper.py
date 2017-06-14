@@ -29,7 +29,7 @@ UnsignedLongLong = type('UnsignedLongLong', (int,), {
                         '_definition': ctypes.c_ulonglong})
 
 
-class RAW_POINTER(object):
+class OpaquePtr(object):
     pass
 
 
@@ -64,8 +64,8 @@ def _get_signature_types(params):
                 return RustType(equiv=tuple, ref=True, mutref=False)
             elif equiv == 'list':
                 return RustType(equiv=list, ref=True, mutref=mutref)
-            elif equiv == 'POINTER':
-                return RustType(equiv=RAW_POINTER, ref=True, mutref=mutref)
+            elif equiv == 'OpaquePtr':
+                return RustType(equiv=OpaquePtr, ref=True, mutref=mutref)
             elif equiv == 'None':
                 return RustType(equiv=None, ref=False, mutref=False)
 
@@ -106,7 +106,7 @@ def _get_ptr_to_C_obj(obj, sig=None):
             raise TypeError(
                 "rustypy: the type hint must be of typing.Dict type")
         return PyDict.from_dict(obj, sig)
-    elif isinstance(obj, RAW_POINTER):
+    elif isinstance(obj, OpaquePtr):
         if not sig:
             raise MissingTypeHint(
                 "rustypy: raw pointer type arguments require type information \
@@ -384,7 +384,7 @@ class RustBinds(object):
                     and not issubclass(hint, typing.List):
                 raise TypeError("rustypy: type hint for argument {n} of function {fn} \
                 must be of typing.List type")
-            elif real_t.equiv is RAW_POINTER:
+            elif real_t.equiv is OpaquePtr:
                 if issubclass(hint, dict):
                     self.__type_hints['real_argtypes'][position] = RustType(
                         equiv=dict, ref=True, mutref=real_t.mutref)
@@ -419,7 +419,7 @@ class RustBinds(object):
                 add_p = PyList_RS
             elif issubclass(p.equiv, dict):
                 add_p = PyDict_RS
-            elif issubclass(p.equiv, RAW_POINTER):
+            elif issubclass(p.equiv, OpaquePtr):
                 add_p = Raw_RS
             if p.mutref or p.ref:
                 add_p = POINTER(add_p)

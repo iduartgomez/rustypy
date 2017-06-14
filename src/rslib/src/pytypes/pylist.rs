@@ -69,13 +69,21 @@ impl PyList {
 
     /// Removes and returns the element at position ```index``` within the vector,
     /// shifting all elements after it to the left.
-    pub fn remove(&mut self, index: usize) -> PyArg {
-        self._inner.remove(index)
+    pub fn remove<T>(&mut self, index: usize) -> T 
+        where T: From<PyArg>
+    {
+        T::from(self._inner.remove(index))
     }
 
     /// Removes the last element from a vector and returns it, or ```None``` if it is empty.
-    pub fn pop(&mut self) -> Option<PyArg> {
-        self._inner.pop()
+    pub fn pop<T>(&mut self) -> Option<T> 
+        where T: From<PyArg>
+    {
+        if let Some(val) = self._inner.pop() {
+            Some(T::from(val))
+        } else {
+            None
+        }
     }
 
     /// Returns the number of elements in the PyList.

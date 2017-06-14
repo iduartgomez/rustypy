@@ -33,8 +33,8 @@ RS_TYPE_CONVERSION = {
     'PyBool': 'bool',
     'PyString': 'str',
     'PyList': 'list',
-    'usize': 'POINTER',
-    'size_t': 'POINTER',
+    'usize': 'OpaquePtr',
+    'size_t': 'OpaquePtr',
     'void': 'None',
 }
 
@@ -148,7 +148,7 @@ def config_ctypes():
     c_backend.pydict_insert.argtypes = (POINTER(PyDict_RS), POINTER(
         KeyType_RS), POINTER(PyArg_RS), POINTER(PyArg_RS))
     c_backend.pydict_insert.restype = c_void_p
-    c_backend.pydict_get_element.restype = POINTER(PyArg_RS)
+    #c_backend.pydict_get_mut_element.restype = c_void_p
     c_backend.pydict_get_drain.argtypes = (
         POINTER(PyDict_RS), POINTER(KeyType_RS))
     c_backend.pydict_get_drain.restype = POINTER(DrainPyDict_RS)
@@ -209,11 +209,11 @@ def _load_rust_lib(recmpl=False):
         print("   compiling with Cargo")
         import subprocess
         path = os.path.dirname(lib)
-        #subprocess.run(['cargo', 'build', '--release'], cwd=path)
-        subprocess.run(['cargo', 'build'], cwd=path)
+        subprocess.run(['cargo', 'build', '--release'], cwd=path)
+        #subprocess.run(['cargo', 'build'], cwd=path)
         import shutil
-        #cp = os.path.join(path, 'target', 'release', lib)
-        cp = os.path.join(path, 'target', 'debug', libfile)
+        cp = os.path.join(path, 'target', 'release', libfile)
+        #cp = os.path.join(path, 'target', 'debug', libfile)
         if os.path.exists(lib):
             os.remove(lib)
         shutil.copy(cp, path)
