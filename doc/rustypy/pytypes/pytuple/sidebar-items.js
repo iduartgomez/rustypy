@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["pytuple_free",""],["pytuple_get_element",""],["pytuple_len",""],["pytuple_new",""],["pytuple_push",""]],"struct":[["PyTuple","An analog of a Python tuple, will accept an undefined number of other supported types."]]});
+initSidebarItems({"struct":[["PyTuple","An analog of a Python tuple, will accept an undefined number of other supported types."]]});

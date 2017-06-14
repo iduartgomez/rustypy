@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `unpack_pylist` macro in crate `rustypy`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, unpack_pylist">
+
+    <title>rustypy::unpack_pylist - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc macro">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>rustypy</a></p><script>window.sidebarCurrent = {name: 'unpack_pylist', ty: 'macro', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Macro <a href='index.html'>rustypy</a>::<wbr><a class="macro" href=''>unpack_pylist</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/rustypy/pytypes/pylist.rs.html#247-285' title='goto source code'>[src]</a></span></h1>
+<pre class="rust macro">
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">unpack_pylist</span> {
+    ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">pylist</span>:<span class="ident">ident</span>; <span class="ident">PyList</span> { <span class="macro-nonterminal">$</span><span class="macro-nonterminal">o</span>:<span class="ident">tt</span> { $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">t</span>:<span class="ident">tt</span>)<span class="op">*</span> } } ) <span class="op">=&gt;</span> { ... };
+    ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">pytuple</span>:<span class="ident">ident</span>; <span class="ident">PyTuple</span> { <span class="macro-nonterminal">$</span><span class="macro-nonterminal">t</span>:<span class="ident">tt</span> } ) <span class="op">=&gt;</span> { ... };
+    ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">pylist</span>:<span class="ident">ident</span>; <span class="ident">PyList</span>{<span class="macro-nonterminal">$</span><span class="macro-nonterminal">t</span>:<span class="ident">tt</span> <span class="op">=&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">type_</span>:<span class="ident">ty</span>} ) <span class="op">=&gt;</span> { ... };
+    ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">pydict</span>:<span class="ident">ident</span>; <span class="ident">PyDict</span>{<span class="macro-nonterminal">$</span><span class="macro-nonterminal">t</span>:<span class="ident">tt</span>} ) <span class="op">=&gt;</span> { ... };
+}</pre>
+<div class='docblock'><p>Consumes a <code>Box&lt;PyList&lt;PyArg(T)&gt;&gt;</code> content and returns a <code>Vec&lt;T&gt;</code> from it, no copies
+are performed in the process.</p>
+
+<p>All inner elements are moved out if possible, if not (like with PyTuples) are copied.
+PyTuple variants are destructured into Rust tuples which contain the appropiate Rust types
+(valid syntax for <a href="../rustypy/macro.unpack_pytuple!.html">unpack_pytuple!</a> macro must
+be provided). The same for other container types (inner PyList, PyDict, etc.).</p>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<p>A simple PyList which contains PyString types::</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">rustypy</span>::{<span class="ident">PyList</span>, <span class="ident">PyString</span>};
+<span class="kw">let</span> <span class="ident">string_list</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">PyList</span>::<span class="ident">from</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;Python&quot;</span>, <span class="string">&quot;in&quot;</span>, <span class="string">&quot;Rust&quot;</span>]));
+<span class="kw">let</span> <span class="ident">unpacked</span> <span class="op">=</span> <span class="macro">unpack_pylist</span><span class="macro">!</span>(<span class="ident">string_list</span>; <span class="ident">PyList</span>{<span class="ident">PyString</span> <span class="op">=&gt;</span> <span class="ident">PyString</span>});</pre>
+
+<p>And an other with i32:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">rustypy</span>::<span class="ident">PyList</span>;
+<span class="kw">let</span> <span class="ident">int_list</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">PyList</span>::<span class="ident">from</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="number">1i32</span>; <span class="number">5</span>]));
+<span class="kw">let</span> <span class="ident">unpacked</span> <span class="op">=</span> <span class="macro">unpack_pylist</span><span class="macro">!</span>(<span class="ident">int_list</span>; <span class="ident">PyList</span>{<span class="ident">I32</span> <span class="op">=&gt;</span> <span class="ident">i32</span>});</pre>
+
+<p>It can contain nested containers. A PyList which contains PyTuples which contain a list
+of i64 PyTuples and a single f32:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="comment">// list from Python: [([(i64; 3)], f32)]</span>
+<span class="kw">let</span> <span class="ident">list</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">PyList</span>::<span class="ident">from_ptr</span>(<span class="ident">list</span>)) };
+<span class="kw">let</span> <span class="ident">unpacked</span> <span class="op">=</span> <span class="macro">unpack_pylist</span><span class="macro">!</span>(<span class="ident">list</span>;
+    <span class="ident">PyList</span>{
+        <span class="ident">PyTuple</span>{(
+            {<span class="ident">PyList</span>{<span class="ident">PyTuple</span>{(<span class="ident">I64</span>, <span class="ident">I64</span>, <span class="ident">I64</span>,)}}}, <span class="ident">F32</span>,
+        )}
+    });
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="macro">vec</span><span class="macro">!</span>[(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>,)], <span class="number">0.1</span>), (<span class="macro">vec</span><span class="macro">!</span>[(<span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>,)], <span class="number">0.2</span>)], <span class="ident">unpacked</span>);</pre>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "rustypy";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

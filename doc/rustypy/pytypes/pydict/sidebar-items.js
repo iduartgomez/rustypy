@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["PyDictK","Types allowed as PyDict key values."]],"fn":[["pydict_drain_element",""],["pydict_free",""],["pydict_get_drain",""],["pydict_get_element",""],["pydict_get_key_type",""],["pydict_insert",""],["pydict_new",""]],"struct":[["IntoIter",""],["PyDict",""]]});
+initSidebarItems({"enum":[["PyDictK","Types allowed as PyDict key values."]],"fn":[["pydict_get_drain",""],["pydict_insert",""],["pydict_new",""]],"struct":[["IntoIter",""],["PyDict",""]]});

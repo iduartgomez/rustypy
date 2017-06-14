@@ -9,6 +9,7 @@
 
     <title>rustypy - Rust</title>
 
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
     <link rel="stylesheet" type="text/css" href="../rustdoc.css">
     <link rel="stylesheet" type="text/css" href="../main.css">
     
@@ -16,7 +17,7 @@
     
     
 </head>
-<body class="rustdoc">
+<body class="rustdoc mod">
     <!--[if lte IE 8]>
     <div class="warning">
         This old browser is unsupported and will most likely display funky
@@ -28,7 +29,7 @@
 
     <nav class="sidebar">
         
-        <p class='location'></p><script>window.sidebarCurrent = {name: 'rustypy', ty: 'mod', relpath: '../'};</script>
+        <p class='location'>Crate rustypy</p><div class="block items"><ul><li><a href="#reexports">Reexports</a></li><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'rustypy', ty: 'mod', relpath: '../'};</script>
     </nav>
 
     <nav class="sub">
@@ -42,12 +43,12 @@
         </form>
     </nav>
 
-    <section id='main' class="content mod">
-<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>rustypy</a></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>rustypy</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/rustypy/src/lib.rs.html#1-210' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/rustypy/lib.rs.html#1-247' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Binding Rust with Python, both ways!</p>
 
 <p>This library will generate and handle type conversions between Python and
@@ -59,55 +60,44 @@ and information on how to use Rust in Python can also be found there.</p>
 on how to write foreign functions that are compliant with Python as well as using the custom
 types that will ease type conversion.</p>
 </div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
-<table><tr><td><code>pub use self::<a class='mod'
-                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
-                                       href='./pytypes/pybool/index.html'>pybool</a>::<a class='struct' href='../rustypy/pytypes/pybool/struct.PyBool.html' title='rustypy::pytypes::pybool::PyBool'>PyBool</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
-                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
-                                       href='./pytypes/pystring/index.html'>pystring</a>::<a class='struct' href='../rustypy/pytypes/pystring/struct.PyString.html' title='rustypy::pytypes::pystring::PyString'>PyString</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
-                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
-                                       href='./pytypes/pylist/index.html'>pylist</a>::<a class='struct' href='../rustypy/pytypes/pylist/struct.PyList.html' title='rustypy::pytypes::pylist::PyList'>PyList</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
-                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
-                                       href='./pytypes/pydict/index.html'>pydict</a>::<a class='struct' href='../rustypy/pytypes/pydict/struct.PyDict.html' title='rustypy::pytypes::pydict::PyDict'>PyDict</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
-                                       href='./pytypes/index.html'>pytypes</a>::<a class='mod'
-                                       href='./pytypes/pytuple/index.html'>pytuple</a>::<a class='struct' href='../rustypy/pytypes/pytuple/struct.PyTuple.html' title='rustypy::pytypes::pytuple::PyTuple'>PyTuple</a>;</code></td></tr><tr><td><code>pub use self::<a class='mod'
-                                       href='./pytypes/index.html'>pytypes</a>::<a class='enum' href='../rustypy/pytypes/enum.PyArg.html' title='rustypy::pytypes::PyArg'>PyArg</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr><td><code>pub use self::<a class="mod" href="./pytypes/index.html">pytypes</a>::<a class="mod" href="./pytypes/pybool/index.html">pybool</a>::<a class="struct" href="../rustypy/pytypes/pybool/struct.PyBool.html" title="struct rustypy::pytypes::pybool::PyBool">PyBool</a>;</code></td></tr><tr><td><code>pub use self::<a class="mod" href="./pytypes/index.html">pytypes</a>::<a class="mod" href="./pytypes/pystring/index.html">pystring</a>::<a class="struct" href="../rustypy/pytypes/pystring/struct.PyString.html" title="struct rustypy::pytypes::pystring::PyString">PyString</a>;</code></td></tr><tr><td><code>pub use self::<a class="mod" href="./pytypes/index.html">pytypes</a>::<a class="mod" href="./pytypes/pylist/index.html">pylist</a>::<a class="struct" href="../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a>;</code></td></tr><tr><td><code>pub use self::<a class="mod" href="./pytypes/index.html">pytypes</a>::<a class="mod" href="./pytypes/pydict/index.html">pydict</a>::<a class="struct" href="../rustypy/pytypes/pydict/struct.PyDict.html" title="struct rustypy::pytypes::pydict::PyDict">PyDict</a>;</code></td></tr><tr><td><code>pub use self::<a class="mod" href="./pytypes/index.html">pytypes</a>::<a class="mod" href="./pytypes/pytuple/index.html">pytuple</a>::<a class="struct" href="../rustypy/pytypes/pytuple/struct.PyTuple.html" title="struct rustypy::pytypes::pytuple::PyTuple">PyTuple</a>;</code></td></tr><tr><td><code>pub use self::<a class="mod" href="./pytypes/index.html">pytypes</a>::<a class="enum" href="../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='pytypes/index.html'
-                                  title='rustypy::pytypes'>pytypes</a></td>
-                           <td class='docblock short'>
+                           <td><a class="mod" href="pytypes/index.html"
+                                  title='mod rustypy::pytypes'>pytypes</a></td>
+                           <td class='docblock-short'>
                                 <p>Types for interfacing with Python.</p>
                            </td>
                        </tr></table><h2 id='macros' class='section-header'><a href="#macros">Macros</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='macro' href='macro.pytuple!.html'
-                                  title='rustypy::pytuple!'>pytuple!</a></td>
-                           <td class='docblock short'>
+                           <td><a class="macro" href="macro.pytuple.html"
+                                  title='macro rustypy::pytuple'>pytuple</a></td>
+                           <td class='docblock-short'>
                                 <p>This macro allows the construction of <a href="../rustypy/pytypes/pytuple/struct.PyTuple.html">PyTuple</a>
 types.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='macro' href='macro.unpack_pydict!.html'
-                                  title='rustypy::unpack_pydict!'>unpack_pydict!</a></td>
-                           <td class='docblock short'>
-                                <p>Consumes a <code>*mut PyDict&lt;K, PyArg&lt;T&gt;&gt; as *mut usize</code> content and returns a <code>HashMap&lt;K, T&gt;</code>
+                           <td><a class="macro" href="macro.unpack_pydict.html"
+                                  title='macro rustypy::unpack_pydict'>unpack_pydict</a></td>
+                           <td class='docblock-short'>
+                                <p>Consumes a <code>*mut PyDict&lt;K, T&gt; as *mut size_t</code> content and returns a <code>HashMap&lt;K, T&gt;</code>
 from it, no copies are performed in the process.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='macro' href='macro.unpack_pylist!.html'
-                                  title='rustypy::unpack_pylist!'>unpack_pylist!</a></td>
-                           <td class='docblock short'>
+                           <td><a class="macro" href="macro.unpack_pylist.html"
+                                  title='macro rustypy::unpack_pylist'>unpack_pylist</a></td>
+                           <td class='docblock-short'>
                                 <p>Consumes a <code>Box&lt;PyList&lt;PyArg(T)&gt;&gt;</code> content and returns a <code>Vec&lt;T&gt;</code> from it, no copies
 are performed in the process.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='macro' href='macro.unpack_pytuple!.html'
-                                  title='rustypy::unpack_pytuple!'>unpack_pytuple!</a></td>
-                           <td class='docblock short'>
+                           <td><a class="macro" href="macro.unpack_pytuple.html"
+                                  title='macro rustypy::unpack_pytuple'>unpack_pytuple</a></td>
+                           <td class='docblock-short'>
                                 <p>Iterates over a a PyTuple and returns a corresponding Rust tuple.</p>
                            </td>
                        </tr></table></section>
@@ -166,11 +156,9 @@ are performed in the process.</p>
     <script>
         window.rootPath = "../";
         window.currentCrate = "rustypy";
-        window.playgroundUrl = "";
     </script>
     <script src="../jquery.js"></script>
     <script src="../main.js"></script>
-    
     <script defer src="../search-index.js"></script>
 </body>
 </html>

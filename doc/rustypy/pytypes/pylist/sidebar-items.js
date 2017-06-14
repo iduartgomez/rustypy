@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["pylist_free",""],["pylist_get_element",""],["pylist_len",""],["pylist_new",""],["pylist_push",""]],"struct":[["IntoIter",""],["PyList","An analog of a Python list which contains an undefined number of elements of a single kind, of any supported type."]]});
+initSidebarItems({"struct":[["IntoIter",""],["PyList","An analog of a Python list which contains an undefined number of elements of a single kind, of any supported type."]]});

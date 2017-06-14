@@ -9,6 +9,7 @@
 
     <title>rustypy::pytypes - Rust</title>
 
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
     <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
     <link rel="stylesheet" type="text/css" href="../../main.css">
     
@@ -16,7 +17,7 @@
     
     
 </head>
-<body class="rustdoc">
+<body class="rustdoc mod">
     <!--[if lte IE 8]>
     <div class="warning">
         This old browser is unsupported and will most likely display funky
@@ -28,7 +29,7 @@
 
     <nav class="sidebar">
         
-        <p class='location'><a href='../index.html'>rustypy</a></p><script>window.sidebarCurrent = {name: 'pytypes', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+        <p class='location'>Module pytypes</p><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#enums">Enums</a></li></ul></div><p class='location'><a href='../index.html'>rustypy</a></p><script>window.sidebarCurrent = {name: 'pytypes', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
     </nav>
 
     <nav class="sub">
@@ -42,26 +43,26 @@
         </form>
     </nav>
 
-    <section id='main' class="content mod">
-<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>rustypy</a>::<wbr><a class='mod' href=''>pytypes</a></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>rustypy</a>::<wbr><a class="mod" href=''>pytypes</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-17' class='srclink' href='../../src/rustypy/src/pytypes/mod.rs.html#1-462' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../../src/rustypy/pytypes/mod.rs.html#1-524' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Types for interfacing with Python.</p>
 </div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='pybool/index.html'
-                                  title='rustypy::pytypes::pybool'>pybool</a></td>
-                           <td class='docblock short'>
+                           <td><a class="mod" href="pybool/index.html"
+                                  title='mod rustypy::pytypes::pybool'>pybool</a></td>
+                           <td class='docblock-short'>
                                 <p>Analog to a Python boolean type.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='pydict/index.html'
-                                  title='rustypy::pytypes::pydict'>pydict</a></td>
-                           <td class='docblock short'>
+                           <td><a class="mod" href="pydict/index.html"
+                                  title='mod rustypy::pytypes::pydict'>pydict</a></td>
+                           <td class='docblock-short'>
                                 <p>An analog of a Python dict which contains pairs of (key, values) each of a single type,
 will accept an undefined number of one (and just one) of any other supported type
 (including other PyDict) as value and a corresponding key of a single supported hashable
@@ -69,162 +70,35 @@ type (check <a href="../pydict/enum.PyDictK.html">PyDictK</a> to see which ones 
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='pylist/index.html'
-                                  title='rustypy::pytypes::pylist'>pylist</a></td>
-                           <td class='docblock short'>
+                           <td><a class="mod" href="pylist/index.html"
+                                  title='mod rustypy::pytypes::pylist'>pylist</a></td>
+                           <td class='docblock-short'>
                                 <p>An analog of a Python list which contains elements of a single type, will accept an
 undefined number of one (and just one) of any other supported type (including other
 PyLists).</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='pystring/index.html'
-                                  title='rustypy::pytypes::pystring'>pystring</a></td>
-                           <td class='docblock short'>
+                           <td><a class="mod" href="pystring/index.html"
+                                  title='mod rustypy::pytypes::pystring'>pystring</a></td>
+                           <td class='docblock-short'>
                                 <p>An analog of a Python String.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='pytuple/index.html'
-                                  title='rustypy::pytypes::pytuple'>pytuple</a></td>
-                           <td class='docblock short'>
+                           <td><a class="mod" href="pytuple/index.html"
+                                  title='mod rustypy::pytypes::pytuple'>pytuple</a></td>
+                           <td class='docblock-short'>
                                 <p>An analog of a Python tuple, will accept an undefined number of any other supported types.</p>
                            </td>
                        </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.PyArg.html'
-                                  title='rustypy::pytypes::PyArg'>PyArg</a></td>
-                           <td class='docblock short'>
+                           <td><a class="enum" href="enum.PyArg.html"
+                                  title='enum rustypy::pytypes::PyArg'>PyArg</a></td>
+                           <td class='docblock-short'>
                                 <p>Enum type used to construct PyTuple and PyList types. All the kinds supported in Python
 are included here.</p>
-                           </td>
-                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
-<table>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_bool.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_bool'>pyarg_extract_owned_bool</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_dict.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_dict'>pyarg_extract_owned_dict</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_double.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_double'>pyarg_extract_owned_double</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_float.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_float'>pyarg_extract_owned_float</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_int.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_int'>pyarg_extract_owned_int</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_list.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_list'>pyarg_extract_owned_list</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_str.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_str'>pyarg_extract_owned_str</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_tuple.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_tuple'>pyarg_extract_owned_tuple</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_extract_owned_ulonglong.html'
-                                  title='rustypy::pytypes::pyarg_extract_owned_ulonglong'>pyarg_extract_owned_ulonglong</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_bool.html'
-                                  title='rustypy::pytypes::pyarg_from_bool'>pyarg_from_bool</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_double.html'
-                                  title='rustypy::pytypes::pyarg_from_double'>pyarg_from_double</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_float.html'
-                                  title='rustypy::pytypes::pyarg_from_float'>pyarg_from_float</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_int.html'
-                                  title='rustypy::pytypes::pyarg_from_int'>pyarg_from_int</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_pydict.html'
-                                  title='rustypy::pytypes::pyarg_from_pydict'>pyarg_from_pydict</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_pylist.html'
-                                  title='rustypy::pytypes::pyarg_from_pylist'>pyarg_from_pylist</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_pytuple.html'
-                                  title='rustypy::pytypes::pyarg_from_pytuple'>pyarg_from_pytuple</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_str.html'
-                                  title='rustypy::pytypes::pyarg_from_str'>pyarg_from_str</a></td>
-                           <td class='docblock short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='fn' href='fn.pyarg_from_ulonglong.html'
-                                  title='rustypy::pytypes::pyarg_from_ulonglong'>pyarg_from_ulonglong</a></td>
-                           <td class='docblock short'>
-                                
                            </td>
                        </tr></table></section>
     <section id='search' class="content hidden"></section>
@@ -282,11 +156,9 @@ are included here.</p>
     <script>
         window.rootPath = "../../";
         window.currentCrate = "rustypy";
-        window.playgroundUrl = "";
     </script>
     <script src="../../jquery.js"></script>
     <script src="../../main.js"></script>
-    
     <script defer src="../../search-index.js"></script>
 </body>
 </html>
