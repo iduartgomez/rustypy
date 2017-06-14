@@ -60,6 +60,7 @@ use super::{PyArg, PyBool, PyString, PyList, PyTuple};
 
 use std::collections::HashMap;
 use std::collections::hash_map::Drain;
+use std::convert::AsRef;
 use std::marker::PhantomData;
 use std::hash::Hash;
 use std::iter::FromIterator;
@@ -90,7 +91,7 @@ impl<K> PyDict<K>
     /// If the map did have this key present, the value is updated, and the old value is returned.
     /// The key is not updated, though; this matters for types that can be == without being
     /// identical. See the module-level documentation for more.
-    pub fn insert<V>(&mut self, k: K, v: V) -> Option<V> 
+    pub fn insert<V>(&mut self, k: K, v: V) -> Option<V>
         where PyArg: From<V>,
               V: From<PyArg>
     {
@@ -106,7 +107,7 @@ impl<K> PyDict<K>
     ///
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
-    pub fn remove<V>(&mut self, k: &K) -> Option<V> 
+    pub fn remove<V>(&mut self, k: &K) -> Option<V>
         where V: From<PyArg>
     {
         if let Some(val) = self._inner.remove(k) {
@@ -120,11 +121,11 @@ impl<K> PyDict<K>
     ///
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
-    pub fn get<'a, V>(&'a mut self, k: &K) -> Option<V> 
-        where V: From<&'a PyArg>
+    pub fn get<'a, V>(&'a mut self, k: &K) -> Option<&'a V>
+        where PyArg: AsRef<V>
     {
         if let Some(rval) = self._inner.get(k) {
-            Some(V::from(rval))
+            Some(rval.as_ref())
         } else {
             None
         }
@@ -143,12 +144,9 @@ impl<K> PyDict<K>
 
     /// Get a PyDict from a previously boxed PyDict.
     ///
-    /// Takes two type parameters:
-    ///     - one corresponding to the key type (check
-    ///       [PyArg](../rustypy/pytypes/enum.PyArg.html) variants)
-    ///     - and PyArg, corresponding to the value type
-    ///
-    /// And a PyDict as a raw *mut size_t pointer.
+    /// Takes the key as type parameter `K`, the raw pointer to the dictionary as argument
+    /// and returns a PyDict with key type `K` (check
+    /// [PyArg](../rustypy/pytypes/pydict/enum.PyDictK.html) variants for allowed key types).
     ///
     /// ```
     /// # use std::collections::HashMap;
@@ -163,7 +161,7 @@ impl<K> PyDict<K>
         *(Box::from_raw(ptr as *mut PyDict<K>))
     }
 
-    /// Returns self as raw pointer. Use this method when returning a PyTuple to Python.
+    /// Returns self as raw pointer. Use this method when returning a PyDict to Python.
     pub fn as_ptr(self) -> *mut size_t {
         Box::into_raw(Box::new(self)) as *mut size_t
     }
@@ -175,6 +173,7 @@ impl<K> PyDict<K>
     {
         HashMap::from_iter(self._inner.drain().map(|(k, v)| (k, <V>::from(v))))
     }
+
     /// Consume self and turn it into an iterator.
     pub fn into_iter<V: From<PyArg>>(self) -> IntoIter<K, V> {
         IntoIter {
@@ -203,9 +202,9 @@ impl<K, V> From<HashMap<K, V>> for PyDict<K>
 {
     fn from(mut hm: HashMap<K, V>) -> PyDict<K> {
         PyDict {
-            _inner: hm.drain().map(|(k, v)| {
-                (k, PyArg::from(v))
-            }).collect::<HashMap<K, PyArg>>(),
+            _inner: hm.drain()
+                .map(|(k, v)| (k, PyArg::from(v)))
+                .collect::<HashMap<K, PyArg>>(),
         }
     }
 }
@@ -229,7 +228,9 @@ impl<K, V> Iterator for IntoIter<K, V>
     fn collect<B>(self) -> B
         where B: FromIterator<Self::Item>
     {
-        self.inner.map(|(k, v)| (k, <V>::from(v))).collect::<B>()
+        self.inner
+            .map(|(k, v)| (k, <V>::from(v)))
+            .collect::<B>()
     }
 }
 
@@ -455,16 +456,20 @@ pub unsafe extern "C" fn pydict_insert(dict: *mut size_t,
 #[test]
 fn drain_dict() {
     unsafe {
-        let match_kv = |kv: *mut PyDictPair| {
-            match *Box::from_raw((kv as *mut PyDictPair)) {
-                PyDictPair { key: PyArg::U16(0), val: PyArg::PyString(val)  } => {
-                    assert_eq!(val, PyString::from("zero"));
-                }
-                PyDictPair { key: PyArg::U16(1), val: PyArg::PyString(val)  } => {
-                    assert_eq!(val, PyString::from("one"));
-                }
-                _ => panic!()
+        let match_kv = |kv: *mut PyDictPair| match *Box::from_raw((kv as *mut PyDictPair)) {
+            PyDictPair {
+                key: PyArg::U16(0),
+                val: PyArg::PyString(val),
+            } => {
+                assert_eq!(val, PyString::from("zero"));
             }
+            PyDictPair {
+                key: PyArg::U16(1),
+                val: PyArg::PyString(val),
+            } => {
+                assert_eq!(val, PyString::from("one"));
+            }
+            _ => panic!(),
         };
 
         let mut hm = HashMap::new();
@@ -655,9 +660,9 @@ pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t,
 #[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pydict_get_mut_element(dict: *mut size_t,
-                                            k_type: &PyDictK,
-                                            key: *mut size_t)
-                                            -> *mut size_t {
+                                                k_type: &PyDictK,
+                                                key: *mut size_t)
+                                                -> *mut size_t {
     macro_rules! _match_pyarg_out {
         ($p:ident) => {{
             match *$p {

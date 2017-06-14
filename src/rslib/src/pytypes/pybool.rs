@@ -68,7 +68,7 @@ impl PyBool {
             true => self.val = 1,
             false => self.val = 0,
         }
-    }                                                                                                                           
+    }
 }
 
 #[doc(hidden)]

@@ -4,6 +4,7 @@ use libc::{size_t, c_char};
 
 use std::hash::Hash;
 use std::collections::HashMap;
+use std::convert::AsRef;
 
 #[doc(hidden)]
 #[macro_export]
@@ -15,8 +16,8 @@ macro_rules! _rustypy_abort_xtract_fail {
         fn write<T: Write>(mut handle: T) {
             write!(&mut handle, "\nrustypy: failed abrupty!").unwrap();
             write!(&mut handle,
-                "rustypy: aborted process, tried to extract one type, but found an other instead:\n \
-                {}\n", $msg).unwrap();
+                "rustypy: aborted process, tried to extract one type, but found an other \
+                 instead:\n {}\n", $msg).unwrap();
             handle.flush().unwrap();
         }
 
@@ -79,7 +80,90 @@ impl PyArg {
     }
 }
 
-// Conversions from <T> to PyArg
+macro_rules! type_ref_from_pyarg_ref {
+    ($type:ty; $variant:path; $repr:expr) => {
+        impl AsRef<$type> for PyArg {
+            fn as_ref(&self) -> &$type {
+                match *self {
+                    $variant(ref v) => v,
+                    _ => _rustypy_abort_xtract_fail!(
+                        "expected a $repr while destructuring PyArg enum"),
+                }
+            }
+        }
+    };
+    (BOXED $type:ty; $variant:path; $repr:expr) => {
+        impl AsRef<$type> for PyArg {
+            fn as_ref(&self) -> &$type {
+                match *self {
+                    $variant(ref v) => &**v,
+                    _ => _rustypy_abort_xtract_fail!(
+                        "expected a $repr while destructuring PyArg enum"),
+                }
+            }
+        }
+    }
+}
+
+type_ref_from_pyarg_ref!(i8; PyArg::I8; i8);
+type_ref_from_pyarg_ref!(i16; PyArg::I16; i16);
+type_ref_from_pyarg_ref!(i32; PyArg::I32; i32);
+type_ref_from_pyarg_ref!(i64; PyArg::I64; i64);
+type_ref_from_pyarg_ref!(u8; PyArg::U8; u8);
+type_ref_from_pyarg_ref!(u16; PyArg::U16; u16);
+type_ref_from_pyarg_ref!(u32; PyArg::U32; u32);
+type_ref_from_pyarg_ref!(u64; PyArg::U64; u64);
+type_ref_from_pyarg_ref!(f32; PyArg::F32; f32);
+type_ref_from_pyarg_ref!(f64; PyArg::F64; f64);
+type_ref_from_pyarg_ref!(PyBool; PyArg::PyBool; PyBool);
+type_ref_from_pyarg_ref!(PyString; PyArg::PyString; PyString);
+type_ref_from_pyarg_ref!(BOXED PyTuple; PyArg::PyTuple; PyTuple);
+type_ref_from_pyarg_ref!(BOXED PyList; PyArg::PyList; PyList);
+
+impl<K> AsRef<PyDict<K>> for PyArg
+    where K: Eq + Hash + PyDictKey
+{
+    fn as_ref(&self) -> &PyDict<K> {
+        match *self {
+            PyArg::PyDict(dict) => unsafe { &*(dict as *mut PyDict<K>) as &PyDict<K> },
+            _ => _rustypy_abort_xtract_fail!("expected a PyDict while destructuring PyArg enum"),
+        }
+    }
+}
+
+// Conversions: PyArg from <T>
+macro_rules! pyarg_from_type {
+    ($type:ty; $variant:path) => {
+        impl From<$type> for PyArg {
+            fn from(a: $type) -> PyArg {
+                $variant(a)
+            }
+        }
+    };
+    (BOXED $type:ty; $variant:path) => {
+        impl From<$type> for PyArg {
+            fn from(a: $type) -> PyArg {
+                $variant(Box::new(a))
+            }
+        }
+    }
+}
+
+pyarg_from_type!(i8; PyArg::I8);
+pyarg_from_type!(i16; PyArg::I16);
+pyarg_from_type!(i32; PyArg::I32);
+pyarg_from_type!(i64; PyArg::I64);
+pyarg_from_type!(u8; PyArg::U8);
+pyarg_from_type!(u16; PyArg::U16);
+pyarg_from_type!(u32; PyArg::U32);
+pyarg_from_type!(u64; PyArg::U64);
+pyarg_from_type!(f32; PyArg::F32);
+pyarg_from_type!(f64; PyArg::F64);
+pyarg_from_type!(PyBool; PyArg::PyBool);
+pyarg_from_type!(PyString; PyArg::PyString);
+pyarg_from_type!(BOXED PyTuple; PyArg::PyTuple);
+pyarg_from_type!(BOXED PyList; PyArg::PyList);
+
 impl<'a> From<&'a str> for PyArg {
     fn from(a: &str) -> PyArg {
         PyArg::PyString(PyString::from(a))
@@ -92,12 +176,6 @@ impl From<String> for PyArg {
     }
 }
 
-impl From<PyString> for PyArg {
-    fn from(a: PyString) -> PyArg {
-        PyArg::PyString(a)
-    }
-}
-
 impl From<bool> for PyArg {
     fn from(a: bool) -> PyArg {
         PyArg::PyBool(PyBool::from(a))
@@ -107,84 +185,6 @@ impl From<bool> for PyArg {
 impl<'a> From<&'a bool> for PyArg {
     fn from(a: &'a bool) -> PyArg {
         PyArg::PyBool(PyBool::from(a))
-    }
-}
-
-impl From<PyBool> for PyArg {
-    fn from(a: PyBool) -> PyArg {
-        PyArg::PyBool(a)
-    }
-}
-
-impl From<i8> for PyArg {
-    fn from(a: i8) -> PyArg {
-        PyArg::I8(a)
-    }
-}
-
-impl From<u8> for PyArg {
-    fn from(a: u8) -> PyArg {
-        PyArg::U8(a)
-    }
-}
-
-impl From<i16> for PyArg {
-    fn from(a: i16) -> PyArg {
-        PyArg::I16(a)
-    }
-}
-
-impl From<u16> for PyArg {
-    fn from(a: u16) -> PyArg {
-        PyArg::U16(a)
-    }
-}
-
-impl From<i32> for PyArg {
-    fn from(a: i32) -> PyArg {
-        PyArg::I32(a)
-    }
-}
-
-impl From<u32> for PyArg {
-    fn from(a: u32) -> PyArg {
-        PyArg::U32(a)
-    }
-}
-
-impl From<i64> for PyArg {
-    fn from(a: i64) -> PyArg {
-        PyArg::I64(a)
-    }
-}
-
-impl From<u64> for PyArg {
-    fn from(a: u64) -> PyArg {
-        PyArg::U64(a)
-    }
-}
-
-impl From<f32> for PyArg {
-    fn from(a: f32) -> PyArg {
-        PyArg::F32(a)
-    }
-}
-
-impl From<f64> for PyArg {
-    fn from(a: f64) -> PyArg {
-        PyArg::F64(a)
-    }
-}
-
-impl From<PyTuple> for PyArg {
-    fn from(a: PyTuple) -> PyArg {
-        PyArg::PyTuple(Box::new(a))
-    }
-}
-
-impl From<PyList> for PyArg {
-    fn from(a: PyList) -> PyArg {
-        PyArg::PyList(Box::new(a))
     }
 }
 
@@ -215,137 +215,51 @@ impl<K, V> From<HashMap<K, V>> for PyArg
 }
 
 // Conversions from PyArg to <T>
-impl From<PyArg> for u8 {
-    fn from(a: PyArg) -> u8 {
-        match a {
-            PyArg::U8(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a u8 while destructuring PyArg enum")
+macro_rules! type_from_pyarg {
+    ($type:ty; $variant:path; $repr:expr) => {
+        impl From<PyArg> for $type {
+            fn from(a: PyArg) -> $type {
+                match a {
+                    $variant(v) => v,
+                    _ => _rustypy_abort_xtract_fail!(
+                        "expected a $repr while destructuring PyArg enum"),
+                }
+            }
+        }
+    };
+    (BOXED $type:ty; $variant:path; $repr:expr) => {
+        impl From<PyArg> for $type {
+            fn from(a: PyArg) -> $type {
+                match a {
+                    $variant(v) => *v,
+                    _ => _rustypy_abort_xtract_fail!(
+                        "expected a $repr while destructuring PyArg enum"),
+                }
+            }
         }
     }
 }
 
-impl From<PyArg> for i8 {
-    fn from(a: PyArg) -> i8 {
-        match a {
-            PyArg::I8(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a i8 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for u16 {
-    fn from(a: PyArg) -> u16 {
-        match a {
-            PyArg::U16(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a u16 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for i16 {
-    fn from(a: PyArg) -> i16 {
-        match a {
-            PyArg::I16(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a i16 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for u32 {
-    fn from(a: PyArg) -> u32 {
-        match a {
-            PyArg::U32(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a u32 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for i32 {
-    fn from(a: PyArg) -> i32 {
-        match a {
-            PyArg::I32(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a i32 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for u64 {
-    fn from(a: PyArg) -> u64 {
-        match a {
-            PyArg::U64(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a u64 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for i64 {
-    fn from(a: PyArg) -> i64 {
-        match a {
-            PyArg::I64(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a i64 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for f32 {
-    fn from(a: PyArg) -> f32 {
-        match a {
-            PyArg::F32(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a f32 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for f64 {
-    fn from(a: PyArg) -> f64 {
-        match a {
-            PyArg::F64(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a f64 while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for PyString {
-    fn from(a: PyArg) -> PyString {
-        match a {
-            PyArg::PyString(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a PyString while destructuring PyArg enum")
-        }
-    }
-}
+type_from_pyarg!(i8; PyArg::I8; i8);
+type_from_pyarg!(i16; PyArg::I16; i16);
+type_from_pyarg!(i32; PyArg::I32; i32);
+type_from_pyarg!(i64; PyArg::I64; i64);
+type_from_pyarg!(u8; PyArg::U8; u8);
+type_from_pyarg!(u16; PyArg::U16; u16);
+type_from_pyarg!(u32; PyArg::U32; u32);
+type_from_pyarg!(u64; PyArg::U64; u64);
+type_from_pyarg!(f32; PyArg::F32; f32);
+type_from_pyarg!(f64; PyArg::F64; f64);
+type_from_pyarg!(PyBool; PyArg::PyBool; PyBool);
+type_from_pyarg!(PyString; PyArg::PyString; PyString);
+type_from_pyarg!(BOXED PyTuple; PyArg::PyTuple; PyTuple);
+type_from_pyarg!(BOXED PyList; PyArg::PyList; PyList);
 
 impl From<PyArg> for String {
     fn from(a: PyArg) -> String {
         match a {
             PyArg::PyString(v) => v.to_string(),
-            _ => _rustypy_abort_xtract_fail!("expected a PyString while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for PyBool {
-    fn from(a: PyArg) -> PyBool {
-        match a {
-            PyArg::PyBool(v) => v,
-            _ => _rustypy_abort_xtract_fail!("expected a PyBool while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for PyTuple {
-    fn from(a: PyArg) -> PyTuple {
-        match a {
-            PyArg::PyTuple(v) => *v,
-            _ => _rustypy_abort_xtract_fail!("expected a PyTuple while destructuring PyArg enum")
-        }
-    }
-}
-
-impl From<PyArg> for PyList {
-    fn from(a: PyArg) -> PyList {
-        match a {
-            PyArg::PyList(v) => *v,
-            _ => _rustypy_abort_xtract_fail!("expected a PyList while destructuring PyArg enum")
+            _ => _rustypy_abort_xtract_fail!("expected a PyString while destructuring PyArg enum"),
         }
     }
 }

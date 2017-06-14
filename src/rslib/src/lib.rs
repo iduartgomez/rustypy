@@ -17,9 +17,10 @@ extern crate walkdir;
 
 use std::io::Read;
 use std::fs::File;
+use std::path::Path;
 use std::ptr;
 
-use libc::{size_t};
+use libc::size_t;
 
 pub mod pytypes;
 
@@ -34,23 +35,52 @@ pub use self::pytypes::PyArg;
 #[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> *mut PyString {
+    use std::convert::AsRef;
     let path = unsafe { PyString::from_ptr_to_string(path) };
-    let mut f =  match File::open(&path) {
+    let path: &Path = path.as_ref();
+    let dir = if let Some(parent) = path.parent() {
+        parent
+    } else {
+        // unlikely this happens, but just in case
+        return PyString::from(format!("crate in root directory not allowed")).as_ptr();
+    };
+    for entry in walkdir::WalkDir::new(dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| if let Some(ext) = e.path().extension() {
+                        ext == "rs"
+                    } else {
+                        false
+                    }) {
+        if let Err(err) = parse_file(krate_data, entry.path()) {
+            return err;
+        }
+    }
+    return ptr::null_mut::<PyString>();
+}
+
+fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyString> {
+    let mut f = match File::open(path) {
         Ok(file) => file,
-        Err(_) => return PyString::from(format!("path not found: {}", path)).as_ptr(),
+        Err(_) => {
+            return Err(PyString::from(format!("path not found: {}", path.to_str().unwrap()))
+                           .as_ptr())
+        }
     };
     let mut src = String::new();
     if f.read_to_string(&mut src).is_err() {
-        return PyString::from(format!("failed to read the source file: {}", path)).as_ptr();
+        return Err(PyString::from(format!("failed to read the source file: {}",
+                                          path.to_str().unwrap()))
+                           .as_ptr());
     }
     match syn::parse_crate(&src) {
         Ok(krate) => {
             syn::visit::walk_crate(krate_data, &krate);
             krate_data.collect_values();
         }
-        Err(err) => return PyString::from(err).as_ptr(),
+        Err(err) => return Err(PyString::from(err).as_ptr()),
     };
-    return ptr::null_mut::<PyString>()
+    Ok(())
 }
 
 #[doc(hidden)]
@@ -66,34 +96,41 @@ impl KrateData {
         KrateData {
             functions: vec![],
             collected: vec![],
-            prefixes: prefixes
+            prefixes: prefixes,
         }
     }
 
     fn collect_values(&mut self) {
         let mut add = true;
         for v in self.functions.drain(..) {
-            let FnDef { name: mut fndef, args, output } = v;
+            let FnDef {
+                name: mut fndef,
+                args,
+                output,
+            } = v;
             if !args.is_empty() {
                 fndef.push_str("::");
-                args.iter().fold(&mut fndef, |mut acc, arg| {
-                    if let Ok(repr) = type_repr(arg, None) {
-                        acc.push_str(&repr);
-                        acc.push(';');
-                    } else {
-                        add = false;
-                    }
-                    acc
-                });
+                args.iter()
+                    .fold(&mut fndef, |mut acc, arg| {
+                        if let Ok(repr) = type_repr(arg, None) {
+                            acc.push_str(&repr);
+                            acc.push(';');
+                        } else {
+                            add = false;
+                        }
+                        acc
+                    });
             }
             if add {
                 match output {
                     syn::FunctionRetTy::Default => fndef.push_str("type(void)"),
-                    syn::FunctionRetTy::Ty(ty) => if let Ok(ty) = type_repr(&ty, None) {
-                        fndef.push_str(&ty)
-                    } else { 
-                        continue 
-                    },
+                    syn::FunctionRetTy::Ty(ty) => {
+                        if let Ok(ty) = type_repr(&ty, None) {
+                            fndef.push_str(&ty)
+                        } else {
+                            continue;
+                        }
+                    }
                 }
                 self.collected.push(fndef);
             } else {
@@ -114,11 +151,12 @@ impl KrateData {
                         _ => continue,
                     }
                 }
-                self.functions.push(FnDef {
-                    name,
-                    args: args, 
-                    output: output,
-                });
+                self.functions
+                    .push(FnDef {
+                              name,
+                              args: args,
+                              output: output,
+                          });
                 break;
             }
         }
@@ -143,13 +181,16 @@ fn type_repr(ty: &syn::Ty, r: Option<&str>) -> Result<String, ()> {
                     Ok(format!("type({} {})", r.unwrap(), ty.ident))
                 } else {
                     Ok(format!("type({})", ty.ident))
-                }                
+                }
             } else {
                 Err(())
             }
         }
         syn::Ty::Ptr(ref ty) => {
-            let syn::MutTy { ref ty, ref mutability } = **ty;
+            let syn::MutTy {
+                ref ty,
+                ref mutability,
+            } = **ty;
             let m = match *mutability {
                 syn::Mutability::Immutable => "*const",
                 syn::Mutability::Mutable => "*mut",
@@ -158,7 +199,10 @@ fn type_repr(ty: &syn::Ty, r: Option<&str>) -> Result<String, ()> {
             Ok(repr)
         }
         syn::Ty::Rptr(_, ref ty) => {
-            let syn::MutTy { ref ty, ref mutability } = **ty;
+            let syn::MutTy {
+                ref ty,
+                ref mutability,
+            } = **ty;
             let m = match *mutability {
                 syn::Mutability::Immutable => "&",
                 syn::Mutability::Mutable => "&mut",
