@@ -121,7 +121,7 @@ impl<K> PyDict<K>
     ///
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
-    pub fn get<'a, V>(&'a mut self, k: &K) -> Option<&'a V>
+    pub fn get<'a, V>(&'a self, k: &K) -> Option<&'a V>
         where PyArg: AsRef<V>
     {
         if let Some(rval) = self._inner.get(k) {

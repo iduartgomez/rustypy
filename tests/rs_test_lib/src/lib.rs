@@ -91,9 +91,9 @@ pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
 
 #[no_mangle]
 pub extern "C" fn other_prefix_dict(dict: *mut usize) -> *mut usize {
-    let mut dict = unsafe { PyDict::<u64>::from_ptr(dict) };
-    assert_eq!(dict.get(&0_u64), Some(&PyArg::PyString(PyString::from("From"))));
-    assert_eq!(dict.get(&1_u64), Some(&PyArg::PyString(PyString::from("Python"))));
+    let dict = unsafe { PyDict::<u64>::from_ptr(dict) };
+    assert_eq!(dict.get(&0_u64), Some(&PyString::from("From")));
+    assert_eq!(dict.get(&1_u64), Some(&PyString::from("Python")));
     let mut hm = HashMap::new();
     hm.insert(0_i64, PyArg::PyString(PyString::from("Back")));
     hm.insert(1_i64, PyArg::PyString(PyString::from("Rust")));

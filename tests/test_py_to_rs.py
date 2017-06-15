@@ -91,9 +91,7 @@ class GeneratePythonToRustBinds(unittest.TestCase):
 
     def test_nested_modules(self):
         set_python_path(self)
-        init_package = os.path.join(_rs_lib_dir, 'tests',
-                                    'test_package', '__init__.py')
-        subprocess.run('python {}'.format(init_package), shell=True)
+        import test_package as test
         #
         src = os.path.join(_rs_lib_dir, 'tests', 'python', 'submodules.rs')
         dst = os.path.join(_rs_lib_dir, 'tests')
