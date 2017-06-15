@@ -533,6 +533,7 @@ class RustFuncGen(object):
                 else:
                     curr.append('PyObject::None')
             elif type(t) is typ.TupleMeta:
+                print("type:", t)
                 if pytypes:
                     curr.append('PyTuple')
                 else:
