@@ -85,21 +85,21 @@ def _to_pystring(arg):
     return c_backend.pyarg_from_str(arg.encode("utf-8"))
 
 
-def _to_pytuple(sig):
+def _to_pytuple(signature):
     def dec(arg):
-        return c_backend.pyarg_from_pytuple(PyTuple.from_tuple(arg, sig))
+        return c_backend.pyarg_from_pytuple(PyTuple.from_tuple(arg, signature))
     return dec
 
 
-def _to_pylist(sig):
+def _to_pylist(signature):
     def dec(arg):
-        return c_backend.pyarg_from_pylist(PyList.from_list(arg, sig))
+        return c_backend.pyarg_from_pylist(PyList.from_list(arg, signature))
     return dec
 
 
-def _to_pydict(sig):
+def _to_pydict(signature):
     def dec(arg):
-        d = PyDict.from_dict(arg, sig)
+        d = PyDict.from_dict(arg, signature)
         return c_backend.pyarg_from_pydict(d)
     return dec
 
@@ -120,7 +120,7 @@ def _extract_value(pyarg, arg_t, depth=0):
         pytype = c_backend.pyarg_extract_owned_double(pyarg)
     elif arg_t is Float:
         pytype = c_backend.pyarg_extract_owned_float(pyarg)
-    elif issubclass(arg_t, typing.Tuple):
+    elif issubclass(arg_t, Tuple):
         ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
         t = PyTuple(ptr, arg_t)
         pytype = t.to_tuple(depth=depth + 1)
@@ -142,7 +142,10 @@ class PyTuple(PythonObject):
         if not signature:
             raise MissingTypeHint(
                 "rustypy: missing type hint for PyTuple unpacking in Python")
-        self.sig = signature
+        if not issubclass(signature, Tuple):
+            raise TypeError("rustypy: expecting rustypy Tuple definition, found `{}` instead"
+                            .format(signature))
+        self.signature = signature
         self.call_fn = call_fn
 
     def free(self):
@@ -152,48 +155,54 @@ class PyTuple(PythonObject):
 
     def to_tuple(self, depth=0):
         arity = c_backend.pytuple_len(self._ptr)
-        if arity != len(self.sig.__tuple_params__) and self.call_fn:
+        if arity != len(self.signature) and self.call_fn:
             raise TypeError("rustypy: the type hint for returning tuple of fn `{}` "
                             "and the return tuple value are not of "
                             "the same length".format(self.call_fn._fn_name))
-        elif arity != len(self.sig.__tuple_params__):
+        elif arity != len(self.signature):
             raise TypeError(
                 "rustypy: type hint for PyTuple is of wrong length")
         tuple_elems = []
-        for last, arg_t in enumerate(self.sig.__tuple_params__):
-            pyarg = c_backend.pytuple_get_element(self._ptr, last)
+        for pos, arg_t in enumerate(self.signature):
+            pyarg = c_backend.pytuple_get_element(self._ptr, pos)
             pytype = _extract_value(pyarg, arg_t, depth=depth + 1)
             if pytype is None:
-                raise TypeError("rustypy: subtype `{t}` of Tuple type is \
-                                not supported".format(t=arg_t))
+                raise TypeError("rustypy: subtype `{t}` of Tuple type is "
+                                "not supported".format(t=arg_t))
             tuple_elems.append(pytype)
         self.free()
         return tuple(tuple_elems)
 
     @staticmethod
-    def from_tuple(source: tuple, sig):
+    def from_tuple(source: tuple, signature):
+        try:
+            if not issubclass(signature, Tuple):
+                raise Exception
+        except:
+            raise TypeError("rustypy: type hint for PyTuple.from_tuple "
+                            "must be of rustypy.Tuple type")
         next_e = None
         cnt = len(source) - 1
         for i in range(0, len(source)):
             cnt = cnt - i
-            arg_t = sig.__tuple_params__[cnt]
-            last = source[cnt]
+            arg_t = signature._element_type(cnt)
+            element = source[cnt]
             if arg_t is str:
-                pyarg = _to_pystring(last)
+                pyarg = _to_pystring(element)
             elif arg_t is bool:
-                pyarg = _to_pystring(last)
+                pyarg = _to_pystring(element)
             elif arg_t is int:
-                pyarg = c_backend.pyarg_from_int(last)
+                pyarg = c_backend.pyarg_from_int(element)
             elif arg_t is Double or arg_t is float:
-                pyarg = c_backend.pyarg_from_double(last)
+                pyarg = c_backend.pyarg_from_double(element)
             elif arg_t is Float:
-                pyarg = c_backend.pyarg_from_float(last)
-            elif issubclass(arg_t, typing.Tuple):
-                pyarg = _to_pytuple(arg_t)(last)
-            elif issubclass(arg_t, typing.List):
-                pyarg = _to_pylist(arg_t)(last)
-            elif issubclass(arg_t, typing.Dict):
-                pyarg = _to_pydict(arg_t)(last)
+                pyarg = c_backend.pyarg_from_float(element)
+            elif issubclass(arg_t, Tuple):
+                pyarg = _to_pytuple(arg_t)(element)
+            elif issubclass(arg_t, list):
+                pyarg = _to_pylist(arg_t)(element)
+            elif issubclass(arg_t, dict):
+                pyarg = _to_pydict(arg_t)(element)
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
@@ -212,7 +221,7 @@ class PyList(PythonObject):
         if not signature:
             raise MissingTypeHint(
                 "rustypy: missing type hint for PyList unpacking in Python")
-        self.sig = signature
+        self.signature = signature
         self.call_fn = call_fn
 
     def free(self):
@@ -221,7 +230,7 @@ class PyList(PythonObject):
         setattr(self, 'to_list', _dangling_pointer)
 
     def to_list(self, depth=0):
-        arg_t = self.sig.__args__[0]
+        arg_t = self.signature.__args__[0]
         pylist = deque()
         last = self._len - 1
         if arg_t is str:
@@ -255,7 +264,7 @@ class PyList(PythonObject):
                 content = c_backend.pyarg_extract_owned_float(pyarg)
                 pylist.appendleft(content)
                 last -= 1
-        elif issubclass(arg_t, typing.Tuple):
+        elif issubclass(arg_t, Tuple):
             for e in range(0, self._len):
                 pyarg = c_backend.pylist_get_element(self._ptr, last)
                 ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
@@ -283,8 +292,8 @@ class PyList(PythonObject):
         return list(pylist)
 
     @staticmethod
-    def from_list(source: list, sig):
-        arg_t = sig.__args__[0]
+    def from_list(source: list, signature):
+        arg_t = signature.__args__[0]
         if arg_t is str:
             fn = _to_pystring
         elif arg_t is bool:
@@ -295,7 +304,7 @@ class PyList(PythonObject):
             fn = c_backend.pyarg_from_double
         elif arg_t is Float:
             fn = c_backend.pyarg_from_float
-        elif issubclass(arg_t, typing.Tuple):
+        elif issubclass(arg_t, Tuple):
             fn = _to_pytuple(arg_t)
         elif issubclass(arg_t, typing.List):
             fn = _to_pylist(arg_t)
@@ -366,8 +375,8 @@ class PyDict(PythonObject):
         if not signature:
             raise MissingTypeHint(
                 "rustypy: missing type hint for PyList unpacking in Python")
-        self.sig = signature
-        key_t = self.sig.__args__[0]
+        self.signature = signature
+        key_t = self.signature.__args__[0]
         if not issubclass(key_t, HashableTypeABC):
             TypeError("rustypy: the type corresponding to the key of a \
             dictionary must be a subclass of rustypy.HashableType")
@@ -379,8 +388,8 @@ class PyDict(PythonObject):
         setattr(self, 'to_dict', _dangling_pointer)
 
     def to_dict(self, depth=0):
-        key_t = self.sig.__args__[0]._type
-        arg_t = self.sig.__args__[1]
+        key_t = self.signature.__args__[0]._type
+        arg_t = self.signature.__args__[1]
         key_rs_t, _, fnk, key_py_t = PyDict.get_key_type_info(key_t)
         drain_iter = c_backend.pydict_get_drain(self._ptr, key_rs_t)
         # get the functions for extracting the key and the value
@@ -394,7 +403,7 @@ class PyDict(PythonObject):
             fnv = c_backend.pyarg_extract_owned_double
         elif arg_t is Float:
             fnv = c_backend.pyarg_extract_owned_float
-        elif issubclass(arg_t, typing.Tuple):
+        elif issubclass(arg_t, Tuple):
             fnv = c_backend.pyarg_extract_owned_tuple
         elif issubclass(arg_t, typing.List):
             fnv = c_backend.pyarg_extract_owned_list
@@ -420,9 +429,9 @@ class PyDict(PythonObject):
         return dict(pydict)
 
     @staticmethod
-    def from_dict(source: dict, sig):
-        key_t = sig.__args__[0]
-        arg_t = sig.__args__[1]
+    def from_dict(source: dict, signature):
+        key_t = signature.__args__[0]
+        arg_t = signature.__args__[1]
         if not issubclass(key_t, HashableTypeABC):
             TypeError("rustypy: the type corresponding to the key of a \
             dictionary must be a subclass of rustypy.HashableType")
@@ -437,7 +446,7 @@ class PyDict(PythonObject):
             fnv = c_backend.pyarg_from_double
         elif arg_t is Float:
             fnv = c_backend.pyarg_from_float
-        elif issubclass(arg_t, typing.Tuple):
+        elif issubclass(arg_t, Tuple):
             fnv = _to_pytuple(arg_t)
         elif issubclass(arg_t, typing.List):
             fnv = _to_pylist(arg_t)
@@ -509,7 +518,7 @@ class PyDict(PythonObject):
     def key_rs_type(self):
         if not hasattr(self, '_key_rs_type'):
             rst, _, _, pyt = PyDict.get_key_type_info(
-                self.sig.__args__[0]._type)
+                self.signature.__args__[0]._type)
             self._key_rs_type = rst
             self._key_py_type = pyt
         return self._key_rs_type
@@ -518,9 +527,9 @@ class PyDict(PythonObject):
     def key_py_type(self):
         if not hasattr(self, '_key_py_type'):
             rst, _, _, pyt = PyDict.get_key_type_info(
-                self.sig.__args__[0]._type)
+                self.signature.__args__[0]._type)
             self._key_rs_type = rst
             self._key_py_type = pyt
         return self._key_py_type
 
-from .rswrapper import Float, Double, UnsignedLongLong
+from .rswrapper import Float, Double, UnsignedLongLong, Tuple

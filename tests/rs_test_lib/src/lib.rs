@@ -52,7 +52,7 @@ pub extern "C" fn python_bind_str_tuple(e1: *mut PyString) -> *mut PyTuple {
 
     pytuple!(PyArg::PyString(s),
              PyArg::PyString(PyString::from("from Rust")))
-        .as_ptr()
+            .as_ptr()
 }
 
 #[no_mangle]
@@ -67,7 +67,7 @@ pub extern "C" fn python_bind_tuple_mixed(e1: i32,
              PyArg::PyBool(PyBool::from(false)),
              PyArg::F32(e3),
              PyArg::PyString(s))
-        .as_ptr()
+            .as_ptr()
 }
 
 #[no_mangle]

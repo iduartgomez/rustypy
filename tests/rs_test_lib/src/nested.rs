@@ -17,7 +17,8 @@ pub extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
 pub extern "C" fn python_bind_nested1_t_n_ls(list: *mut PyList) -> *mut PyList {
     let list = unsafe { Box::new(PyList::from_ptr(list)) };
     let converted = unpack_pylist!(list; PyList{PyList{PyTuple{(I64, (F32, I64,),)}}});
-    assert_eq!(vec![vec![(50i64, (1.0f32, 30i64))], vec![(25i64, (0.5f32, 40i64))]],
+    assert_eq!(vec![vec![(50i64, (1.0f32, 30i64))],
+                    vec![(25i64, (0.5f32, 40i64))]],
                converted);
     let mut v0 = Vec::new();
     for x in converted {

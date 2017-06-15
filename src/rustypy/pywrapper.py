@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
 """Generates code for calling Python from Rust code."""
 
-import os
-import sys
-import inspect
-import typing as typ
 import collections.abc as abc
+import inspect
+import os
 import random
-
-from importlib import import_module, invalidate_caches
-from textwrap import dedent, indent
-from io import StringIO
-from string import ascii_letters
-from types import FunctionType
+import sys
+import typing as typ
 from collections import namedtuple
-from string import Template
+from importlib import import_module, invalidate_caches
+from io import StringIO
+from string import Template, ascii_letters
+from textwrap import dedent, indent
+from types import FunctionType
 
 from .scripts import get_version
+
 rustypy_ver = get_version()
 
 tab = "    "  # for formatting output
@@ -452,8 +451,8 @@ class RustFuncGen(object):
                 for prefix in self.prefixes:
                     pl = len(prefix)
                     if inspect.isfunction(obj) \
-                    and (name[:pl] == prefix or hasattr(obj, '_bind_to_rust')) \
-                    and name not in functions:
+                            and (name[:pl] == prefix or hasattr(obj, '_bind_to_rust')) \
+                            and name not in functions:
                         functions.append(name)
                         self.__no_funcs = False
             if self.__no_funcs:
@@ -532,13 +531,12 @@ class RustFuncGen(object):
                     curr.append('PyNone')
                 else:
                     curr.append('PyObject::None')
-            elif type(t) is typ.TupleMeta:
-                print("type:", t)
+            elif issubclass(t, Tuple):
                 if pytypes:
                     curr.append('PyTuple')
                 else:
                     curr.append('tuple')
-                for type_ in t.__tuple_params__:
+                for type_ in t:
                     inner_types(type_, add)
             elif issubclass(t, (list, abc.MutableSequence)):
                 if pytypes:
@@ -568,7 +566,7 @@ class RustFuncGen(object):
                         param = "PyLong"
                     else:
                         param = "c_long"
-                elif t is float:
+                elif t is float or t is Double or t is Float:
                     if pytypes:
                         param = "PyFloat"
                     else:
@@ -584,7 +582,7 @@ class RustFuncGen(object):
                     else:
                         param = "bool"
                 elif (type(t) is typ.GenericMeta) \
-                        or (type(t) is typ.TypeVar):
+                        or (type(t) is typ.TypeVar) or (issubclass(t, Tuple)):
                     param = "PyObject"
                 elif issubclass(t, FunctionType):
                     param = None
@@ -592,6 +590,7 @@ class RustFuncGen(object):
                 if 'param' in locals() and param:
                     curr.append(param)
                 else:
+                    print(type(t), t)
                     raise self.InvalidType(p)
             if len(add) > 0:
                 curr[-1] = (curr[-1], add)
@@ -872,3 +871,5 @@ def bind_py_pckg_funcs(prefixes=None):
     path = info["f_globals"]["__file__"]
     path = os.path.abspath(path)
     RustFuncGen(with_path=path, prefixes=prefixes)
+
+from .rswrapper.rswrapper import Tuple, Double, Float

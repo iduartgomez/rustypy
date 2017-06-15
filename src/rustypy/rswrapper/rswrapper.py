@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """Generates code for calling Rust from Python."""
 
+import os.path
 import re
 import types
 import typing
-import os.path
-
-from string import Template
 from collections import deque, namedtuple
+from string import Template
 
 from .ffi_defs import *
+from .ffi_defs import get_rs_lib
+from .pytypes import MissingTypeHint, PyBool, PyDict, PyList, PyString, PyTuple
 
 global c_backend
-from .ffi_defs import get_rs_lib
 c_backend = get_rs_lib()
 
 # ==================== #
@@ -27,6 +27,94 @@ Float = type('Float', (float,), {'_definition': ctypes.c_float})
 Double = type('Double', (float,), {'_definition': ctypes.c_double})
 UnsignedLongLong = type('UnsignedLongLong', (int,), {
                         '_definition': ctypes.c_ulonglong})
+
+
+class TupleMeta(type):
+
+    def __new__(cls, name, bases, namespace, parameters=None):
+        self = super().__new__(cls, name, bases, namespace)
+        self.__iter_cnt = 0
+        if not parameters:
+            self.__params = None
+            return self
+        self.__params = []
+        for arg_t in parameters:
+            if arg_t is str:
+                self.__params.append(str)
+            elif arg_t is bool:
+                self.__params.append(bool)
+            elif arg_t is int:
+                self.__params.append(int)
+            elif arg_t is Double or arg_t is float:
+                self.__params.append(Double)
+            elif arg_t is Float:
+                self.__params.append(Float)
+            elif type(arg_t) is typing.TypeVar:
+                self.__params.append(arg_t)
+            elif issubclass(arg_t, Tuple):
+                self.__params.append(arg_t)
+            elif issubclass(arg_t, typing.List):
+                self.__params.append(arg_t)
+            elif issubclass(arg_t, typing.Dict):
+                self.__params.append(arg_t)
+            else:
+                raise TypeError("rustypy: subtype `{t}` of Tuple type is \
+                                not supported".format(t=arg_t))
+        return self
+
+    def __init__(self, *args, **kwds):
+        pass
+
+    def __len__(self):
+        return len(self.__params)
+
+    def __getitem__(self, parameters):
+        if self.__params is not None:
+            raise TypeError("Cannot re-parameterize %r" % (self,))
+        if not isinstance(parameters, tuple):
+            parameters = (parameters,)
+        return self.__class__(self.__name__, self.__bases__, dict(self.__dict__), parameters)
+
+    def __repr__(self):
+        if self.__params is None:
+            return "rutypy.Tuple"
+        inner = "".join(["%r, " % e if i + 1 < len(self.__params) else repr(e)
+                         for i, e in enumerate(self.__params)])
+        return "rustypy.Tuple[{}]".format(inner)
+
+    def _element_type(self, pos):
+        return self.__params[pos]
+
+    def __subclasscheck__(self, cls):
+        if cls is typing.Any:
+            return true
+        if isinstance(cls, tuple):
+            return True
+        if not isinstance(cls, TupleMeta):
+            return False
+        else:
+            return True
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.__params:
+            return StopIteration()
+        if self.__iter_cnt < len(self.__params):
+            e = self.__params[self.__iter_cnt]
+            self.__iter_cnt += 1
+            return e
+        else:
+            self.__iter_cnt = 0
+            raise StopIteration()
+
+
+class Tuple(metaclass=TupleMeta):
+    __slots__ = ()
+
+    def __new__(self, *args, **kwds):
+        raise TypeError("Cannot subclass %r" % (self,))
 
 
 class OpaquePtr(object):
@@ -430,6 +518,3 @@ class RustBinds(object):
         setattr(FFI, "restype", restype)
         if len(argtypes) > 0:
             setattr(FFI, "argtypes", tuple(argtypes))
-
-from .pytypes import PyString, PyBool, PyTuple, PyList, PyDict
-from .pytypes import MissingTypeHint

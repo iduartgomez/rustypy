@@ -84,12 +84,30 @@ impl PyArg {
     }
 }
 
-macro_rules! type_ref_from_pyarg_ref {
+macro_rules! pyarg_conversions {
     ($type:ty; $variant:path; $repr:expr) => {
         impl AsRef<$type> for PyArg {
             fn as_ref(&self) -> &$type {
                 match *self {
                     $variant(ref v) => v,
+                    _ => {
+                        let msg = format!("expected a {} while destructuring PyArg enum", $repr);
+                        _rustypy_abort_xtract_fail!(var msg);
+                    }
+                }
+            }
+        }
+
+        impl From<$type> for PyArg {
+            fn from(a: $type) -> PyArg {
+                $variant(a)
+            }
+        }
+
+        impl From<PyArg> for $type {
+            fn from(a: PyArg) -> $type {
+                match a {
+                    $variant(v) => v,
                     _ => {
                         let msg = format!("expected a {} while destructuring PyArg enum", $repr);
                         _rustypy_abort_xtract_fail!(var msg);
@@ -110,23 +128,41 @@ macro_rules! type_ref_from_pyarg_ref {
                 }
             }
         }
+
+        impl From<$type> for PyArg {
+            fn from(a: $type) -> PyArg {
+                $variant(Box::new(a))
+            }
+        }
+
+        impl From<PyArg> for $type {
+            fn from(a: PyArg) -> $type {
+                match a {
+                    $variant(v) => *v,
+                    _ => {
+                        let msg = format!("expected a {} while destructuring PyArg enum", $repr);
+                        _rustypy_abort_xtract_fail!(var msg);
+                    }
+                }
+            }
+        }
     }
 }
 
-type_ref_from_pyarg_ref!(i8; PyArg::I8; "i8");
-type_ref_from_pyarg_ref!(i16; PyArg::I16; "i16");
-type_ref_from_pyarg_ref!(i32; PyArg::I32; "i32");
-type_ref_from_pyarg_ref!(i64; PyArg::I64; "i64");
-type_ref_from_pyarg_ref!(u8; PyArg::U8; "u8");
-type_ref_from_pyarg_ref!(u16; PyArg::U16; "u16");
-type_ref_from_pyarg_ref!(u32; PyArg::U32; "u32");
-type_ref_from_pyarg_ref!(u64; PyArg::U64; "u64");
-type_ref_from_pyarg_ref!(f32; PyArg::F32; "f32");
-type_ref_from_pyarg_ref!(f64; PyArg::F64; "f64");
-type_ref_from_pyarg_ref!(PyBool; PyArg::PyBool; "PyBool");
-type_ref_from_pyarg_ref!(PyString; PyArg::PyString; "PyString");
-type_ref_from_pyarg_ref!(BOXED PyTuple; PyArg::PyTuple; "PyTuple");
-type_ref_from_pyarg_ref!(BOXED PyList; PyArg::PyList; "PyList");
+pyarg_conversions!(i8; PyArg::I8; "i8");
+pyarg_conversions!(i16; PyArg::I16; "i16");
+pyarg_conversions!(i32; PyArg::I32; "i32");
+pyarg_conversions!(i64; PyArg::I64; "i64");
+pyarg_conversions!(u8; PyArg::U8; "u8");
+pyarg_conversions!(u16; PyArg::U16; "u16");
+pyarg_conversions!(u32; PyArg::U32; "u32");
+pyarg_conversions!(u64; PyArg::U64; "u64");
+pyarg_conversions!(f32; PyArg::F32; "f32");
+pyarg_conversions!(f64; PyArg::F64; "f64");
+pyarg_conversions!(PyBool; PyArg::PyBool; "PyBool");
+pyarg_conversions!(PyString; PyArg::PyString; "PyString");
+pyarg_conversions!(BOXED PyTuple; PyArg::PyTuple; "PyTuple");
+pyarg_conversions!(BOXED PyList; PyArg::PyList; "PyList");
 
 impl<K> AsRef<PyDict<K>> for PyArg
     where K: Eq + Hash + PyDictKey
@@ -140,37 +176,6 @@ impl<K> AsRef<PyDict<K>> for PyArg
 }
 
 // Conversions: PyArg from <T>
-macro_rules! pyarg_from_type {
-    ($type:ty; $variant:path) => {
-        impl From<$type> for PyArg {
-            fn from(a: $type) -> PyArg {
-                $variant(a)
-            }
-        }
-    };
-    (BOXED $type:ty; $variant:path) => {
-        impl From<$type> for PyArg {
-            fn from(a: $type) -> PyArg {
-                $variant(Box::new(a))
-            }
-        }
-    }
-}
-
-pyarg_from_type!(i8; PyArg::I8);
-pyarg_from_type!(i16; PyArg::I16);
-pyarg_from_type!(i32; PyArg::I32);
-pyarg_from_type!(i64; PyArg::I64);
-pyarg_from_type!(u8; PyArg::U8);
-pyarg_from_type!(u16; PyArg::U16);
-pyarg_from_type!(u32; PyArg::U32);
-pyarg_from_type!(u64; PyArg::U64);
-pyarg_from_type!(f32; PyArg::F32);
-pyarg_from_type!(f64; PyArg::F64);
-pyarg_from_type!(PyBool; PyArg::PyBool);
-pyarg_from_type!(PyString; PyArg::PyString);
-pyarg_from_type!(BOXED PyTuple; PyArg::PyTuple);
-pyarg_from_type!(BOXED PyList; PyArg::PyList);
 
 impl<'a> From<&'a str> for PyArg {
     fn from(a: &str) -> PyArg {
@@ -223,49 +228,6 @@ impl<K, V> From<HashMap<K, V>> for PyArg
 }
 
 // Conversions from PyArg to <T>
-macro_rules! type_from_pyarg {
-    ($type:ty; $variant:path; $repr:expr) => {
-        impl From<PyArg> for $type {
-            fn from(a: PyArg) -> $type {
-                match a {
-                    $variant(v) => v,
-                    _ => {
-                        let msg = format!("expected a {} while destructuring PyArg enum", $repr);
-                        _rustypy_abort_xtract_fail!(var msg);
-                    }
-                }
-            }
-        }
-    };
-    (BOXED $type:ty; $variant:path; $repr:expr) => {
-        impl From<PyArg> for $type {
-            fn from(a: PyArg) -> $type {
-                match a {
-                    $variant(v) => *v,
-                    _ => {
-                        let msg = format!("expected a {} while destructuring PyArg enum", $repr);
-                        _rustypy_abort_xtract_fail!(var msg);
-                    }
-                }
-            }
-        }
-    }
-}
-
-type_from_pyarg!(i8; PyArg::I8; "i8");
-type_from_pyarg!(i16; PyArg::I16; "i16");
-type_from_pyarg!(i32; PyArg::I32; "i32");
-type_from_pyarg!(i64; PyArg::I64; "i64");
-type_from_pyarg!(u8; PyArg::U8; "u8");
-type_from_pyarg!(u16; PyArg::U16; "u16");
-type_from_pyarg!(u32; PyArg::U32; "u32");
-type_from_pyarg!(u64; PyArg::U64; "u64");
-type_from_pyarg!(f32; PyArg::F32; "f32");
-type_from_pyarg!(f64; PyArg::F64; "f64");
-type_from_pyarg!(PyBool; PyArg::PyBool; "PyBool");
-type_from_pyarg!(PyString; PyArg::PyString; "PyString");
-type_from_pyarg!(BOXED PyTuple; PyArg::PyTuple; "PyTuple");
-type_from_pyarg!(BOXED PyList; PyArg::PyList; "PyList");
 
 impl From<PyArg> for String {
     fn from(a: PyArg) -> String {

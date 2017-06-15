@@ -1,4 +1,5 @@
 import typing as typ
+from rustypy.rswrapper import Tuple
 
 # primitives:
 
@@ -23,14 +24,14 @@ def rust_bind_bool_func(bool_arg: bool) -> bool:
     return rval
 
 
-def other_prefix_tuple1(tup_arg: typ.Tuple[str, int]) -> typ.Tuple[str, int]:
+def other_prefix_tuple1(tup_arg: Tuple[str, int]) -> Tuple[str, int]:
     output = list(tup_arg)
     output[0] += "added this in Python!"
     output[1] += 10
     output = tuple(output)
     return output
 
-K = typ.Tuple[str, bool]
+K = Tuple[str, bool]
 
 
 def other_prefix_tuple2(tup_arg: K) -> K:
@@ -43,7 +44,7 @@ def other_prefix_tuple2(tup_arg: K) -> K:
     output = tuple(output)
     return output
 
-J = typ.Tuple[float, bool]
+J = Tuple[float, bool]
 
 
 def other_prefix_tuple3(tup_arg1: float, tup_arg2: bool) -> J:

@@ -1,6 +1,7 @@
 import typing as typ
 import collections.abc as abc
 from rustypy import rust_bind
+from rustypy.rswrapper import Tuple
 
 # generics:
 T = typ.TypeVar('A', int, str)
@@ -32,7 +33,7 @@ def dict1(dict_arg: typ.Dict[str, int]) \
         dict_arg[k] = v + 1
     return dict_arg
 
-K = typ.Tuple[str, bool]
+K = Tuple[str, bool]
 U = typ.Dict[str, K]
 
 
@@ -40,7 +41,7 @@ U = typ.Dict[str, K]
 def dict2(dict_arg: U) -> U:
     return dict_arg
 
-J = typ.Tuple[float, bool]
+J = Tuple[float, bool]
 U = typ.List[J]
 
 
@@ -59,12 +60,12 @@ def list1(ls_arg: U) \
 
 
 @rust_bind
-def cmpd_tuple(tup_arg1: typ.Tuple[int, J]) -> typ.Tuple[int, K, float]:
+def cmpd_tuple(tup_arg1: Tuple[int, J]) -> Tuple[int, K, float]:
     out = (1, ('passed', True), 0.0)
     return out
 
-X = typ.List[typ.Tuple[K, T]]
-U = typ.List[typ.Tuple[int, bool]]
+X = typ.List[Tuple[K, T]]
+U = typ.List[Tuple[int, bool]]
 
 
 @rust_bind
@@ -81,12 +82,12 @@ def cmpd_list_and_tuple(ls_arg: X) -> U:
             raise AssertionError("value is neither a string or an integer")
     return out
 
-U = typ.List[typ.Tuple[int, bool]]
+U = typ.List[Tuple[int, bool]]
 
 
 @rust_bind
 def cmpd_list(arg1: U, arg2: typ.List[int]) \
-        -> typ.List[typ.Tuple[typ.List[int], float]]:
+        -> typ.List[Tuple[typ.List[int], float]]:
     for e in arg1:
         assert isinstance(e[0], int)
         assert isinstance(e[1], bool)

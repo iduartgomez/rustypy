@@ -8,7 +8,7 @@ import shutil
 from importlib import import_module
 from rustypy.pywrapper import RustFuncGen
 from rustypy.rswrapper import bind_rs_crate_funcs
-from rustypy.rswrapper import Float, Double
+from rustypy.rswrapper import Float, Double, Tuple
 from rustypy.rswrapper.ffi_defs import _load_rust_lib
 
 
@@ -55,19 +55,19 @@ class GenerateRustToPythonBinds(unittest.TestCase):
 
     def test_tuple_conversion(self):
         # tuple
-        U = typing.Tuple[int, int]
+        U = Tuple[int, int]
         self.bindings.python_bind_int_tuple.restype = U
         for i in range(0, 100):
             return_val = self.bindings.python_bind_int_tuple(1, 2)
             self.assertEqual(return_val, (1, 2))
 
-        U = typing.Tuple[str, str]
+        U = Tuple[str, str]
         self.bindings.python_bind_str_tuple.restype = U
         return_val = self.bindings.python_bind_str_tuple("Some")
         self.assertEqual(return_val, ("Some", "from Rust"))
 
         # mixed types
-        T = typing.Tuple[int, bool, Float, str]
+        T = Tuple[int, bool, Float, str]
         self.bindings.python_bind_tuple_mixed.restype = T
         return_val = self.bindings.python_bind_tuple_mixed(
             1, True, 2.5, "Some from Rust")
@@ -82,9 +82,9 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.assertEqual(result, ["Rust", "in", "Python"])
 
         # list of tuples
-        T = typing.List[typing.Tuple[int, typing.Tuple[Float, int]]]
+        T = typing.List[Tuple[int, Tuple[Float, int]]]
         self.bindings.python_bind_list2.add_argtype(0, T)
-        U = typing.List[typing.Tuple[Double, bool]]
+        U = typing.List[Tuple[Double, bool]]
         self.bindings.python_bind_list2.restype = U
         result = self.bindings.python_bind_list2(
             [(50, (1.0, 30)), (25, (0.5, 40))])
@@ -92,7 +92,7 @@ class GenerateRustToPythonBinds(unittest.TestCase):
 
         # list of lists of tuples
         T = typing.List[typing.List[
-            typing.Tuple[int, typing.Tuple[Float, int]]]]
+            Tuple[int, Tuple[Float, int]]]]
         self.bindings.python_bind_nested1_t_n_ls.add_argtype(0, T)
         self.bindings.python_bind_nested1_t_n_ls.restype = T
         result = self.bindings.python_bind_nested1_t_n_ls(
@@ -100,7 +100,7 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.assertEqual(result, [[(50, (1.0, 30))], [(25, (0.5, 40))]])
 
         # list of tuples of lists
-        T = typing.List[typing.Tuple[typing.List[int], Float]]
+        T = typing.List[Tuple[typing.List[int], Float]]
         self.bindings.python_bind_nested2_t_n_ls.add_argtype(0, T)
         self.bindings.python_bind_nested2_t_n_ls.restype = T
         result = self.bindings.python_bind_nested2_t_n_ls(

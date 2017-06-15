@@ -21,7 +21,7 @@ fn test_pytuple_macros() {
     let ptr = pytuple!(PyArg::PyBool(PyBool::from(false)),
                        PyArg::PyString(PyString::from("test")),
                        PyArg::I64(55i64))
-        .as_ptr();
+            .as_ptr();
 
     let mut pytuple = unsafe { PyTuple::from_ptr(ptr) };
     let unpacked = unpack_pytuple!(pytuple; (PyBool, PyString, I64,));
