@@ -1,4 +1,4 @@
-# RustyPy
+# RustyPy [![Build Status](https://travis-ci.org/iduartgomez/rustypy.svg?branch=master)](https://travis-ci.org/iduartgomez/rustypy)
 RustyPy is a code generator for generating binding functions between Rust and
 Python files. In addition it provides a series of types for interfacing from
 Python with Rust, with automatic type conversion handling for primitives and

@@ -6,7 +6,7 @@ import inspect
 import os
 import random
 import sys
-import typing as typ
+import typing
 from collections import namedtuple
 from importlib import import_module, invalidate_caches
 from io import StringIO
@@ -14,6 +14,7 @@ from string import Template, ascii_letters
 from textwrap import dedent, indent
 from types import FunctionType
 
+from .rswrapper.rswrapper import Double, Float, Tuple
 from .scripts import get_version
 
 rustypy_ver = get_version()
@@ -526,41 +527,8 @@ class RustFuncGen(object):
     def parse_parameter(self, p, pytypes=False):
         def inner_types(t, curr):
             add = []
-            if t is None:
-                if pytypes:
-                    curr.append('PyNone')
-                else:
-                    curr.append('PyObject::None')
-            elif issubclass(t, Tuple):
-                if pytypes:
-                    curr.append('PyTuple')
-                else:
-                    curr.append('tuple')
-                for type_ in t:
-                    inner_types(type_, add)
-            elif issubclass(t, (list, abc.MutableSequence)):
-                if pytypes:
-                    curr.append("PyList")
-                else:
-                    curr.append("Vec")
-                for type_ in t.__args__:
-                    inner_types(type_, add)
-            elif issubclass(t, (dict, abc.MutableMapping)):
-                if pytypes:
-                    curr.append("PyDict")
-                else:
-                    curr.append("HashMap")
-                for type_ in t.__args__:
-                    inner_types(type_, add)
-            elif issubclass(t, (set, abc.MutableSet)):
-                raise NotImplementedError("support for sets not added yet")
-                if pytypes:
-                    curr.append("PySet")
-                else:
-                    curr.append("Set")
-                for type_ in t.__args__:
-                    inner_types(type_, add)
-            else:
+            param = False
+            if inspect.isclass(t):
                 if t is int:
                     if pytypes:
                         param = "PyLong"
@@ -580,18 +548,54 @@ class RustFuncGen(object):
                     if pytypes:
                         param = "PyBool"
                     else:
-                        param = "bool"
-                elif (type(t) is typ.GenericMeta) \
-                        or (type(t) is typ.TypeVar) or (issubclass(t, Tuple)):
+                        param = "bool"                
+                elif issubclass(t, Tuple):
+                    if pytypes:
+                        curr.append('PyTuple')
+                    else:
+                        curr.append('tuple')
+                    for type_ in t:
+                        inner_types(type_, add)
+                    param = True
+                elif issubclass(t, (list, abc.MutableSequence)):
+                    if pytypes:
+                        curr.append("PyList")
+                    else:
+                        curr.append("Vec")
+                    for type_ in t.__args__:
+                        inner_types(type_, add)
+                    param = True
+                elif issubclass(t, (dict, abc.MutableMapping)):
+                    if pytypes:
+                        curr.append("PyDict")
+                    else:
+                        curr.append("HashMap")
+                    for type_ in t.__args__:
+                        inner_types(type_, add)
+                    param = True
+                elif issubclass(t, (set, abc.MutableSet)):
+                    raise NotImplementedError("rustypy: support for sets not added yet")
+                    if pytypes:
+                        curr.append("PySet")
+                    else:
+                        curr.append("Set")
+                    for type_ in t.__args__:
+                        inner_types(type_, add)
+                    param = True
+                elif t.__class__ is typing.GenericMeta:
                     param = "PyObject"
                 elif issubclass(t, FunctionType):
-                    param = None
-                # check if is a valid type or raise exception
-                if 'param' in locals() and param:
-                    curr.append(param)
+                    param = False
+            elif t is None:
+                if pytypes:
+                    param = 'PyNone'
                 else:
-                    print(type(t), t)
-                    raise self.InvalidType(p)
+                    param = 'PyObject::None'
+            # check if is a valid type or raise exception
+            if not isinstance(param, bool):
+                curr.append(param)
+            elif not param:
+                raise self.InvalidType(p)
             if len(add) > 0:
                 curr[-1] = (curr[-1], add)
 
@@ -871,5 +875,3 @@ def bind_py_pckg_funcs(prefixes=None):
     path = info["f_globals"]["__file__"]
     path = os.path.abspath(path)
     RustFuncGen(with_path=path, prefixes=prefixes)
-
-from .rswrapper.rswrapper import Tuple, Double, Float

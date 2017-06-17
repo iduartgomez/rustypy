@@ -18,7 +18,7 @@ def setUpModule():
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     global _rs_lib_dir
     _rs_lib_dir = os.path.join(os.path.dirname(_py_test_dir), 'src', 'rslib')
-    os.remove(os.path.join(_rs_lib_dir, 'librustypy.so'))
+    #os.remove(os.path.join(_rs_lib_dir, 'librustypy.so'))
     # load sample lib
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
@@ -27,7 +27,7 @@ def setUpModule():
     global lib_test
     lib_test = os.path.join(lib_test_entry, 'target', 'debug',
                             '{}test_lib{}'.format(pre, ext))
-    subprocess.run(['cargo', 'build'], cwd=lib_test_entry)
+    #subprocess.run(['cargo', 'build'], cwd=lib_test_entry)
 
 
 def set_python_path(self, *path):
@@ -77,7 +77,8 @@ class GeneratePythonToRustBinds(unittest.TestCase):
     def test_basics_nested_types(self):
         set_python_path(self, 'test_package', 'basics')
         import nested_types as test
-        self.gen = RustFuncGen(module=test)
+        prefixes = ["rust_bind_", "other_prefix_"]
+        self.gen = RustFuncGen(module=test, prefixes=prefixes)
         #
         src = os.path.join(_rs_lib_dir, 'tests', 'python', 'nested_types.rs')
         dst = os.path.join(_rs_lib_dir, 'tests')
@@ -108,7 +109,8 @@ class GeneratePythonToRustBinds(unittest.TestCase):
             sys.path = self._original_path
         if hasattr(self, '_original_env'):
             os.putenv('PYTHONPATH', self._original_env)
-        os.remove(self._copied)
+        if hasattr(self, '_copied'):
+            os.remove(self._copied)
 
 if __name__ == "__main__":
     unittest.main()

@@ -87,6 +87,7 @@ fn basics_nested_types() {
     let answ = basics.generic1(arg.into_object());
     assert_eq!(0, answ.extract::<c_long>(py).unwrap());
 
+    /*
     let a: PyLong = 0.to_py_object(py);
     let b: PyString = "second".to_py_object(py);
     let arg: Vec<PyObject> = vec![a.into_object(), b.into_object()];
@@ -94,4 +95,5 @@ fn basics_nested_types() {
     assert_eq!(answ.len(), 1);
     assert_eq!(&answ.get(0).unwrap().extract::<String>(py).unwrap(),
                "success");
+    */
 }

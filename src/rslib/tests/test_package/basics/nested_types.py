@@ -1,9 +1,9 @@
 import typing
-from rustypy import rust_bind
+from rustypy.pywrapper import rust_bind
 from rustypy.rswrapper import Tuple, List, Dict
 
 # generics:
-T = typing.TypeVar('A', int, str)
+T = typing.Generic[typing.TypeVar('A', int, str)]
 
 
 @rust_bind
@@ -13,6 +13,7 @@ def generic1(g_arg: T) -> T:
     return g_arg
 
 
+"""
 @rust_bind
 def generic2(g_arg: List[T]) -> List[T]:
     if g_arg[0] != 0:
@@ -21,6 +22,7 @@ def generic2(g_arg: List[T]) -> List[T]:
         raise AssertionError
     out = ['success']
     return out
+"""
 
 # containers/mappings:
 

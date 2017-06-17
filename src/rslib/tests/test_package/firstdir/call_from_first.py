@@ -1,4 +1,4 @@
-from rustypy import rust_bind
+from rustypy.pywrapper import rust_bind
 
 @rust_bind
 def first_module() -> None:

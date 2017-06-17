@@ -5,6 +5,7 @@ import os.path
 import re
 import types
 import typing
+import inspect
 from collections import deque, namedtuple
 from string import Template
 
@@ -45,17 +46,19 @@ class TupleMeta(type):
                 self.__params.append(bool)
             elif arg_t is int:
                 self.__params.append(int)
+            elif arg_t is UnsignedLongLong:
+                self.__params.append(UnsignedLongLong)
             elif arg_t is Double or arg_t is float:
                 self.__params.append(Double)
             elif arg_t is Float:
                 self.__params.append(Float)
-            elif type(arg_t) is typing.TypeVar:
-                self.__params.append(arg_t)
             elif issubclass(arg_t, Tuple):
                 self.__params.append(arg_t)
-            elif issubclass(arg_t, typing.List):
+            elif issubclass(arg_t, list):
                 self.__params.append(arg_t)
-            elif issubclass(arg_t, typing.Dict):
+            elif issubclass(arg_t, dict):
+                self.__params.append(arg_t)
+            elif arg_t.__class__ is typing.GenericMeta:
                 self.__params.append(arg_t)
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \

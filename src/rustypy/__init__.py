@@ -1,3 +1,1 @@
-from .pywrapper import rust_bind
-
-__version__ = '0.1.13'
+__version__ = '0.1.15'
