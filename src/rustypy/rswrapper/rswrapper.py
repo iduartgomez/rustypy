@@ -21,7 +21,7 @@ c_backend = get_rs_lib()
 
 FIND_TYPE = re.compile("type\((.*)\)")
 
-RustType = namedtuple('RustType', ['equiv', 'ref', 'mutref'])
+RustType = namedtuple('RustType', ['equiv', 'ref', 'mutref', 'raw'])
 
 Float = type('Float', (float,), {'_definition': ctypes.c_float})
 Double = type('Double', (float,), {'_definition': ctypes.c_double})
@@ -124,13 +124,19 @@ class OpaquePtr(object):
 def _get_signature_types(params):
     def inner_types(t):
         t = t.strip()
-        mutref, ref = False, False
-        if "&mut" in t or "*mut" in t:
-            type_ = t.replace("&mut", '').replace("*mut", '').strip()
+        mutref, ref, raw = False, False, False
+        if "&mut" in t:
+            type_ = t.replace("&mut", '').strip()
             mutref = True
-        elif "&" in t or "*const" in t:
-            type_ = t.replace('&', '').replace("*const", '').strip()
+        elif "*mut" in t:
+            type_ = t.replace("*mut", '').strip()
+            mutref, raw = True, True
+        elif "&" in t:
+            type_ = t.replace('&', '').strip()
             ref = True
+        elif "*const" in t:
+            type_ = t.replace("*const", '').strip()
+            ref, raw = True, True
         else:
             type_ = t
         try:
@@ -139,23 +145,23 @@ def _get_signature_types(params):
             raise TypeError("rustypy: type not supported: {}".format(type_))
         else:
             if equiv == 'int':
-                return RustType(equiv=int, ref=ref, mutref=mutref)
+                return RustType(equiv=int, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'float':
-                return RustType(equiv=Float, ref=ref, mutref=mutref)
+                return RustType(equiv=Float, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'double':
-                return RustType(equiv=Double, ref=ref, mutref=mutref)
+                return RustType(equiv=Double, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'str':
-                return RustType(equiv=str, ref=True, mutref=False)
+                return RustType(equiv=str, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'bool':
-                return RustType(equiv=bool, ref=ref, mutref=mutref)
+                return RustType(equiv=bool, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'tuple':
-                return RustType(equiv=tuple, ref=True, mutref=False)
+                return RustType(equiv=tuple, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'list':
-                return RustType(equiv=list, ref=True, mutref=mutref)
+                return RustType(equiv=list, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'OpaquePtr':
-                return RustType(equiv=OpaquePtr, ref=True, mutref=mutref)
+                return RustType(equiv=OpaquePtr, ref=ref, mutref=mutref, raw=raw)
             elif equiv == 'None':
-                return RustType(equiv=None, ref=False, mutref=False)
+                return RustType(equiv=None, ref=False, mutref=False, raw=False)
 
     params = [x for x in params.split(';') if x != '']
     param_types = []
@@ -447,7 +453,7 @@ class RustBinds(object):
             if issubclass(annotation, dict):
                 real_t = self.__type_hints['real_return']
                 self.__type_hints['real_return'] = RustType(
-                    equiv=dict, ref=True, mutref=real_t.mutref)
+                    equiv=dict, ref=real_t.ref, mutref=real_t.mutref, raw=real_t.raw)
                 r_args = [x for x in self.__type_hints['real_argtypes']]
                 r_args.append(self.real_restype)
                 RustBinds.decl_C_args(self._rs_fn, r_args)
@@ -475,7 +481,7 @@ class RustBinds(object):
             elif real_t.equiv is OpaquePtr:
                 if issubclass(hint, dict):
                     self.__type_hints['real_argtypes'][position] = RustType(
-                        equiv=dict, ref=True, mutref=real_t.mutref)
+                        equiv=dict, ref=real_t.ref, mutref=real_t.mutref, raw=real_t.raw)
                     r_args = [x for x in self.__type_hints['real_argtypes']]
                     r_args.append(self.real_restype)
                     RustBinds.decl_C_args(self._rs_fn, r_args)
