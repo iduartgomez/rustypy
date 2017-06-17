@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PyBool","Analog to a Python boolean type."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["IntoIter",""],["PyList","An analog of a Python list which contains an undefined number of elements of a single kind, of any supported type."]]});

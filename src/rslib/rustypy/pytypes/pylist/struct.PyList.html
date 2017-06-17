@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `PyList` struct in crate `rustypy`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, PyList">
+
+    <title>rustypy::pytypes::pylist::PyList - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Struct PyList</p><div class="block items"><ul><li><a href="#methods">Methods</a></li><li><a href="#implementations">Trait Implementations</a></li></ul></div><p class='location'><a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a>::<wbr><a href='index.html'>pylist</a></p><script>window.sidebarCurrent = {name: 'PyList', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a>::<wbr><a href='index.html'>pylist</a>::<wbr><a class="struct" href=''>PyList</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#58-60' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct PyList { /* fields omitted */ }</pre><div class='docblock'><p>An analog of a Python list which contains an undefined number of elements of
+a single kind, of any <a href="../../../rustypy/pytypes/enum.PyArg.html">supported type</a>.</p>
+
+<p>Read the <a href="index.html">module docs</a> for more information.</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#62-122' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span></h4>
+<div class='docblock'><p>Constructs a new, empty <code>PyList&lt;T&gt;</code>.</p>
+
+<p>The vector will not allocate until elements are pushed onto it.</p>
+</div><h4 id='method.remove' class="method"><span id='remove.v' class='invisible'><code>fn <a href='#method.remove' class='fnname'>remove</a>&lt;T&gt;(&amp;mut self, index: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; T <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>&gt;,&nbsp;</span></code></span></h4>
+<div class='docblock'><p>Removes and returns the element at position <code>index</code> within the vector,
+shifting all elements after it to the left.</p>
+</div><h4 id='method.pop' class="method"><span id='pop.v' class='invisible'><code>fn <a href='#method.pop' class='fnname'>pop</a>&lt;T&gt;(&amp;mut self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;T&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>&gt;,&nbsp;</span></code></span></h4>
+<div class='docblock'><p>Removes the last element from a vector and returns it, or <code>None</code> if it is empty.</p>
+</div><h4 id='method.len' class="method"><span id='len.v' class='invisible'><code>fn <a href='#method.len' class='fnname'>len</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the number of elements in the PyList.</p>
+</div><h4 id='method.push' class="method"><span id='push.v' class='invisible'><code>fn <a href='#method.push' class='fnname'>push</a>&lt;T&gt;(&amp;mut self, a: T) <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;T&gt;,&nbsp;</span></code></span></h4>
+<div class='docblock'><p>Appends an element to the back of a collection.</p>
+
+<h2 id='panics' class='section-header'><a href='#panics'>Panics</a></h2>
+<p>Panics if the number of elements in the vector overflows a usize.</p>
+</div><h4 id='method.from_ptr' class="method"><span id='from_ptr.v' class='invisible'><code>unsafe fn <a href='#method.from_ptr' class='fnname'>from_ptr</a>(ptr: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a>) -&gt; <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span></h4>
+<div class='docblock'><p>Get a PyList from a previously boxed raw pointer.</p>
+</div><h4 id='method.as_ptr' class="method"><span id='as_ptr.v' class='invisible'><code>fn <a href='#method.as_ptr' class='fnname'>as_ptr</a>(self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span></h4>
+<div class='docblock'><p>Return a PyList as a raw pointer.</p>
+</div><h4 id='method.into_iter' class="method"><span id='into_iter.v' class='invisible'><code>fn <a href='#method.into_iter' class='fnname'>into_iter</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>&gt;&gt;(self) -&gt; <a class="struct" href="../../../rustypy/pytypes/pylist/struct.IntoIter.html" title="struct rustypy::pytypes::pylist::IntoIter">IntoIter</a>&lt;T&gt;</code></span></h4>
+<div class='docblock'><p>Consume self and turn it into an iterator.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#57' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#57' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a> for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#57' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;T&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/traits/trait.FromIterator.html" title="trait core::iter::traits::FromIterator">FromIterator</a>&lt;T&gt; for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a> <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;T&gt;,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#124-134' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from_iter' class="method"><span id='from_iter.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/iter/traits/trait.FromIterator.html#tymethod.from_iter' class='fnname'>from_iter</a>&lt;I:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/traits/trait.IntoIterator.html" title="trait core::iter::traits::IntoIterator">IntoIterator</a>&lt;Item = T&gt;&gt;(iter: I) -&gt; Self</code></span></h4>
+<div class='docblock'><p>Creates a value from an iterator. <a href="https://doc.rust-lang.org/nightly/core/iter/traits/trait.FromIterator.html#tymethod.from_iter">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;T&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;T&gt;&gt; for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a> <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;T&gt;,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#158-164' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.into' class="method"><span id='into.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html#tymethod.into' class='fnname'>into</a>(self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;T&gt;</code></span></h4>
+<div class='docblock'><p>Performs the conversion.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;T&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;T&gt;&gt; for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a> <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;T&gt;,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#166-172' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from' class="method"><span id='from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html#tymethod.from' class='fnname'>from</a>(v: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;T&gt;) -&gt; <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span></h4>
+<div class='docblock'><p>Performs the conversion.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/index/trait.Index.html" title="trait core::ops::index::Index">Index</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt; for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#174-179' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='associatedtype.Output' class="type"><span id='Output.t' class='invisible'><code>type <a href='https://doc.rust-lang.org/nightly/core/ops/index/trait.Index.html#associatedtype.Output' class="type">Output</a> = <a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a></code></span></h4>
+<div class='docblock'><p>The returned type after indexing</p>
+</div><h4 id='method.index' class="method"><span id='index.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/index/trait.Index.html#tymethod.index' class='fnname'>index</a>(&amp;self, index: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; &amp;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a></code></span></h4>
+<div class='docblock'><p>The method for the indexing (<code>container[index]</code>) operation</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/index/trait.IndexMut.html" title="trait core::ops::index::IndexMut">IndexMut</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt; for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#181-185' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.index_mut' class="method"><span id='index_mut.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/index/trait.IndexMut.html#tymethod.index_mut' class='fnname'>index_mut</a>(&amp;mut self, index: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; &amp;mut <a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a></code></span></h4>
+<div class='docblock'><p>The method for the mutable indexing (<code>container[index]</code>) operation</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;<a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>&gt; for <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rustypy/pytypes/mod.rs.html#138-148' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from-1' class="method"><span id='from.v-1' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html#tymethod.from' class='fnname'>from</a>(a: <a class="enum" href="../../../rustypy/pytypes/enum.PyArg.html" title="enum rustypy::pytypes::PyArg">PyArg</a>) -&gt; <a class="struct" href="../../../rustypy/pytypes/pylist/struct.PyList.html" title="struct rustypy::pytypes::pylist::PyList">PyList</a></code></span></h4>
+<div class='docblock'><p>Performs the conversion.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "rustypy";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

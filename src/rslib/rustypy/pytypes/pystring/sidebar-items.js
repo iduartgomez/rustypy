@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PyString","An analog of a Python string."]]});

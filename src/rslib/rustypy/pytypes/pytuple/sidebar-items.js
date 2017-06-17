@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PyTuple","An analog of a Python tuple, will accept an undefined number of other supported types."]]});

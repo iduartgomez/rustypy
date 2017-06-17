@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `pylist` mod in crate `rustypy`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, pylist">
+
+    <title>rustypy::pytypes::pylist - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Module pylist</p><div class="block items"><ul><li><a href="#structs">Structs</a></li></ul></div><p class='location'><a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a></p><script>window.sidebarCurrent = {name: 'pylist', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../../index.html'>rustypy</a>::<wbr><a href='../index.html'>pytypes</a>::<wbr><a class="mod" href=''>pylist</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/rustypy/pytypes/pylist.rs.html#1-322' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>An analog of a Python list which contains elements of a single type, will accept an
+undefined number of one (and just one) of any other supported type (including other
+PyLists).</p>
+
+<p>PyList can be constructed from other iterable types as long as the inner type is
+supported (a copy will be performed in case is necessary).</p>
+
+<pre class="rust rust-example-rendered">
+<span class="ident">PyList</span>::<span class="ident">from_iter</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="number">1u32</span>; <span class="number">3</span>]);
+<span class="ident">PyList</span>::<span class="ident">from</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="number">1u32</span>; <span class="number">3</span>]);</pre>
+
+<p>You can also use the typical vector interfaces (push, pop, remove, etc.) as long as the
+type is supported (check <a href="../rustypy/pytypes/enum.PyArg.html">PyArg</a> variants). PyList
+types and their content can also be implicitly converted through an special iterator type.</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">PyList</span>::<span class="ident">new</span>();
+<span class="kw">for</span> <span class="ident">e</span> <span class="kw">in</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u32</span>, <span class="number">1</span>, <span class="number">3</span>] {
+    <span class="ident">l</span>.<span class="ident">push</span>(<span class="ident">e</span>);
+}
+
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="ident">PyList</span>::<span class="ident">into_iter</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>(<span class="ident">l</span>);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">iter</span>.<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;&gt;</span>(), <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u32</span>, <span class="number">1</span>, <span class="number">3</span>])</pre>
+
+<p>When extracting in Python with the FFI, elements are moved whenever is possible, not copied
+and when free&#39;d all the original elements are dropped.</p>
+
+<h1 id='safety' class='section-header'><a href='#safety'>Safety</a></h1>
+<p>PyList must be passed between Rust and Python as a raw pointer. You can get a raw pointer
+using <code>as_ptr</code> and convert from a raw pointer using the &quot;static&quot;
+method <code>PyList::from_ptr</code> which is unsafe as it requires dereferencing a raw pointer.</p>
+
+<p>For convinience there are some methods to perform conversions to Vec<T> from PyList<PyArg>,
+while none of those are unsafe per se, they require providing the expected PyArg enum variant.
+In case the expected variant is wrong, the process will abort and exit as it&#39;s not possible
+to handle errors acrosss the FFI boundary.</p>
+
+<h2 id='unpacking-pylist-from-python' class='section-header'><a href='#unpacking-pylist-from-python'>Unpacking PyList from Python</a></h2>
+<p>Is recommended to use the <a href="../../macro.unpack_pylist!.html">unpack_pylist!</a> macro in order
+to convert a PyList to a Rust native type. Check the macro documentation for more info.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.IntoIter.html"
+                                  title='struct rustypy::pytypes::pylist::IntoIter'>IntoIter</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.PyList.html"
+                                  title='struct rustypy::pytypes::pylist::PyList'>PyList</a></td>
+                           <td class='docblock-short'>
+                                <p>An analog of a Python list which contains an undefined number of elements of
+a single kind, of any <a href="../../../rustypy/pytypes/enum.PyArg.html">supported type</a>.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "rustypy";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>
