@@ -41,12 +41,22 @@ use pytypes::PyArg;
 /// Read the [module docs](index.html) for more information.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PyTuple {
-    pub elem: PyArg,
-    pub idx: usize,
-    pub next: Option<Box<PyTuple>>,
+    pub(crate) elem: PyArg,
+    pub(crate) idx: usize,
+    pub(crate) next: Option<Box<PyTuple>>,
 }
 
 impl<'a> PyTuple {
+    #[doc(hidden)]
+    pub fn new(elem: PyArg, idx: usize, next: Option<Box<PyTuple>>) -> PyTuple {
+        PyTuple { elem, idx, next }
+    }
+
+    #[doc(hidden)]
+    pub fn set_next(&mut self, next: Option<Box<PyTuple>>) {
+        self.next = next;
+    }
+
     /// Get a PyTuple from a previously boxed raw pointer.
     pub unsafe fn from_ptr(ptr: *mut PyTuple) -> PyTuple {
         *(Box::from_raw(ptr))
@@ -151,11 +161,11 @@ macro_rules! pytuple {
         let mut tuple = Vec::new();
         cnt = 0usize;
         $(
-            let tuple_e = PyTuple {
-                elem: $elem,
-                idx: cnt,
-                next: None,
-            };
+            let tuple_e = PyTuple::new(
+                $elem,
+                cnt,
+                None,
+            );
             tuple.push(tuple_e);
             cnt += 1;
         )*;
@@ -165,7 +175,7 @@ macro_rules! pytuple {
             let idx = t_len - i;
             let last = tuple.pop().unwrap();
             let prev = tuple.get_mut(idx).unwrap();
-            prev.next = Some(Box::new(last));
+            prev.set_next(Some(Box::new(last)));
         }
         tuple.pop().unwrap()
     }};
@@ -175,11 +185,11 @@ macro_rules! pytuple {
         let mut tuple = Vec::new();
         cnt = 0usize;
         $(
-            let tuple_e = PyTuple {
-                elem: $elem,
-                idx: cnt,
-                next: None,
-            };
+            let tuple_e = PyTuple::new(
+                $elem,
+                cnt,
+                None,
+            );
             tuple.push(tuple_e);
             cnt += 1;
         )*;
@@ -189,7 +199,7 @@ macro_rules! pytuple {
             let idx = t_len - i;
             let last = tuple.pop().unwrap();
             let prev = tuple.get_mut(idx).unwrap();
-            prev.next = Some(Box::new(last));
+            prev.set_next(Some(Box::new(last)));
         }
         tuple.pop().unwrap()
     }};
@@ -219,7 +229,7 @@ macro_rules! pytuple {
 /// # hm.insert(PyString::from("two"), vec![3_i32, 2, 1]);
 /// # let mut pytuple = pytuple!(PyArg::PyDict(PyDict::from(hm.clone()).as_ptr()),
 /// #                            PyArg::PyDict(PyDict::from(hm.clone()).as_ptr())).as_ptr();
-/// // tuple from Python: ({"one": [0, 1, 3], "two": [3, 2, 1]})
+/// // tuple from Python: ({"one": [0, 1, 3]}, {"two": [3, 2, 1]})
 /// let mut pytuple = unsafe { PyTuple::from_ptr(pytuple) };
 /// let unpacked = unpack_pytuple!(pytuple; ({PyDict{(PyString, PyList{I32 => i64})}},
 ///                                          {PyDict{(PyString, PyList{I32 => i64})}},));

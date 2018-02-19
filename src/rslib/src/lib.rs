@@ -11,8 +11,8 @@
 #![crate_type = "cdylib"]
 
 extern crate cpython;
-extern crate syn;
 extern crate libc;
+extern crate syn;
 extern crate walkdir;
 
 use std::io::Read;
@@ -45,13 +45,15 @@ pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> 
         return PyString::from(format!("crate in root directory not allowed")).as_ptr();
     };
     for entry in walkdir::WalkDir::new(dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| if let Some(ext) = e.path().extension() {
-                        ext == "rs"
-                    } else {
-                        false
-                    }) {
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            if let Some(ext) = e.path().extension() {
+                ext == "rs"
+            } else {
+                false
+            }
+        }) {
         if let Err(err) = parse_file(krate_data, entry.path()) {
             return err;
         }
@@ -63,15 +65,17 @@ fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyStri
     let mut f = match File::open(path) {
         Ok(file) => file,
         Err(_) => {
-            return Err(PyString::from(format!("path not found: {}", path.to_str().unwrap()))
-                           .as_ptr())
+            return Err(
+                PyString::from(format!("path not found: {}", path.to_str().unwrap())).as_ptr(),
+            )
         }
     };
     let mut src = String::new();
     if f.read_to_string(&mut src).is_err() {
-        return Err(PyString::from(format!("failed to read the source file: {}",
-                                          path.to_str().unwrap()))
-                           .as_ptr());
+        return Err(PyString::from(format!(
+            "failed to read the source file: {}",
+            path.to_str().unwrap()
+        )).as_ptr());
     }
     match syn::parse_crate(&src) {
         Ok(krate) => {
@@ -110,16 +114,15 @@ impl KrateData {
             } = v;
             if !args.is_empty() {
                 fndef.push_str("::");
-                args.iter()
-                    .fold(&mut fndef, |mut acc, arg| {
-                        if let Ok(repr) = type_repr(arg, None) {
-                            acc.push_str(&repr);
-                            acc.push(';');
-                        } else {
-                            add = false;
-                        }
-                        acc
-                    });
+                args.iter().fold(&mut fndef, |acc, arg| {
+                    if let Ok(repr) = type_repr(arg, None) {
+                        acc.push_str(&repr);
+                        acc.push(';');
+                    } else {
+                        add = false;
+                    }
+                    acc
+                });
             }
             if add {
                 match output {
@@ -151,12 +154,11 @@ impl KrateData {
                         _ => continue,
                     }
                 }
-                self.functions
-                    .push(FnDef {
-                              name,
-                              args: args,
-                              output: output,
-                          });
+                self.functions.push(FnDef {
+                    name,
+                    args: args,
+                    output: output,
+                });
                 break;
             }
         }
@@ -223,11 +225,9 @@ impl syn::visit::Visitor for KrateData {
                     self.add_fn(name, &*fn_decl)
                 }
             }
-            syn::ItemKind::Mod(Some(ref items)) => {
-                for item in items {
-                    self.visit_item(item);
-                }
-            }
+            syn::ItemKind::Mod(Some(ref items)) => for item in items {
+                self.visit_item(item);
+            },
             _ => {
                 /*
                 ignored:

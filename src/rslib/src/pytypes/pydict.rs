@@ -56,7 +56,7 @@
 //! to convert a PyDict to a Rust native type. Check the macro documentation for more info.
 
 use libc::size_t;
-use super::{PyArg, PyBool, PyString, PyList, PyTuple};
+use super::{PyArg, PyBool, PyList, PyString, PyTuple};
 
 use std::collections::HashMap;
 use std::collections::hash_map::Drain;
@@ -69,7 +69,8 @@ use std::mem;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PyDict<K>
-    where K: Eq + Hash + PyDictKey
+where
+    K: Eq + Hash + PyDictKey,
 {
     _inner: HashMap<K, PyArg>,
 }
@@ -77,11 +78,14 @@ pub struct PyDict<K>
 pub(crate) use self::key_bound::PyDictKey;
 
 impl<K> PyDict<K>
-    where K: Eq + Hash + PyDictKey
+where
+    K: Eq + Hash + PyDictKey,
 {
     /// Creates an empty PyDict.
     pub fn new() -> PyDict<K> {
-        PyDict { _inner: HashMap::new() }
+        PyDict {
+            _inner: HashMap::new(),
+        }
     }
 
     /// Inserts a key-value pair into the map.
@@ -92,8 +96,9 @@ impl<K> PyDict<K>
     /// The key is not updated, though; this matters for types that can be == without being
     /// identical. See the module-level documentation for more.
     pub fn insert<V>(&mut self, k: K, v: V) -> Option<V>
-        where PyArg: From<V>,
-              V: From<PyArg>
+    where
+        PyArg: From<V>,
+        V: From<PyArg>,
     {
         if let Some(val) = self._inner.insert(k, PyArg::from(v)) {
             Some(V::from(val))
@@ -108,7 +113,8 @@ impl<K> PyDict<K>
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
     pub fn remove<V>(&mut self, k: &K) -> Option<V>
-        where V: From<PyArg>
+    where
+        V: From<PyArg>,
     {
         if let Some(val) = self._inner.remove(k) {
             Some(V::from(val))
@@ -122,7 +128,8 @@ impl<K> PyDict<K>
     /// The key may be any borrowed form of the map's key type, but Hash and Eq on the borrowed
     /// form must match those for the key type.
     pub fn get<'a, V>(&'a self, k: &K) -> Option<&'a V>
-        where PyArg: AsRef<V>
+    where
+        PyArg: AsRef<V>,
     {
         if let Some(rval) = self._inner.get(k) {
             Some(rval.as_ref())
@@ -169,7 +176,8 @@ impl<K> PyDict<K>
     /// Consumes self and returns a HashMap, takes one type parameter and transforms inner
     /// content to that type.
     pub fn into_hashmap<V>(mut self) -> HashMap<K, V>
-        where V: From<PyArg>
+    where
+        V: From<PyArg>,
     {
         HashMap::from_iter(self._inner.drain().map(|(k, v)| (k, <V>::from(v))))
     }
@@ -184,8 +192,9 @@ impl<K> PyDict<K>
 }
 
 impl<K, V> FromIterator<(K, V)> for PyDict<K>
-    where K: PyDictKey + Eq + Hash,
-          PyArg: From<V>
+where
+    K: PyDictKey + Eq + Hash,
+    PyArg: From<V>,
 {
     fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
         let mut hm = HashMap::new();
@@ -197,8 +206,9 @@ impl<K, V> FromIterator<(K, V)> for PyDict<K>
 }
 
 impl<K, V> From<HashMap<K, V>> for PyDict<K>
-    where K: PyDictKey + Eq + Hash,
-          PyArg: From<V>
+where
+    K: PyDictKey + Eq + Hash,
+    PyArg: From<V>,
 {
     fn from(mut hm: HashMap<K, V>) -> PyDict<K> {
         PyDict {
@@ -215,8 +225,9 @@ pub struct IntoIter<K, V> {
 }
 
 impl<K, V> Iterator for IntoIter<K, V>
-    where V: From<PyArg>,
-          K: PyDictKey + Eq + Hash
+where
+    V: From<PyArg>,
+    K: PyDictKey + Eq + Hash,
 {
     type Item = (K, V);
     fn next(&mut self) -> Option<(K, V)> {
@@ -226,11 +237,10 @@ impl<K, V> Iterator for IntoIter<K, V>
         }
     }
     fn collect<B>(self) -> B
-        where B: FromIterator<Self::Item>
+    where
+        B: FromIterator<Self::Item>,
     {
-        self.inner
-            .map(|(k, v)| (k, <V>::from(v)))
-            .collect::<B>()
+        self.inner.map(|(k, v)| (k, <V>::from(v))).collect::<B>()
     }
 }
 
@@ -249,13 +259,11 @@ impl<K, V> Iterator for IntoIter<K, V>
 /// ```
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
+/// # use std::iter::FromIterator;
 /// use rustypy::{PyDict, PyString};
 /// use std::collections::HashMap;
 ///
-/// let mut hm = HashMap::new();
-/// for (k, v) in vec![(0_i32, "Hello"), (1_i32, " "), (2_i32, "World!")] {
-///     hm.insert(k, v);
-/// }
+/// let mut hm = HashMap::from_iter(vec![(0_i32, "Hello"), (1_i32, " "), (2_i32, "World!")]);
 /// let dict = PyDict::from(hm).as_ptr();
 /// let unpacked = unpack_pydict!(dict; PyDict{(i32, PyString => String)});
 /// # }
@@ -329,6 +337,7 @@ macro_rules! unpack_pydict {
     }};
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub extern "C" fn pydict_new(k_type: &PyDictK) -> *mut size_t {
     match *(k_type) {
@@ -375,11 +384,14 @@ pub extern "C" fn pydict_new(k_type: &PyDictK) -> *mut size_t {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
-pub unsafe extern "C" fn pydict_insert(dict: *mut size_t,
-                                       k_type: &PyDictK,
-                                       key: *mut PyArg,
-                                       value: *mut PyArg) {
+pub unsafe extern "C" fn pydict_insert(
+    dict: *mut size_t,
+    k_type: &PyDictK,
+    key: *mut PyArg,
+    value: *mut PyArg,
+) {
     macro_rules! _match_pyarg_in {
        ($p:ident; $v:tt) => {{
            match *(Box::from_raw($p as *mut PyArg)) {
@@ -456,7 +468,7 @@ pub unsafe extern "C" fn pydict_insert(dict: *mut size_t,
 #[test]
 fn drain_dict() {
     unsafe {
-        let match_kv = |kv: *mut PyDictPair| match *Box::from_raw((kv as *mut PyDictPair)) {
+        let match_kv = |kv: *mut PyDictPair| match *Box::from_raw(kv as *mut PyDictPair) {
             PyDictPair {
                 key: PyArg::U16(0),
                 val: PyArg::PyString(val),
@@ -493,6 +505,7 @@ fn drain_dict() {
     }
 }
 
+#[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pydict_get_drain(dict: *mut size_t, k_type: &PyDictK) -> *mut size_t {
     match *(k_type) {
@@ -576,9 +589,10 @@ pub unsafe extern "C" fn pydict_free_kv(pair: *mut PyDictPair) {
 
 #[doc(hidden)]
 #[no_mangle]
-pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t,
-                                              k_type: &PyDictK)
-                                              -> *mut PyDictPair {
+pub unsafe extern "C" fn pydict_drain_element(
+    iter: *mut size_t,
+    k_type: &PyDictK,
+) -> *mut PyDictPair {
     fn _get_null() -> *mut PyDictPair {
         let p: *mut PyDictPair = ptr::null_mut();
         p
@@ -659,10 +673,11 @@ pub unsafe extern "C" fn pydict_drain_element(iter: *mut size_t,
 
 #[doc(hidden)]
 #[no_mangle]
-pub unsafe extern "C" fn pydict_get_mut_element(dict: *mut size_t,
-                                                k_type: &PyDictK,
-                                                key: *mut size_t)
-                                                -> *mut size_t {
+pub unsafe extern "C" fn pydict_get_mut_element(
+    dict: *mut size_t,
+    k_type: &PyDictK,
+    key: *mut size_t,
+) -> *mut size_t {
     macro_rules! _match_pyarg_out {
         ($p:ident) => {{
             match *$p {
