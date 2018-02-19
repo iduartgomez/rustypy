@@ -70,14 +70,16 @@ impl PyList {
     /// Removes and returns the element at position ```index``` within the vector,
     /// shifting all elements after it to the left.
     pub fn remove<T>(&mut self, index: usize) -> T
-        where T: From<PyArg>
+    where
+        T: From<PyArg>,
     {
         T::from(self._inner.remove(index))
     }
 
     /// Removes the last element from a vector and returns it, or ```None``` if it is empty.
     pub fn pop<T>(&mut self) -> Option<T>
-        where T: From<PyArg>
+    where
+        T: From<PyArg>,
     {
         if let Some(val) = self._inner.pop() {
             Some(T::from(val))
@@ -97,7 +99,8 @@ impl PyList {
     ///
     /// Panics if the number of elements in the vector overflows a usize.
     pub fn push<T>(&mut self, a: T)
-        where PyArg: From<T>
+    where
+        PyArg: From<T>,
     {
         self._inner.push(PyArg::from(a))
     }
@@ -122,7 +125,8 @@ impl PyList {
 }
 
 impl<T> FromIterator<T> for PyList
-    where PyArg: From<T>
+where
+    PyArg: From<T>,
 {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut c = PyList::new();
@@ -139,7 +143,8 @@ pub struct IntoIter<T> {
 }
 
 impl<T> Iterator for IntoIter<T>
-    where T: From<PyArg>
+where
+    T: From<PyArg>,
 {
     type Item = T;
     fn next(&mut self) -> Option<T> {
@@ -149,14 +154,16 @@ impl<T> Iterator for IntoIter<T>
         }
     }
     fn collect<B>(self) -> B
-        where B: FromIterator<Self::Item>
+    where
+        B: FromIterator<Self::Item>,
     {
         self.inner.map(|x| <T>::from(x)).collect::<B>()
     }
 }
 
 impl<T> Into<Vec<T>> for PyList
-    where PyArg: Into<T>
+where
+    PyArg: Into<T>,
 {
     fn into(mut self) -> Vec<T> {
         self._inner.drain(..).map(|x| PyArg::into(x)).collect()
@@ -164,10 +171,13 @@ impl<T> Into<Vec<T>> for PyList
 }
 
 impl<T> From<Vec<T>> for PyList
-    where PyArg: From<T>
+where
+    PyArg: From<T>,
 {
     fn from(mut v: Vec<T>) -> PyList {
-        PyList { _inner: v.drain(..).map(|x| PyArg::from(x)).collect() }
+        PyList {
+            _inner: v.drain(..).map(|x| PyArg::from(x)).collect(),
+        }
     }
 }
 
@@ -184,110 +194,12 @@ impl<'a> IndexMut<usize> for PyList {
     }
 }
 
-/// Consumes a `Box<PyList<PyArg(T)>>` content and returns a `Vec<T>` from it, no copies
-/// are performed in the process.
-///
-/// All inner elements are moved out if possible, if not (like with PyTuples) are copied.
-/// PyTuple variants are destructured into Rust tuples which contain the appropiate Rust types
-/// (valid syntax for [unpack_pytuple!](../rustypy/macro.unpack_pytuple!.html) macro must
-/// be provided). The same for other container types (inner PyList, PyDict, etc.).
-///
-/// # Examples
-///
-/// A simple PyList which contains PyString types::
-///
-/// ```
-/// # #[macro_use] extern crate rustypy;
-/// # fn main(){
-/// use rustypy::{PyList, PyString};
-/// let string_list = Box::new(PyList::from(vec!["Python", "in", "Rust"]));
-/// let unpacked = unpack_pylist!(string_list; PyList{PyString => PyString});
-/// # }
-/// ```
-///
-/// And an other with i32:
-///
-/// ```
-/// # #[macro_use] extern crate rustypy;
-/// # fn main(){
-/// use rustypy::PyList;
-/// let int_list = Box::new(PyList::from(vec![1i32; 5]));
-/// let unpacked = unpack_pylist!(int_list; PyList{I32 => i32});
-/// # }
-/// ```
-///
-/// It can contain nested containers. A PyList which contains PyTuples which contain a list
-/// of i64 PyTuples and a single f32:
-///
-/// ```
-/// # #[macro_use] extern crate rustypy;
-/// # fn main(){
-/// #    use rustypy::{PyList, PyArg};
-/// #    let list = PyList::from(vec![
-/// #        pytuple!(PyArg::PyList(Box::new(PyList::from(vec![
-/// #                    pytuple!(PyArg::I64(1), PyArg::I64(2), PyArg::I64(3))]))),
-/// #                 PyArg::F32(0.1)),
-/// #        pytuple!(PyArg::PyList(Box::new(PyList::from(vec![
-/// #                    pytuple!(PyArg::I64(3), PyArg::I64(2), PyArg::I64(1))]))),
-/// #                 PyArg::F32(0.2))
-/// #        ]).as_ptr();
-/// // list from Python: [([(i64; 3)], f32)]
-/// let list = unsafe { Box::new(PyList::from_ptr(list)) };
-/// let unpacked = unpack_pylist!(list;
-///     PyList{
-///         PyTuple{(
-///             {PyList{PyTuple{(I64, I64, I64,)}}}, F32,
-///         )}
-///     });
-/// assert_eq!(vec![(vec![(1, 2, 3,)], 0.1), (vec![(3, 2, 1,)], 0.2)], unpacked);
-/// # }
-/// ```
-///
-#[macro_export]
-macro_rules! unpack_pylist {
-    ( $pylist:ident; PyList { $o:tt { $($t:tt)* } } ) => {{
-        let mut unboxed = *($pylist);
-        use std::collections::VecDeque;
-        let mut list = VecDeque::with_capacity(unboxed.len());
-        for _ in 0..unboxed.len() {
-            match unboxed.pop() {
-                Some(PyArg::$o(val)) => {
-                    let inner = unpack_pylist!(val; $o { $($t)* });
-                    list.push_front(inner);
-                },
-                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
-                None => {}
-            }
-        };
-        Vec::from(list)
-    }};
-    ( $pytuple:ident; PyTuple { $t:tt } ) => {{
-        let mut unboxed = *($pytuple);
-        unpack_pytuple!(unboxed; $t)
-    }};
-    ( $pylist:ident; PyList{$t:tt => $type_:ty} ) => {{
-        use rustypy::PyArg;
-        let mut unboxed = *($pylist);
-        use std::collections::VecDeque;
-        let mut list = VecDeque::with_capacity(unboxed.len());
-        for _ in 0..unboxed.len() {
-            match unboxed.pop() {
-                Some(PyArg::$t(val)) => { list.push_front(<$type_>::from(val)); },
-                Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
-                None => {}
-            }
-        };
-        Vec::from(list)
-    }};
-    ( $pydict:ident; PyDict{$t:tt} ) => {{
-        unpack_pydict!( $pydict; PyDict{$t} )
-    }};
-}
-
 #[doc(hidden)]
 #[no_mangle]
 pub unsafe extern "C" fn pylist_new(len: usize) -> *mut PyList {
-    let list = PyList { _inner: Vec::with_capacity(len) };
+    let list = PyList {
+        _inner: Vec::with_capacity(len),
+    };
     list.as_ptr()
 }
 

@@ -23,6 +23,7 @@ use std::ptr;
 use libc::size_t;
 
 pub mod pytypes;
+mod macros;
 
 // re-export
 pub use self::pytypes::pybool::PyBool;
