@@ -45,8 +45,8 @@ mod inner_types {
                 PyArg::PyTuple(val) => {
                     $i += 1;
                     if $i == 0 {}; // stub to remove warning...
+                    let mut val = unsafe { PyTuple::from_ptr(val) };
                     let mut cnt = 0;
-                    let mut val = *(val); // move out of box
                     ($(
                         unpack_pytuple!(val; cnt; elem: $p)
                     ,)*)
