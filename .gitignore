@@ -1,0 +1,10 @@
+# Python generated
+*.egg-info
+__pycache__
+
+# Rust generated
+Cargo.lock
+target
+librustypy*
+
+.vscode

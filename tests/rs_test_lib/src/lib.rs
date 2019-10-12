@@ -30,20 +30,20 @@ pub mod primitives {
         assert_eq!(string, "From Python.");
         string.push_str(" Added in Rust.");
 
-        PyString::from(string).as_ptr()
+        PyString::from(string).into_raw()
     }
 
     #[no_mangle]
     pub extern "C" fn python_bind_bool(ptr: *mut PyBool) -> *mut PyBool {
         let bool_t = unsafe { PyBool::from_ptr_into_bool(ptr) };
         assert!(bool_t);
-        PyBool::from(false).as_ptr()
+        PyBool::from(false).into_raw()
     }
 }
 
 #[no_mangle]
 pub extern "C" fn python_bind_int_tuple(e1: i32, e2: i32) -> *mut PyTuple {
-    pytuple!(PyArg::I32(e1), PyArg::I32(e2)).as_ptr()
+    pytuple!(PyArg::I32(e1), PyArg::I32(e2)).into_raw()
 }
 
 #[no_mangle]
@@ -53,7 +53,7 @@ pub extern "C" fn python_bind_str_tuple(e1: *mut PyString) -> *mut PyTuple {
     pytuple!(
         PyArg::PyString(s),
         PyArg::PyString(PyString::from("from Rust"))
-    ).as_ptr()
+    ).into_raw()
 }
 
 #[no_mangle]
@@ -70,7 +70,7 @@ pub extern "C" fn python_bind_tuple_mixed(
         PyArg::PyBool(PyBool::from(false)),
         PyArg::F32(e3),
         PyArg::PyString(s)
-    ).as_ptr()
+    ).into_raw()
 }
 
 #[no_mangle]
@@ -88,7 +88,7 @@ pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
     }
     let content = vec!["Rust", "in", "Python"];
     let returnval = PyList::from(content);
-    returnval.as_ptr()
+    returnval.into_raw()
 }
 
 #[no_mangle]
@@ -99,5 +99,5 @@ pub extern "C" fn other_prefix_dict(dict: *mut usize) -> *mut usize {
     let mut hm = HashMap::new();
     hm.insert(0_i64, PyArg::PyString(PyString::from("Back")));
     hm.insert(1_i64, PyArg::PyString(PyString::from("Rust")));
-    PyDict::from(hm).as_ptr()
+    PyDict::from(hm).into_raw()
 }

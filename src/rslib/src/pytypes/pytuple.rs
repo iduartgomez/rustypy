@@ -22,7 +22,7 @@
 //!
 //! # Safety
 //! PyTuple must be passed between Rust and Python as a raw pointer. You can get a
-//! raw pointer using ```as_ptr``` and convert from a raw pointer using the "static"
+//! raw pointer using ```into_raw``` and convert from a raw pointer using the "static"
 //! method ```PyDict::from_ptr``` which is unsafe as it requires dereferencing a raw pointer.
 //!
 //! ## Unpacking PyTuple from Python
@@ -30,8 +30,8 @@
 //! to convert a PyTuple to a Rust native type. Check the macro documentation for more info.
 
 use std::iter::IntoIterator;
-use std::ops::Deref;
 use std::mem;
+use std::ops::Deref;
 
 use pytypes::PyArg;
 
@@ -46,6 +46,7 @@ pub struct PyTuple {
     pub(crate) next: Option<Box<PyTuple>>,
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl<'a> PyTuple {
     #[doc(hidden)]
     pub fn new(elem: PyArg, idx: usize, next: Option<Box<PyTuple>>) -> PyTuple {
@@ -114,7 +115,7 @@ impl<'a> PyTuple {
     }
 
     /// Returns self as raw pointer. Use this method when returning a PyTuple to Python.
-    pub fn as_ptr(self) -> *mut PyTuple {
+    pub fn into_raw(self) -> *mut PyTuple {
         Box::into_raw(Box::new(self))
     }
 }
@@ -210,10 +211,10 @@ macro_rules! pytuple {
 pub unsafe extern "C" fn pytuple_new(idx: usize, elem: *mut PyArg) -> *mut PyTuple {
     let tuple = PyTuple {
         elem: *(Box::from_raw(elem)),
-        idx: idx,
+        idx,
         next: None,
     };
-    tuple.as_ptr()
+    tuple.into_raw()
 }
 
 #[doc(hidden)]
@@ -225,19 +226,18 @@ pub unsafe extern "C" fn pytuple_push(next: *mut PyTuple, prev: &mut PyTuple) {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pytuple_free(ptr: *mut PyTuple) {
+pub unsafe extern "C" fn pytuple_free(ptr: *mut PyTuple) {
     if ptr.is_null() {
         return;
     }
-    unsafe {
-        Box::from_raw(ptr);
-    }
+
+    Box::from_raw(ptr);
 }
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pytuple_len(ptr: *mut PyTuple) -> usize {
-    let tuple = unsafe { &*ptr };
+pub unsafe extern "C" fn pytuple_len(ptr: *mut PyTuple) -> usize {
+    let tuple = &*ptr;
     tuple.len()
 }
 
@@ -245,7 +245,7 @@ pub extern "C" fn pytuple_len(ptr: *mut PyTuple) -> usize {
 #[no_mangle]
 pub unsafe extern "C" fn pytuple_get_element(ptr: *mut PyTuple, index: usize) -> *mut PyArg {
     let tuple = &mut *ptr;
-    let ref elem = PyTuple::as_mut(tuple, index).unwrap();
+    let elem = &PyTuple::as_mut(tuple, index).unwrap();
     let copied: PyArg = (*elem).clone();
     Box::into_raw(Box::new(copied))
 }

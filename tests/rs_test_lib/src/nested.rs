@@ -13,7 +13,7 @@ pub extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
         pytuple!(PyArg::F64(0.5f64), PyArg::PyBool(PyBool::from(true))),
         pytuple!(PyArg::F64(-0.5f64), PyArg::PyBool(PyBool::from(false))),
     ];
-    PyList::from_iter(v).as_ptr()
+    PyList::from_iter(v).into_raw()
 }
 
 #[no_mangle]
@@ -32,13 +32,13 @@ pub extern "C" fn python_bind_nested1_t_n_ls(list: *mut PyList) -> *mut PyList {
         for (f1, (f2, f3)) in x {
             let t_e = pytuple!(
                 PyArg::I64(f1),
-                PyArg::PyTuple(pytuple!(PyArg::F32(f2), PyArg::I64(f3)).as_ptr())
+                PyArg::PyTuple(pytuple!(PyArg::F32(f2), PyArg::I64(f3)).into_raw())
             );
             v1.push(t_e);
         }
         v0.push(v1);
     }
-    PyList::from_iter(v0).as_ptr()
+    PyList::from_iter(v0).into_raw()
 }
 
 #[no_mangle]
@@ -49,10 +49,10 @@ pub extern "C" fn python_bind_nested2_t_n_ls(list: *mut PyList) -> *mut PyList {
     let mut v0 = Vec::new();
     for (f1, f2) in unpacked {
         let e = pytuple!(
-            PyArg::PyList(PyList::from_iter(f1).as_ptr()),
+            PyArg::PyList(PyList::from_iter(f1).into_raw()),
             PyArg::F32(f2)
         );
         v0.push(e);
     }
-    PyList::from_iter(v0).as_ptr()
+    PyList::from_iter(v0).into_raw()
 }

@@ -23,7 +23,7 @@
 //!     l.push(e);
 //! }
 //!
-//! let mut iter = PyList::into_iter::<u32>(l);
+//! let mut iter = PyList::speciallized_iter::<u32>(l);
 //! assert_eq!(iter.collect::<Vec<u32>>(), vec![0u32, 1, 3])
 //! ```
 //!
@@ -32,7 +32,7 @@
 //!
 //! # Safety
 //! PyList must be passed between Rust and Python as a raw pointer. You can get a raw pointer
-//! using ```as_ptr``` and convert from a raw pointer using the "static"
+//! using ```into_raw``` and convert from a raw pointer using the "static"
 //! method ```PyList::from_ptr``` which is unsafe as it requires dereferencing a raw pointer.
 //!
 //! For convinience there are some methods to perform conversions to Vec<T> from PyList<PyArg>,
@@ -46,15 +46,15 @@
 
 use pytypes::PyArg;
 
-use std::ops::{Index, IndexMut};
 use std::iter::{FromIterator, IntoIterator};
 use std::marker::PhantomData;
+use std::ops::{Index, IndexMut};
 
 /// An analog of a Python list which contains an undefined number of elements of
 /// a single kind, of any [supported type](../../../rustypy/pytypes/enum.PyArg.html).
 ///
 /// Read the [module docs](index.html) for more information.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct PyList {
     _inner: Vec<PyArg>,
 }
@@ -93,6 +93,10 @@ impl PyList {
         self._inner.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self._inner.is_empty()
+    }
+
     /// Appends an element to the back of a collection.
     ///
     /// ##Panics
@@ -111,12 +115,12 @@ impl PyList {
     }
 
     /// Return a PyList as a raw pointer.
-    pub fn as_ptr(self) -> *mut PyList {
+    pub fn into_raw(self) -> *mut PyList {
         Box::into_raw(Box::new(self))
     }
 
     /// Consume self and turn it into an iterator.
-    pub fn into_iter<T: From<PyArg>>(self) -> IntoIter<T> {
+    pub fn speciallized_iter<T: From<PyArg>>(self) -> IntoIter<T> {
         IntoIter {
             inner: self._inner.into_iter(),
             target_t: PhantomData,
@@ -157,7 +161,7 @@ where
     where
         B: FromIterator<Self::Item>,
     {
-        self.inner.map(|x| <T>::from(x)).collect::<B>()
+        self.inner.map(<T>::from).collect::<B>()
     }
 }
 
@@ -166,7 +170,7 @@ where
     PyArg: Into<T>,
 {
     fn into(mut self) -> Vec<T> {
-        self._inner.drain(..).map(|x| PyArg::into(x)).collect()
+        self._inner.drain(..).map(PyArg::into).collect()
     }
 }
 
@@ -176,7 +180,7 @@ where
 {
     fn from(mut v: Vec<T>) -> PyList {
         PyList {
-            _inner: v.drain(..).map(|x| PyArg::from(x)).collect(),
+            _inner: v.drain(..).map(PyArg::from).collect(),
         }
     }
 }
@@ -200,7 +204,7 @@ pub unsafe extern "C" fn pylist_new(len: usize) -> *mut PyList {
     let list = PyList {
         _inner: Vec::with_capacity(len),
     };
-    list.as_ptr()
+    list.into_raw()
 }
 
 #[doc(hidden)]
@@ -217,13 +221,11 @@ pub unsafe extern "C" fn pylist_len(list: &mut PyList) -> usize {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pylist_free(ptr: *mut PyList) {
+pub unsafe extern "C" fn pylist_free(ptr: *mut PyList) {
     if ptr.is_null() {
         return;
     }
-    unsafe {
-        Box::from_raw(ptr);
-    }
+    Box::from_raw(ptr);
 }
 
 #[doc(hidden)]

@@ -1,6 +1,6 @@
 //! An analog of a Python String.
 //!
-//! To return to Python you must use ```as_ptr``` method and return a raw pointer.
+//! To return to Python you must use ```into_raw``` method and return a raw pointer.
 //! You can create them using the ```from``` trait method, from both ```&str``` and ```String```.
 //!
 //! # Safety
@@ -16,12 +16,12 @@
 //! let pystr = PyString::from("Hello world!");
 //!
 //! // prepare to return to Python:
-//! let ptr = pystr.as_ptr();
+//! let ptr = pystr.into_raw();
 //! // convert from raw pointer to an owned String
 //! let rust_string = unsafe { PyString::from_ptr_to_string(ptr) };
 //! ```
-use std::ffi::CString;
 use libc::c_char;
+use std::ffi::CString;
 
 use std::convert::From;
 use std::fmt;
@@ -50,12 +50,14 @@ impl PyString {
     }
     /// Returns PyString as a raw pointer. Use this whenever you want to return
     /// a PyString to Python.
-    pub fn as_ptr(self) -> *mut PyString {
+    pub fn into_raw(self) -> *mut PyString {
         Box::into_raw(Box::new(self))
     }
     /// Return a PyString from a raw char pointer.
     pub unsafe fn from_raw(ptr: *const c_char) -> PyString {
-        PyString { _inner: CStr::from_ptr(ptr).to_owned() }
+        PyString {
+            _inner: CStr::from_ptr(ptr).to_owned(),
+        }
     }
 }
 
@@ -68,14 +70,18 @@ impl fmt::Display for PyString {
 impl<'a> From<&'a str> for PyString {
     /// Copies a string slice to a PyString.
     fn from(s: &'a str) -> PyString {
-        PyString { _inner: CString::new(s).unwrap() }
+        PyString {
+            _inner: CString::new(s).unwrap(),
+        }
     }
 }
 
 impl From<String> for PyString {
     /// Copies a String to a PyString.
     fn from(s: String) -> PyString {
-        PyString { _inner: CString::new(s).unwrap() }
+        PyString {
+            _inner: CString::new(s).unwrap(),
+        }
     }
 }
 
@@ -88,30 +94,30 @@ impl From<PyString> for String {
 /// Destructs the PyString, mostly to be used from Python.
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pystring_free(ptr: *mut PyString) {
+pub unsafe extern "C" fn pystring_free(ptr: *mut PyString) {
     if ptr.is_null() {
         return;
     }
-    unsafe {
-        Box::from_raw(ptr);
-    }
+    Box::from_raw(ptr);
 }
 
 use std::ffi::CStr;
 /// Creates a PyString wrapper from a raw c_char pointer
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pystring_new(ptr: *const c_char) -> *mut PyString {
-    let pystr = PyString { _inner: unsafe { CStr::from_ptr(ptr).to_owned() } };
-    pystr.as_ptr()
+pub unsafe extern "C" fn pystring_new(ptr: *const c_char) -> *mut PyString {
+    let pystr = PyString {
+        _inner: CStr::from_ptr(ptr).to_owned(),
+    };
+    pystr.into_raw()
 }
 
 /// Consumes the wrapper and returns a raw c_char pointer. Afterwards is not necessary
 /// to destruct it as it has already been consumed.
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pystring_get_str(ptr: *mut PyString) -> *const c_char {
-    let pystr: PyString = unsafe { PyString::from_ptr(ptr) };
+pub unsafe extern "C" fn pystring_get_str(ptr: *mut PyString) -> *const c_char {
+    let pystr: PyString = PyString::from_ptr(ptr);
     pystr._inner.into_raw()
 }
 
@@ -122,7 +128,7 @@ mod tests {
     #[test]
     fn pystring_operations() {
         let source = "test string";
-        let owned_pystr = PyString::from(source).as_ptr();
+        let owned_pystr = PyString::from(source).into_raw();
         let back_from_py = unsafe { PyString::from_ptr_to_string(owned_pystr) };
         assert_eq!(back_from_py, "test string");
         {

@@ -2,9 +2,9 @@
 
 use libc::{c_char, size_t};
 
-use std::hash::Hash;
 use std::collections::HashMap;
 use std::convert::AsRef;
+use std::hash::Hash;
 
 #[doc(hidden)]
 #[macro_export]
@@ -33,17 +33,17 @@ macro_rules! _rustypy_abort_xtract_fail {
     }}
 }
 
-pub mod pystring;
 pub mod pybool;
-pub mod pytuple;
-pub mod pylist;
 pub mod pydict;
+pub mod pylist;
+pub mod pystring;
+pub mod pytuple;
 
 use self::pybool::PyBool;
+use self::pydict::{PyDict, PyDictKey};
+use self::pylist::PyList;
 use self::pystring::PyString;
 use self::pytuple::PyTuple;
-use self::pylist::PyList;
-use self::pydict::{PyDict, PyDictKey};
 
 /// Enum type used to construct PyTuple and PyList types. All the kinds supported in Python
 /// are included here.
@@ -79,7 +79,7 @@ pub enum PyArg {
 }
 
 impl PyArg {
-    pub fn as_ptr(self) -> *mut PyArg {
+    pub fn into_raw(self) -> *mut PyArg {
         Box::into_raw(Box::new(self))
     }
 }
@@ -131,7 +131,7 @@ macro_rules! pyarg_conversions {
 
         impl From<$type> for PyArg {
             fn from(a: $type) -> PyArg {
-                $variant(a.as_ptr())
+                $variant(a.into_raw())
             }
         }
 
@@ -207,7 +207,7 @@ where
     PyArg: From<T>,
 {
     fn from(a: Vec<T>) -> PyArg {
-        PyArg::PyList(PyList::from(a).as_ptr())
+        PyArg::PyList(PyList::from(a).into_raw())
     }
 }
 
@@ -216,7 +216,7 @@ where
     K: Eq + Hash + PyDictKey,
 {
     fn from(a: PyDict<K>) -> PyArg {
-        PyArg::PyDict(a.as_ptr())
+        PyArg::PyDict(a.into_raw())
     }
 }
 
@@ -227,7 +227,7 @@ where
 {
     fn from(a: HashMap<K, V>) -> PyArg {
         let dict = PyDict::from(a);
-        PyArg::PyDict(dict.as_ptr())
+        PyArg::PyDict(dict.into_raw())
     }
 }
 
@@ -289,8 +289,8 @@ pub extern "C" fn pyarg_from_bool(e: i8) -> *mut PyArg {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_from_str(e: *const c_char) -> *mut PyArg {
-    let e = unsafe { PyString::from_raw(e) };
+pub unsafe extern "C" fn pyarg_from_str(e: *const c_char) -> *mut PyArg {
+    let e = PyString::from_raw(e);
     Box::into_raw(Box::new(PyArg::PyString(e)))
 }
 
@@ -317,16 +317,16 @@ pub extern "C" fn pyarg_from_pydict(e: *mut size_t) -> *mut PyArg {
 // Extract owned args, no copies:
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_int(e: *mut PyArg) -> i64 {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_int(e: *mut PyArg) -> i64 {
+    let e = *(Box::from_raw(e));
     match e {
         PyArg::I64(val) => val,
-        PyArg::I32(val) => val as i64,
-        PyArg::I16(val) => val as i64,
-        PyArg::I8(val) => val as i64,
-        PyArg::U32(val) => val as i64,
-        PyArg::U16(val) => val as i64,
-        PyArg::U8(val) => val as i64,
+        PyArg::I32(val) => i64::from(val),
+        PyArg::I16(val) => i64::from(val),
+        PyArg::I8(val) => i64::from(val),
+        PyArg::U32(val) => i64::from(val),
+        PyArg::U16(val) => i64::from(val),
+        PyArg::U8(val) => i64::from(val),
         _ => _rustypy_abort_xtract_fail!(
             "failed while trying to extract an integer type of i64 or \
              less"
@@ -336,8 +336,8 @@ pub extern "C" fn pyarg_extract_owned_int(e: *mut PyArg) -> i64 {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_ulonglong(e: *mut PyArg) -> u64 {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_ulonglong(e: *mut PyArg) -> u64 {
+    let e = *(Box::from_raw(e));
     match e {
         PyArg::U64(val) => val,
         _ => _rustypy_abort_xtract_fail!("failed while trying to extract an u64"),
@@ -346,8 +346,8 @@ pub extern "C" fn pyarg_extract_owned_ulonglong(e: *mut PyArg) -> u64 {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_float(e: *mut PyArg) -> f32 {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_float(e: *mut PyArg) -> f32 {
+    let e = *(Box::from_raw(e));
     match e {
         PyArg::F32(val) => val,
         _ => _rustypy_abort_xtract_fail!("failed while trying to extract an f32"),
@@ -356,8 +356,8 @@ pub extern "C" fn pyarg_extract_owned_float(e: *mut PyArg) -> f32 {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_double(e: *mut PyArg) -> f64 {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_double(e: *mut PyArg) -> f64 {
+    let e = *(Box::from_raw(e));
     match e {
         PyArg::F64(val) => val,
         _ => _rustypy_abort_xtract_fail!("failed while trying to extract an f64"),
@@ -366,28 +366,28 @@ pub extern "C" fn pyarg_extract_owned_double(e: *mut PyArg) -> f64 {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_bool(e: *mut PyArg) -> *mut PyBool {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_bool(e: *mut PyArg) -> *mut PyBool {
+    let e = *(Box::from_raw(e));
     match e {
-        PyArg::PyBool(val) => val.as_ptr(),
+        PyArg::PyBool(val) => val.into_raw(),
         _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyBool"),
     }
 }
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_str(e: *mut PyArg) -> *mut PyString {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_str(e: *mut PyArg) -> *mut PyString {
+    let e = *(Box::from_raw(e));
     match e {
-        PyArg::PyString(val) => val.as_ptr(),
+        PyArg::PyString(val) => val.into_raw(),
         _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyString"),
     }
 }
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_tuple(e: *mut PyArg) -> *mut PyTuple {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_tuple(e: *mut PyArg) -> *mut PyTuple {
+    let e = *(Box::from_raw(e));
     match e {
         PyArg::PyTuple(val) => val,
         _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyTuple"),
@@ -396,8 +396,8 @@ pub extern "C" fn pyarg_extract_owned_tuple(e: *mut PyArg) -> *mut PyTuple {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_list(e: *mut PyArg) -> *mut PyList {
-    let e = unsafe { *(Box::from_raw(e)) };
+pub unsafe extern "C" fn pyarg_extract_owned_list(e: *mut PyArg) -> *mut PyList {
+    let e = *(Box::from_raw(e));
     match e {
         PyArg::PyList(val) => val,
         _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyList"),
@@ -406,12 +406,10 @@ pub extern "C" fn pyarg_extract_owned_list(e: *mut PyArg) -> *mut PyList {
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pyarg_extract_owned_dict(e: *mut PyArg) -> *mut size_t {
-    unsafe {
-        let e = *(Box::from_raw(e));
-        match e {
-            PyArg::PyDict(val) => val,
-            _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyDict"),
-        }
+pub unsafe extern "C" fn pyarg_extract_owned_dict(e: *mut PyArg) -> *mut size_t {
+    let e = *(Box::from_raw(e));
+    match e {
+        PyArg::PyDict(val) => val,
+        _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyDict"),
     }
 }

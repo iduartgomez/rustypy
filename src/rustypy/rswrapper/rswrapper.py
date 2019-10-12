@@ -116,8 +116,8 @@ class TupleMeta(type):
 class Tuple(metaclass=TupleMeta):
     __slots__ = ()
 
-    def __new__(self, *args, **kwds):
-        raise TypeError("Cannot subclass %r" % (self,))
+    def __new__(cls, *args, **kwds):
+        raise TypeError("Cannot subclass %r" % (cls,))
 
 
 class OpaquePtr(object):
@@ -285,7 +285,7 @@ def get_crate_entry(mod):
 
 def bind_rs_crate_funcs(mod, lib, prefixes=None):
     if not c_backend:
-        load_rust_lib()
+        get_rs_lib()
     if not os.path.exists(mod):
         raise OSError('rustypy: `{}` path does not exist')
     elif not os.path.exists(lib):
@@ -412,7 +412,7 @@ class RustBinds(object):
                 arg_refs = []
                 for x, r in enumerate(prep_args):
                     if isinstance(r, POINTER(PyString_RS)):
-                        arg_refs.append(f_extract_pytypes(r, call_fn=self))
+                        arg_refs.append(_extract_pytypes(r, call_fn=self))
                     elif isinstance(r, POINTER(PyBool_RS)):
                         arg_refs.append(_extract_pytypes(r, call_fn=self))
                     elif isinstance(r, POINTER(ctypes.c_longlong)):

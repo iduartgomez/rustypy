@@ -12,9 +12,13 @@ from rustypy.rswrapper import Float, Double
 from rustypy.rswrapper.ffi_defs import _load_rust_lib
 
 
+_rs_lib_dir = None
+lib_test_entry = None
+lib_test = None
+
+
 def setUpModule():
-    #_load_rust_lib(recmpl=True)  # uncomment to recompile rust lib
-    global _py_test_dir
+    # _load_rust_lib(recmpl=True)  # uncomment to recompile rust lib
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     global _rs_lib_dir
     _rs_lib_dir = os.path.join(os.path.dirname(_py_test_dir), 'src', 'rslib')
@@ -111,6 +115,7 @@ class GeneratePythonToRustBinds(unittest.TestCase):
             os.putenv('PYTHONPATH', self._original_env)
         if hasattr(self, '_copied'):
             os.remove(self._copied)
+
 
 if __name__ == "__main__":
     unittest.main()

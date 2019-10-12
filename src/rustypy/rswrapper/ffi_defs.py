@@ -3,11 +3,11 @@
 import os
 import sys
 import ctypes
+import pathlib
 import pkg_resources
 
 from ctypes import POINTER, ARRAY, c_void_p
 
-global c_backend
 c_backend = None
 
 RS_TYPE_CONVERSION = {
@@ -205,18 +205,22 @@ def _load_rust_lib(recmpl=False):
     libfile = "{}rustypy{}".format(pre, ext)
     lib = pkg_resources.resource_filename('rslib', libfile)
     if (not os.path.exists(lib)) or recmpl:
-        print("   library not found at: {}".format(lib))
-        print("   compiling with Cargo")
+        import logging
         import subprocess
-        path = os.path.dirname(lib)
-        subprocess.run(['cargo', 'build', '--release'], cwd=path)
-        #subprocess.run(['cargo', 'build'], cwd=path)
         import shutil
+
+        logging.info("   library not found at: {}".format(lib))
+        logging.info("   compiling with Cargo")
+
+        path = pathlib.Path(lib).parent.parent.parent
+        subprocess.run(['cargo', 'build', '--release'], cwd=str(path))
+        #subprocess.run(['cargo', 'build'], cwd=path)
+
         cp = os.path.join(path, 'target', 'release', libfile)
         #cp = os.path.join(path, 'target', 'debug', libfile)
         if os.path.exists(lib):
             os.remove(lib)
-        shutil.copy(cp, path)
+        shutil.copy(cp, path.joinpath('src', 'rslib', libfile))
         _load_rust_lib()
     else:
         from ..__init__ import __version__ as curr_ver
@@ -224,9 +228,10 @@ def _load_rust_lib(recmpl=False):
         lib_ver = curr_ver
         # load the library
         if lib_ver != curr_ver:
-            compile_rust_lib(recmpl=True)
+            _load_rust_lib(recmpl=True)
         else:
-            globals()['c_backend'] = ctypes.cdll.LoadLibrary(lib)
+            global c_backend
+            c_backend = ctypes.cdll.LoadLibrary(lib)
             config_ctypes()
 
 

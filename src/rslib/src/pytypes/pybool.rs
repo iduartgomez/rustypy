@@ -1,7 +1,7 @@
 //! Analog to a Python boolean type.
 //!
 //! It supports & and | operators, and comparison to Rust bool types.
-//! To return to Python use the ```as_ptr``` method and return a raw pointer.
+//! To return to Python use the ```into_raw``` method and return a raw pointer.
 //!
 //! # Safety
 //! You can convert a raw pointer to a bool type with ```from_ptr_into_bool``` method,
@@ -16,14 +16,14 @@
 //! assert_eq!(pybool, true);
 //!
 //! // prepare to return to Python:
-//! let ptr = pybool.as_ptr();
+//! let ptr = pybool.into_raw();
 //! // convert from raw pointer to a bool
 //! let rust_bool = unsafe { PyBool::from_ptr_into_bool(ptr) };
 //! ```
 use libc::c_char;
 
 use std::convert::From;
-use std::ops::{Not, BitAnd, BitOr};
+use std::ops::{BitAnd, BitOr, Not};
 
 /// Analog to a Python boolean type.
 ///
@@ -49,7 +49,7 @@ impl PyBool {
     }
 
     /// Conversion from PyBool to bool.
-    pub fn to_bool(&self) -> bool {
+    pub fn to_bool(self) -> bool {
         match self.val {
             0 => false,
             _ => true,
@@ -58,26 +58,27 @@ impl PyBool {
 
     /// Returns PyBool as a raw pointer. Use this whenever you want to return
     /// a PyBool to Python.
-    pub fn as_ptr(self) -> *mut PyBool {
+    pub fn into_raw(self) -> *mut PyBool {
         Box::into_raw(Box::new(self))
     }
 
     /// Sets value of the underlying bool
     pub fn load(&mut self, v: bool) {
-        match v {
-            true => self.val = 1,
-            false => self.val = 0,
+        if v {
+            self.val = 1
+        } else {
+            self.val = 0
         }
     }
 }
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pybool_free(ptr: *mut PyBool) {
+pub unsafe extern "C" fn pybool_free(ptr: *mut PyBool) {
     if ptr.is_null() {
         return;
     }
-    unsafe { Box::from_raw(ptr) };
+    Box::from_raw(ptr);
 }
 
 #[doc(hidden)]
@@ -87,14 +88,14 @@ pub extern "C" fn pybool_new(val: c_char) -> *mut PyBool {
         0 => 0,
         _ => 1,
     };
-    let pystr = PyBool { val: val };
-    pystr.as_ptr()
+    let pystr = PyBool { val };
+    pystr.into_raw()
 }
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn pybool_get_val(ptr: *mut PyBool) -> i8 {
-    let pybool = unsafe { &*ptr };
+pub unsafe extern "C" fn pybool_get_val(ptr: *mut PyBool) -> i8 {
+    let pybool = &*ptr;
     pybool.val
 }
 
@@ -106,21 +107,15 @@ impl From<PyBool> for bool {
 
 impl From<bool> for PyBool {
     fn from(b: bool) -> PyBool {
-        let val = match b {
-            true => 1,
-            false => 0,
-        };
-        PyBool { val: val }
+        let val = if b { 1 } else { 0 };
+        PyBool { val }
     }
 }
 
 impl<'a> From<&'a bool> for PyBool {
     fn from(b: &'a bool) -> PyBool {
-        let val = match b {
-            &true => 1,
-            &false => 0,
-        };
-        PyBool { val: val }
+        let val = if *b { 1 } else { 0 };
+        PyBool { val }
     }
 }
 
@@ -130,31 +125,19 @@ impl From<i8> for PyBool {
             0 => 0,
             _ => 1,
         };
-        PyBool { val: val }
+        PyBool { val }
     }
 }
 
 impl PartialEq<bool> for PyBool {
     fn eq(&self, other: &bool) -> bool {
-        if self.val == 0 && *other == false {
-            true
-        } else if self.val == 1 && *other == true {
-            true
-        } else {
-            false
-        }
+        (self.val == 0 && !(*other)) || (self.val == 1 && *other)
     }
 }
 
 impl<'a> PartialEq<bool> for &'a PyBool {
     fn eq(&self, other: &bool) -> bool {
-        if self.val == 0 && *other == false {
-            true
-        } else if self.val == 1 && *other == true {
-            true
-        } else {
-            false
-        }
+        (self.val == 0 && !(*other)) || (self.val == 1 && *other)
     }
 }
 

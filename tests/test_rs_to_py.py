@@ -5,35 +5,41 @@ import os
 import typing
 import shutil
 
-from importlib import import_module
-from rustypy.pywrapper import RustFuncGen
-from rustypy.rswrapper import bind_rs_crate_funcs
 from rustypy.rswrapper import Float, Double, Tuple
-from rustypy.rswrapper.ffi_defs import _load_rust_lib
+
+lib_test_entry = None
+lib_test = None
 
 
 def setUpModule():
-    #_load_rust_lib(recmpl=True)  # uncomment to recompile rust lib
-    global _py_test_dir
+    import logging
+    #from rustypy.rswrapper.ffi_defs import _load_rust_lib
+    # _load_rust_lib(recmpl=True)  # uncomment to recompile rust lib
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
-    global _rs_lib_dir
-    _rs_lib_dir = os.path.join(os.path.dirname(_py_test_dir), 'src', 'rslib')
-    os.remove(os.path.join(_rs_lib_dir, 'librustypy.so'))
+    _rs_lib_dir = os.path.join(os.path.dirname(
+        _py_test_dir), 'src', 'rslib', 'src')
+    try:
+        os.remove(os.path.join(_rs_lib_dir, 'librustypy.so'))
+    except:
+        logging.info("Library wasn't compiled")
     # load sample lib
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
     global lib_test_entry
-    lib_test_entry = os.path.join(_py_test_dir, 'rs_test_lib')
     global lib_test
+    lib_test_entry = os.path.join(_py_test_dir, 'rs_test_lib')
     lib_test = os.path.join(lib_test_entry, 'target', 'debug',
                             '{}test_lib{}'.format(pre, ext))
-    subprocess.run(['cargo', 'build'], cwd=lib_test_entry)
+    subprocess.run(['cargo', 'build'], cwd=lib_test_entry).check_returncode()
 
 
 class GenerateRustToPythonBinds(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        from rustypy.rswrapper import bind_rs_crate_funcs
+        from rustypy.rswrapper import Float, Double, Tuple
+
         prefixes = ["python_bind_", "other_prefix_"]
         cls.bindings = bind_rs_crate_funcs(lib_test_entry, lib_test, prefixes)
 
@@ -126,6 +132,7 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         self.bindings.other_prefix_dict.restype = R
         result = self.bindings.other_prefix_dict(d)
         self.assertEqual(result, {0: "Back", 1: "Rust"})
+
 
 if __name__ == "__main__":
     unittest.main()

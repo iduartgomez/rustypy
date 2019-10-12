@@ -15,35 +15,37 @@ extern crate libc;
 extern crate syn;
 extern crate walkdir;
 
-use std::io::Read;
 use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 use std::ptr;
 
 use libc::size_t;
 
-pub mod pytypes;
 mod macros;
+pub mod pytypes;
 
 // re-export
 pub use self::pytypes::pybool::PyBool;
-pub use self::pytypes::pystring::PyString;
-pub use self::pytypes::pylist::PyList;
 pub use self::pytypes::pydict::PyDict;
+pub use self::pytypes::pylist::PyList;
+pub use self::pytypes::pystring::PyString;
 pub use self::pytypes::pytuple::PyTuple;
 pub use self::pytypes::PyArg;
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> *mut PyString {
-    use std::convert::AsRef;
-    let path = unsafe { PyString::from_ptr_to_string(path) };
+pub unsafe extern "C" fn parse_src(
+    path: *mut PyString,
+    krate_data: &mut KrateData,
+) -> *mut PyString {
+    let path = PyString::from_ptr_to_string(path);
     let path: &Path = path.as_ref();
     let dir = if let Some(parent) = path.parent() {
         parent
     } else {
         // unlikely this happens, but just in case
-        return PyString::from(format!("crate in root directory not allowed")).as_ptr();
+        return PyString::from("crate in root directory not allowed".to_string()).into_raw();
     };
     for entry in walkdir::WalkDir::new(dir)
         .into_iter()
@@ -54,12 +56,13 @@ pub extern "C" fn parse_src(path: *mut PyString, krate_data: &mut KrateData) -> 
             } else {
                 false
             }
-        }) {
+        })
+    {
         if let Err(err) = parse_file(krate_data, entry.path()) {
             return err;
         }
     }
-    return ptr::null_mut::<PyString>();
+    ptr::null_mut::<PyString>()
 }
 
 fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyString> {
@@ -67,7 +70,7 @@ fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyStri
         Ok(file) => file,
         Err(_) => {
             return Err(
-                PyString::from(format!("path not found: {}", path.to_str().unwrap())).as_ptr(),
+                PyString::from(format!("path not found: {}", path.to_str().unwrap())).into_raw(),
             )
         }
     };
@@ -76,20 +79,20 @@ fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyStri
         return Err(PyString::from(format!(
             "failed to read the source file: {}",
             path.to_str().unwrap()
-        )).as_ptr());
+        ))
+        .into_raw());
     }
-    match syn::parse_crate(&src) {
+    match syn::parse_file(&src) {
         Ok(krate) => {
-            syn::visit::walk_crate(krate_data, &krate);
+            syn::visit::visit_file(krate_data, &krate);
             krate_data.collect_values();
         }
-        Err(err) => return Err(PyString::from(err).as_ptr()),
+        Err(err) => return Err(PyString::from(format!("{}", err)).into_raw()),
     };
     Ok(())
 }
 
 #[doc(hidden)]
-#[derive(Debug)]
 pub struct KrateData {
     functions: Vec<FnDef>,
     collected: Vec<String>,
@@ -101,7 +104,7 @@ impl KrateData {
         KrateData {
             functions: vec![],
             collected: vec![],
-            prefixes: prefixes,
+            prefixes,
         }
     }
 
@@ -127,8 +130,8 @@ impl KrateData {
             }
             if add {
                 match output {
-                    syn::FunctionRetTy::Default => fndef.push_str("type(void)"),
-                    syn::FunctionRetTy::Ty(ty) => {
+                    syn::ReturnType::Default => fndef.push_str("type(void)"),
+                    syn::ReturnType::Type(_, ty) => {
                         if let Ok(ty) = type_repr(&ty, None) {
                             fndef.push_str(&ty)
                         } else {
@@ -143,22 +146,21 @@ impl KrateData {
         }
     }
 
-    fn add_fn(&mut self, name: String, fn_decl: &syn::FnDecl) {
+    fn add_fn(&mut self, name: String, fn_decl: &syn::ItemFn) {
         for prefix in &self.prefixes {
             if name.starts_with(prefix) {
-                let syn::FnDecl { inputs, output, .. } = fn_decl.clone();
+                let syn::ItemFn { sig, .. } = fn_decl.clone();
                 let mut args = vec![];
-                for arg in inputs {
+                for arg in sig.inputs {
                     match arg {
-                        syn::FnArg::Captured(_, ty) => args.push(ty),
-                        syn::FnArg::Ignored(ty) => args.push(ty),
+                        syn::FnArg::Typed(pat_ty) => args.push(*pat_ty.ty),
                         _ => continue,
                     }
                 }
                 self.functions.push(FnDef {
                     name,
-                    args: args,
-                    output: output,
+                    args,
+                    output: sig.output,
                 });
                 break;
             }
@@ -174,12 +176,12 @@ impl KrateData {
     }
 }
 
-fn type_repr(ty: &syn::Ty, r: Option<&str>) -> Result<String, ()> {
+fn type_repr(ty: &syn::Type, r: Option<&str>) -> Result<String, ()> {
     let mut repr = String::new();
-    match *ty {
-        syn::Ty::Path(_, ref path) => {
-            let syn::Path { ref segments, .. } = *path;
-            if let Some(ty) = segments.last() {
+    match ty {
+        syn::Type::Path(path) => {
+            let syn::TypePath { path, .. } = path;
+            if let Some(ty) = path.segments.last() {
                 if r.is_some() {
                     Ok(format!("type({} {})", r.unwrap(), ty.ident))
                 } else {
@@ -189,91 +191,73 @@ fn type_repr(ty: &syn::Ty, r: Option<&str>) -> Result<String, ()> {
                 Err(())
             }
         }
-        syn::Ty::Ptr(ref ty) => {
-            let syn::MutTy {
-                ref ty,
-                ref mutability,
-            } = **ty;
-            let m = match *mutability {
-                syn::Mutability::Immutable => "*const",
-                syn::Mutability::Mutable => "*mut",
+        syn::Type::Ptr(ty) => {
+            let syn::TypePtr {
+                elem, mutability, ..
+            } = ty;
+            let m = match mutability {
+                Some(_) => "*mut",
+                _ => "*const",
             };
-            repr.push_str(&type_repr(&*ty, Some(m))?);
+            repr.push_str(&type_repr(&*elem, Some(m))?);
             Ok(repr)
         }
-        syn::Ty::Rptr(_, ref ty) => {
-            let syn::MutTy {
-                ref ty,
-                ref mutability,
-            } = **ty;
-            let m = match *mutability {
-                syn::Mutability::Immutable => "&",
-                syn::Mutability::Mutable => "&mut",
+        syn::Type::Reference(ty) => {
+            let syn::TypeReference {
+                elem, mutability, ..
+            } = ty;
+            let m = match mutability {
+                Some(_) => "&mut",
+                _ => "&",
             };
-            repr.push_str(&type_repr(&*ty, Some(m))?);
+            repr.push_str(&type_repr(&*elem, Some(m))?);
             Ok(repr)
         }
         _ => Err(()),
     }
 }
 
-impl syn::visit::Visitor for KrateData {
+impl<'ast> syn::visit::Visit<'ast> for KrateData {
     fn visit_item(&mut self, item: &syn::Item) {
-        match item.node {
-            syn::ItemKind::Fn(ref fn_decl, ..) => {
-                if let syn::Visibility::Public = item.vis {
-                    let name = format!("{}", item.ident);
+        match item {
+            syn::Item::Fn(fn_decl, ..) => {
+                if let syn::Visibility::Public(_) = fn_decl.vis {
+                    let name = format!("{}", fn_decl.sig.ident);
                     self.add_fn(name, &*fn_decl)
                 }
             }
-            syn::ItemKind::Mod(Some(ref items)) => for item in items {
-                self.visit_item(item);
-            },
-            _ => {
-                /*
-                ignored:
-                ExternCrate(Option<Ident>),
-                Use(Box<ViewPath>),
-                Static(Box<Ty>, Mutability, Box<Expr>),
-                Const(Box<Ty>, Box<Expr>),
-                ForeignMod(ForeignMod),
-                Ty(Box<Ty>, Generics),
-                Enum(Vec<Variant>, Generics),
-                Struct(VariantData, Generics),
-                Union(VariantData, Generics),
-                Trait(Unsafety, Generics, Vec<TyParamBound>, Vec<TraitItem>),
-                DefaultImpl(Unsafety, Path),
-                Impl(Unsafety, ImplPolarity, Generics, Option<Path>, Box<Ty>, Vec<ImplItem>),
-                Mac(Mac),
-                */
+            syn::Item::Mod(mod_item) if mod_item.content.is_some() => {
+                for item in &mod_item.content.as_ref().unwrap().1 {
+                    self.visit_item(item);
+                }
             }
+            _ => {}
         }
     }
 }
 
-#[derive(Debug)]
 struct FnDef {
     name: String,
-    output: syn::FunctionRetTy,
-    args: Vec<syn::Ty>,
+    output: syn::ReturnType,
+    args: Vec<syn::Type>,
 }
 
 // C FFI for KrateData objects:
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn krate_data_new(ptr: *mut PyList) -> *mut KrateData {
-    let p = unsafe { PyList::from_ptr(ptr) };
+pub unsafe extern "C" fn krate_data_new(ptr: *mut PyList) -> *mut KrateData {
+    let p = PyList::from_ptr(ptr);
     let p: Vec<String> = PyList::into(p);
     Box::into_raw(Box::new(KrateData::new(p)))
 }
 
 #[doc(hidden)]
 #[no_mangle]
-pub extern "C" fn krate_data_free(ptr: *mut KrateData) {
+pub unsafe extern "C" fn krate_data_free(ptr: *mut KrateData) {
     if ptr.is_null() {
         return;
     }
-    unsafe { *(Box::from_raw(ptr)) };
+    Box::from_raw(ptr);
 }
 
 #[doc(hidden)]
@@ -286,7 +270,7 @@ pub extern "C" fn krate_data_len(krate: &KrateData) -> size_t {
 #[no_mangle]
 pub extern "C" fn krate_data_iter(krate: &KrateData, idx: size_t) -> *mut PyString {
     match krate.iter_krate(idx as usize) {
-        Some(val) => PyString::from(val).as_ptr(),
-        None => PyString::from("NO_IDX_ERROR").as_ptr(),
+        Some(val) => PyString::from(val).into_raw(),
+        None => PyString::from("NO_IDX_ERROR").into_raw(),
     }
 }

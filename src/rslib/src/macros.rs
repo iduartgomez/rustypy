@@ -21,8 +21,8 @@ mod inner_types {
     /// # let mut hm = HashMap::new();
     /// # hm.insert(PyString::from("one"), vec![0_i32, 1, 2]);
     /// # hm.insert(PyString::from("two"), vec![3_i32, 2, 1]);
-    /// # let mut pytuple = pytuple!(PyArg::PyDict(PyDict::from(hm.clone()).as_ptr()),
-    /// #                            PyArg::PyDict(PyDict::from(hm.clone()).as_ptr())).as_ptr();
+    /// # let mut pytuple = pytuple!(PyArg::PyDict(PyDict::from(hm.clone()).into_raw()),
+    /// #                            PyArg::PyDict(PyDict::from(hm.clone()).into_raw())).into_raw();
     /// // tuple from Python: ({"one": [0, 1, 3]}, {"two": [3, 2, 1]})
     /// let unpacked = unpack_pytuple!(pytuple; ({PyDict{(PyString, PyList{I32 => i64})}},
     ///                                          {PyDict{(PyString, PyList{I32 => i64})}},));
@@ -215,7 +215,7 @@ mod inner_types {
     /// # #[macro_use] extern crate rustypy;
     /// # fn main(){
     /// use rustypy::{PyList, PyString};
-    /// let string_list = PyList::from(vec!["Python", "in", "Rust"]).as_ptr();
+    /// let string_list = PyList::from(vec!["Python", "in", "Rust"]).into_raw();
     /// let unpacked = unpack_pylist!(string_list; PyList{PyString => PyString});
     /// # }
     /// ```
@@ -226,7 +226,7 @@ mod inner_types {
     /// # #[macro_use] extern crate rustypy;
     /// # fn main(){
     /// # use rustypy::PyList;
-    /// # let int_list = PyList::from(vec![1i32; 5]).as_ptr();
+    /// # let int_list = PyList::from(vec![1i32; 5]).into_raw();
     /// // list from python: [1, 1, 1, 1, 1]
     /// let unpacked = unpack_pylist!(int_list; PyList{I32 => i32});
     /// # }
@@ -241,12 +241,12 @@ mod inner_types {
     /// #    use rustypy::{PyList, PyArg};
     /// #    let list = PyList::from(vec![
     /// #        pytuple!(PyArg::PyList(PyList::from(vec![
-    /// #                    pytuple!(PyArg::I64(1), PyArg::I64(2), PyArg::I64(3))]).as_ptr()),
+    /// #                    pytuple!(PyArg::I64(1), PyArg::I64(2), PyArg::I64(3))]).into_raw()),
     /// #                 PyArg::F32(0.1)),
     /// #        pytuple!(PyArg::PyList(PyList::from(vec![
-    /// #                    pytuple!(PyArg::I64(3), PyArg::I64(2), PyArg::I64(1))]).as_ptr()),
+    /// #                    pytuple!(PyArg::I64(3), PyArg::I64(2), PyArg::I64(1))]).into_raw()),
     /// #                 PyArg::F32(0.2))
-    /// #        ]).as_ptr();
+    /// #        ]).into_raw();
     /// // list from Python: [([(i64; 3)], f32)]
     /// let unpacked = unpack_pylist!(list;
     ///     PyList{
@@ -319,7 +319,7 @@ mod inner_types {
     /// use std::collections::HashMap;
     ///
     /// let mut hm = HashMap::from_iter(vec![(0_i32, "Hello"), (1_i32, " "), (2_i32, "World!")]);
-    /// let dict = PyDict::from(hm).as_ptr();
+    /// let dict = PyDict::from(hm).into_raw();
     /// let unpacked = unpack_pydict!(dict; PyDict{(i32, PyString => String)});
     /// # }
     /// ```
@@ -343,7 +343,7 @@ mod inner_types {
     /// #     let l = PyArg::from(vec![0_i64; 3]);
     /// #     hm1.insert(PyString::from(k), pytuple!(l, v));
     /// # }
-    /// # let dict = PyDict::from(hm1).as_ptr();
+    /// # let dict = PyDict::from(hm1).into_raw();
     /// // dict from Python: {str: ([u64], {i32: str})} as *mut size_t
     /// let unpacked = unpack_pydict!(dict;
     ///     PyDict{(PyString, PyTuple{({PyList{I64 => i64}},
@@ -415,8 +415,8 @@ mod inner_types {
 /// # let mut hm = HashMap::new();
 /// # hm.insert(PyString::from("one"), vec![0_i32, 1, 2]);
 /// # hm.insert(PyString::from("two"), vec![3_i32, 2, 1]);
-/// # let mut pytuple = pytuple!(PyArg::PyDict(PyDict::from(hm.clone()).as_ptr()),
-/// #                            PyArg::PyDict(PyDict::from(hm.clone()).as_ptr())).as_ptr();
+/// # let mut pytuple = pytuple!(PyArg::PyDict(PyDict::from(hm.clone()).into_raw()),
+/// #                            PyArg::PyDict(PyDict::from(hm.clone()).into_raw())).into_raw();
 /// // tuple from Python: ({"one": [0, 1, 3]}, {"two": [3, 2, 1]})
 /// let unpacked = unpack_pytuple!(pytuple; ({PyDict{(PyString, PyList{I32 => i64})}},
 ///                                          {PyDict{(PyString, PyList{I32 => i64})}},));
@@ -429,7 +429,7 @@ mod inner_types {
 /// # #[macro_use] extern crate rustypy;
 /// # fn main(){
 /// # use rustypy::PyList;
-/// # let int_list = PyList::from(vec![1i32; 5]).as_ptr();
+/// # let int_list = PyList::from(vec![1i32; 5]).into_raw();
 /// // list from python: [1, 1, 1, 1, 1]
 /// let unpacked = unpack_pytype!(int_list; PyList{I32 => i32});
 /// # }
@@ -445,7 +445,7 @@ mod inner_types {
 /// # use std::collections::HashMap;
 /// #
 /// # let mut hm = HashMap::from_iter(vec![(0_i32, "Hello"), (1_i32, " "), (2_i32, "World!")]);
-/// # let dict = PyDict::from(hm).as_ptr();
+/// # let dict = PyDict::from(hm).into_raw();
 /// let unpacked = unpack_pytype!(dict; PyDict{(i32, PyString => String)});
 /// # }
 /// ```
@@ -469,7 +469,7 @@ mod inner_types {
 /// #     let l = PyArg::from(vec![0_i64; 3]);
 /// #     hm1.insert(PyString::from(k), pytuple!(l, v));
 /// # }
-/// # let dict = PyDict::from(hm1).as_ptr();
+/// # let dict = PyDict::from(hm1).into_raw();
 /// // dict from Python: {str: ([u64], {i32: str})} as *mut size_t
 /// let unpacked = unpack_pytype!(dict;
 ///     PyDict{(PyString, PyTuple{({PyList{I64 => i64}},
