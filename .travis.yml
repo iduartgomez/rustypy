@@ -16,8 +16,8 @@ install:
   - export LIBRARY_PATH="$LIBRARY_PATH:$PYTHON_LIB"
   - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PYTHON_LIB:$HOME/rust/lib"
   - rustc -V
-  - pip install -e .
+  - pip install .
 script:
+  - cargo test
   - python ./tests/test_py_to_rs.py
   - python ./tests/test_rs_to_py.py
-  - cd ./src/rslib/ && cargo test

@@ -1,9 +1,8 @@
-import unittest
+import os
 import subprocess
 import sys
-import os
 import typing
-import shutil
+import unittest
 
 from rustypy.rswrapper import Float, Double, Tuple
 
@@ -13,7 +12,7 @@ lib_test = None
 
 def setUpModule():
     import logging
-    #from rustypy.rswrapper.ffi_defs import _load_rust_lib
+    # from rustypy.rswrapper.ffi_defs import _load_rust_lib
     # _load_rust_lib(recmpl=True)  # uncomment to recompile rust lib
     _py_test_dir = os.path.abspath(os.path.dirname(__file__))
     _rs_lib_dir = os.path.join(os.path.dirname(
@@ -38,7 +37,6 @@ class GenerateRustToPythonBinds(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from rustypy.rswrapper import bind_rs_crate_funcs
-        from rustypy.rswrapper import Float, Double, Tuple
 
         prefixes = ["python_bind_", "other_prefix_"]
         cls.bindings = bind_rs_crate_funcs(lib_test_entry, lib_test, prefixes)

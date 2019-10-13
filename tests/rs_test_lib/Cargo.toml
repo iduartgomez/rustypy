@@ -1,13 +1,13 @@
 [package]
-name = "test_lib"
+name = "test_lib_rs"
 version = "0.0.1"
 authors = ["IDG <iduartgomez@gmail.com>"]
 
 [dependencies]
 libc = "~0.2"
-rustypy = { version="^0.1", path="../.." }
+rustypy = { path="../.." }
 
 [lib]
-name = "test_lib"
-path  =  'src/lib.rs'
+name = "test_lib_rs"
+path  =  './lib.rs'
 crate-type = ["cdylib", "rlib"]

@@ -1,5 +1,6 @@
 from rustypy.rswrapper import Tuple
 
+
 # primitives:
 
 
@@ -30,6 +31,7 @@ def other_prefix_tuple1(tup_arg: Tuple[str, int]) -> Tuple[str, int]:
     output = tuple(output)
     return output
 
+
 K = Tuple[str, bool]
 
 
@@ -42,6 +44,7 @@ def other_prefix_tuple2(tup_arg: K) -> K:
         output[1] = False
     output = tuple(output)
     return output
+
 
 J = Tuple[float, bool]
 

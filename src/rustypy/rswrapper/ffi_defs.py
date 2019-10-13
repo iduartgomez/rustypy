@@ -1,12 +1,12 @@
 """FFI definitions."""
 
-import os
-import sys
 import ctypes
+import os
 import pathlib
-import pkg_resources
+import sys
+from ctypes import POINTER, c_void_p
 
-from ctypes import POINTER, ARRAY, c_void_p
+import pkg_resources
 
 c_backend = None
 
@@ -203,7 +203,9 @@ def _load_rust_lib(recmpl=False):
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
     libfile = "{}rustypy{}".format(pre, ext)
-    lib = pkg_resources.resource_filename('rslib', libfile)
+
+    root = pathlib.Path(pkg_resources.require("rustypy")[0].module_path).parent
+    lib = root.joinpath('src', 'rslib', libfile)
     if (not os.path.exists(lib)) or recmpl:
         import logging
         import subprocess
@@ -212,15 +214,11 @@ def _load_rust_lib(recmpl=False):
         logging.info("   library not found at: {}".format(lib))
         logging.info("   compiling with Cargo")
 
-        path = pathlib.Path(lib).parent.parent.parent
-        subprocess.run(['cargo', 'build', '--release'], cwd=str(path))
-        #subprocess.run(['cargo', 'build'], cwd=path)
-
-        cp = os.path.join(path, 'target', 'release', libfile)
-        #cp = os.path.join(path, 'target', 'debug', libfile)
+        subprocess.run(['cargo', 'build', '--release'], cwd=str(root))
+        cp = os.path.join(root, 'target', 'release', libfile)
         if os.path.exists(lib):
             os.remove(lib)
-        shutil.copy(cp, path.joinpath('src', 'rslib', libfile))
+        shutil.copy(cp, lib)
         _load_rust_lib()
     else:
         from ..__init__ import __version__ as curr_ver

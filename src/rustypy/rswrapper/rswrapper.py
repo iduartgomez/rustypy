@@ -33,37 +33,37 @@ UnsignedLongLong = type('UnsignedLongLong', (int,), {
 class TupleMeta(type):
 
     def __new__(cls, name, bases, namespace, parameters=None):
-        self = super().__new__(cls, name, bases, namespace)
-        self.__iter_cnt = 0
+        tuple_cls = super().__new__(cls, name, bases, namespace)
+        tuple_cls.__iter_cnt = 0
         if not parameters:
-            self.__params = None
-            return self
-        self.__params = []
+            tuple_cls.__params = None
+            return tuple_cls
+        tuple_cls.__params = []
         for arg_t in parameters:
             if arg_t is str:
-                self.__params.append(str)
+                tuple_cls.__params.append(str)
             elif arg_t is bool:
-                self.__params.append(bool)
+                tuple_cls.__params.append(bool)
             elif arg_t is int:
-                self.__params.append(int)
+                tuple_cls.__params.append(int)
             elif arg_t is UnsignedLongLong:
-                self.__params.append(UnsignedLongLong)
+                tuple_cls.__params.append(UnsignedLongLong)
             elif arg_t is Double or arg_t is float:
-                self.__params.append(Double)
+                tuple_cls.__params.append(Double)
             elif arg_t is Float:
-                self.__params.append(Float)
+                tuple_cls.__params.append(Float)
             elif issubclass(arg_t, Tuple):
-                self.__params.append(arg_t)
+                tuple_cls.__params.append(arg_t)
             elif issubclass(arg_t, list):
-                self.__params.append(arg_t)
+                tuple_cls.__params.append(arg_t)
             elif issubclass(arg_t, dict):
-                self.__params.append(arg_t)
+                tuple_cls.__params.append(arg_t)
             elif arg_t.__class__ is typing.GenericMeta:
-                self.__params.append(arg_t)
+                tuple_cls.__params.append(arg_t)
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
                                 not supported".format(t=arg_t))
-        return self
+        return tuple_cls
 
     def __init__(self, *args, **kwds):
         pass

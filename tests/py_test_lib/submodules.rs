@@ -4,8 +4,6 @@ extern crate libc;
 extern crate cpython;
 extern crate rustypy;
 
-mod test_package;
-
 use cpython::{Python};
 
 #[test]

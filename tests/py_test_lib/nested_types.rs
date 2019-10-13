@@ -1,14 +1,11 @@
 extern crate libc;
 extern crate cpython;
-
 extern crate rustypy;
 
 use std::collections::HashMap;
 
 use libc::c_long;
 use cpython::{Python, ToPyObject, PythonObject, PyObject, PyLong, PyString};
-
-mod test_package;
 
 #[test]
 fn basics_nested_types() {

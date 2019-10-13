@@ -1,7 +1,5 @@
-#[macro_use]
 extern crate rustypy;
-
-use rustypy::{PyArg, PyBool, PyList, PyString};
+#[macro_use] use rustypy::*;
 
 #[test]
 fn unpack_pylist_macro() {

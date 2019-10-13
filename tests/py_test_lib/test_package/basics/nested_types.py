@@ -3,7 +3,8 @@ from rustypy.pywrapper import rust_bind
 from rustypy.rswrapper import Tuple, List, Dict
 
 # generics:
-T = typing.Generic[typing.TypeVar('A', int, str)]
+A = typing.TypeVar('A', int, str)
+T = typing.Generic[A]
 
 
 @rust_bind
@@ -24,6 +25,7 @@ def generic2(g_arg: List[T]) -> List[T]:
     return out
 """
 
+
 # containers/mappings:
 
 
@@ -34,6 +36,7 @@ def dict1(dict_arg: Dict[str, int]) \
         dict_arg[k] = v + 1
     return dict_arg
 
+
 K = Tuple[str, bool]
 U = Dict[str, K]
 
@@ -41,6 +44,7 @@ U = Dict[str, K]
 @rust_bind
 def dict2(dict_arg: U) -> U:
     return dict_arg
+
 
 J = Tuple[float, bool]
 U = List[J]
@@ -57,6 +61,7 @@ def list1(ls_arg: U) \
     out_ls = ['passed']
     return out_ls
 
+
 # nested types:
 
 
@@ -64,6 +69,7 @@ def list1(ls_arg: U) \
 def cmpd_tuple(tup_arg1: Tuple[int, J]) -> Tuple[int, K, float]:
     out = (1, ('passed', True), 0.0)
     return out
+
 
 X = List[Tuple[K, T]]
 U = List[Tuple[int, bool]]
@@ -83,6 +89,7 @@ def cmpd_list_and_tuple(ls_arg: X) -> U:
             raise AssertionError("value is neither a string or an integer")
     return out
 
+
 U = List[Tuple[int, bool]]
 
 
@@ -96,6 +103,7 @@ def cmpd_list(arg1: U, arg2: List[int]) \
         assert isinstance(e, int)
     out = [([1], 1.0)]
     return out
+
 
 U = Dict[int, K]
 
@@ -116,6 +124,7 @@ def cmpd_list_and_dict() -> List[U]:
 def cmpd_dict_and_ls() -> Dict[int, List[float]]:
     d = {0: [0.0, 1.0, 2.0, 3.0]}
     return d
+
 
 # not supported yet:
 """
