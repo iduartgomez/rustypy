@@ -1,0 +1,16 @@
+# Python generated
+.tox
+*.egg-info
+__pycache__
+build
+dist
+
+# Rust generated
+Cargo.lock
+target
+**/librustypy.so
+**/rustypy_pybind*
+
+# IDESs
+.vscode
+.idea

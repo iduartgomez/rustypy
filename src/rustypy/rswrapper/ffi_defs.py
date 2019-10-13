@@ -1,13 +1,12 @@
 """FFI definitions."""
 
-import os
-import sys
 import ctypes
-import pkg_resources
+import importlib
+import os
+import pathlib
+import sys
+from ctypes import POINTER, c_void_p
 
-from ctypes import POINTER, ARRAY, c_void_p
-
-global c_backend
 c_backend = None
 
 RS_TYPE_CONVERSION = {
@@ -200,23 +199,42 @@ def config_ctypes():
 
 
 def _load_rust_lib(recmpl=False):
+    def load_compiled_lib(lib_path):
+        global c_backend
+        c_backend = ctypes.cdll.LoadLibrary(lib_path)
+        config_ctypes()
+
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
-    libfile = "{}rustypy{}".format(pre, ext)
-    lib = pkg_resources.resource_filename('rslib', libfile)
+
+    def get_from_site():
+        glob_pattern = "{}rustypy*{}".format(pre, ext)
+        for p in sys.path:
+            if p.endswith('site-packages'):
+                lib_path = list(pathlib.Path(p).glob(glob_pattern))
+                if len(lib_path) > 0:
+                    return str(lib_path[0])
+        return None
+
+    lib = get_from_site()
+    if lib:
+        load_compiled_lib(lib)
+
+    lib_file = "{}rustypy{}".format(pre, ext)
+    root = pathlib.Path(str(importlib.import_module('librustypy').__file__)).parent
+    lib = str(root.joinpath(lib_file))
     if (not os.path.exists(lib)) or recmpl:
-        print("   library not found at: {}".format(lib))
-        print("   compiling with Cargo")
+        import logging
         import subprocess
-        path = os.path.dirname(lib)
-        subprocess.run(['cargo', 'build', '--release'], cwd=path)
-        #subprocess.run(['cargo', 'build'], cwd=path)
         import shutil
-        cp = os.path.join(path, 'target', 'release', libfile)
-        #cp = os.path.join(path, 'target', 'debug', libfile)
+        logging.info("   library not found at: {}".format(lib))
+        logging.info("   compiling with Cargo")
+
+        subprocess.run(['cargo', 'build', '--release'], cwd=str(root))
+        cp = os.path.join(str(root), 'target', 'release', lib_file)
         if os.path.exists(lib):
             os.remove(lib)
-        shutil.copy(cp, path)
+        shutil.copy(cp, lib)
         _load_rust_lib()
     else:
         from ..__init__ import __version__ as curr_ver
@@ -224,10 +242,9 @@ def _load_rust_lib(recmpl=False):
         lib_ver = curr_ver
         # load the library
         if lib_ver != curr_ver:
-            compile_rust_lib(recmpl=True)
+            _load_rust_lib(recmpl=True)
         else:
-            globals()['c_backend'] = ctypes.cdll.LoadLibrary(lib)
-            config_ctypes()
+            load_compiled_lib(lib)
 
 
 def get_rs_lib():

@@ -1,0 +1,13 @@
+[package]
+name = "test_lib_py"
+version = "0.0.1"
+edition = "2015"
+
+[dependencies]
+cpython = { version="~0.3.0", features=["python3-sys"] }
+libc = "~0.2.62"
+rustypy = { path = "../../src/librustypy" }
+
+[lib]
+name = "test_lib_py"
+path = "./lib.rs"

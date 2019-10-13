@@ -1,0 +1,20 @@
+[package]
+name = "rustypy"
+version = "0.1.16"
+authors = ["IDG <iduartgomez@gmail.com>"]
+edition = "2015"
+
+[dependencies]
+cpython = { version="~0.3.0", features=["python3-sys"] }
+libc = "~0.2.62"
+syn = { version="~1.0.5", features=["full", "visit"] }
+walkdir = "1"
+
+[lib]
+name = "rustypy"
+path = "./lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[test]]
+name = "rustypy_macros"
+path = "tests/macros.rs"
