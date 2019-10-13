@@ -8,13 +8,13 @@ use libc::c_long;
 use cpython::{Python, ToPyObject, PythonObject, PyObject, PyLong, PyString};
 
 #[test]
-fn basics_nested_types() {
-    use test_package::basics::rustypy_pybind::PyModules;
+fn nested_types() {
+    use test_package::rustypy_pybind::PyModules;
 
     let gil = Python::acquire_gil();
     let py = gil.python();
     let module: PyModules = PyModules::new(&py);
-    let basics = module.nested_types;
+    let basics = module.basics.nested_types;
 
     // Vec<(c_double, bool)> -> Vec<String>
     let arg = vec![(0.2, true), (0.3, true), (0.5, true)];

@@ -39,10 +39,6 @@ impl PyString {
     pub unsafe fn from_ptr(ptr: *mut PyString) -> PyString {
         *Box::from_raw(ptr)
     }
-    /// Constructs an owned String from a PyString.
-    pub fn to_string(&self) -> String {
-        String::from(self._inner.to_str().unwrap())
-    }
     /// Constructs an owned String from a raw pointer.
     pub unsafe fn from_ptr_to_string(ptr: *mut PyString) -> String {
         let pystr = *(Box::from_raw(ptr));
@@ -63,7 +59,7 @@ impl PyString {
 
 impl fmt::Display for PyString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", String::from(self._inner.to_str().unwrap()))
     }
 }
 

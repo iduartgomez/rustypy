@@ -1,12 +1,11 @@
 """FFI definitions."""
 
 import ctypes
+import importlib
 import os
 import pathlib
 import sys
 from ctypes import POINTER, c_void_p
-
-import pkg_resources
 
 c_backend = None
 
@@ -200,22 +199,39 @@ def config_ctypes():
 
 
 def _load_rust_lib(recmpl=False):
+    def load_compiled_lib(lib_path):
+        global c_backend
+        c_backend = ctypes.cdll.LoadLibrary(lib_path)
+        config_ctypes()
+
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
-    libfile = "{}rustypy{}".format(pre, ext)
 
-    root = pathlib.Path(pkg_resources.require("rustypy")[0].module_path).parent
-    lib = root.joinpath('src', 'rslib', libfile)
+    def get_from_site():
+        glob_pattern = "{}rustypy*{}".format(pre, ext)
+        for p in sys.path:
+            if p.endswith('site-packages'):
+                lib_path = list(pathlib.Path(p).glob(glob_pattern))
+                if len(lib_path) > 0:
+                    return str(lib_path[0])
+        return None
+
+    lib = get_from_site()
+    if lib:
+        load_compiled_lib(lib)
+
+    lib_file = "{}rustypy{}".format(pre, ext)
+    root = pathlib.Path(str(importlib.import_module('librustypy').__file__)).parent
+    lib = str(root.joinpath(lib_file))
     if (not os.path.exists(lib)) or recmpl:
         import logging
         import subprocess
         import shutil
-
         logging.info("   library not found at: {}".format(lib))
         logging.info("   compiling with Cargo")
 
         subprocess.run(['cargo', 'build', '--release'], cwd=str(root))
-        cp = os.path.join(root, 'target', 'release', libfile)
+        cp = os.path.join(str(root), 'target', 'release', lib_file)
         if os.path.exists(lib):
             os.remove(lib)
         shutil.copy(cp, lib)
@@ -228,9 +244,7 @@ def _load_rust_lib(recmpl=False):
         if lib_ver != curr_ver:
             _load_rust_lib(recmpl=True)
         else:
-            global c_backend
-            c_backend = ctypes.cdll.LoadLibrary(lib)
-            config_ctypes()
+            load_compiled_lib(lib)
 
 
 def get_rs_lib():

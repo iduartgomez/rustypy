@@ -395,7 +395,7 @@ class RustFuncGen(object):
             path = info["f_globals"]["__file__"]
             path = os.path.abspath(path)
         else:
-            path = with_path
+            path = str(with_path)
 
         if module is True and inspect.ismodule(module):
             self._ismodule = True
@@ -669,7 +669,7 @@ $mod_list_init
                 Ok(m) => Some(
                     $name {
                         module: m,
-                        py: py
+                        py
                     }),
                 Err(exception) => {
                     handle_import_error(exception);
@@ -834,8 +834,6 @@ $build
             for mod, data in self.m_dict.items():
                 ModuleStruct(mod, data, pckg_struct)
         file = os.path.join(dir_, 'rustypy_pybind.rs')
-        file_header = "".join(
-            [self._file_header_info, self._file_header_funcs])
         with open(file, 'w', encoding="UTF-8") as f:
             f.write(dedent(self._file_header_info))
             f.write(dedent(self._file_header_funcs))

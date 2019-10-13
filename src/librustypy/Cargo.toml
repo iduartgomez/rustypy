@@ -12,9 +12,9 @@ walkdir = "1"
 
 [lib]
 name = "rustypy"
-path = "src/rslib/lib.rs"
+path = "./lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [[test]]
 name = "rustypy_macros"
-path = "src/rslib/tests/macros.rs"
+path = "tests/macros.rs"

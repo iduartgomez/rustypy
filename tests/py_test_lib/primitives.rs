@@ -5,13 +5,13 @@ extern crate rustypy;
 use cpython::Python;
 
 #[test]
-fn basics_primitives() {
-    use test_package::basics::rustypy_pybind::PyModules;
+fn primitives() {
+    use test_package::rustypy_pybind::PyModules;
     let gil = Python::acquire_gil();
     let py = gil.python();
 
     let module: PyModules = PyModules::new(&py);
-    let basics = module.primitives;
+    let basics = module.basics.primitives;
 
     let arg = 1;
     let answ = basics.rust_bind_int_func(arg);

@@ -4,20 +4,23 @@ language: python
 python:
   - "3.5"
   - "3.6"
-  - "3.7"
-sudo: false
+  #- "3.7"
+
+env:
+  global:
+    - TRAVIS_RUST_VERSION=stable
+    - RUST_BACKTRACE=1
+    - CI_HOME=`pwd`
+
 before_install:
-  - mkdir ~/rust-installer
-  - curl -sL https://static.rust-lang.org/rustup.sh -o ~/rust-installer/rustup.sh
-  - sh ~/rust-installer/rustup.sh --prefix=~/rust --yes --disable-sudo
-  - export PATH="$HOME/rust/bin:$PATH"
+  - source ./ci/travis_setup.sh
+
 install:
-  - export PYTHON_LIB=$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
-  - export LIBRARY_PATH="$LIBRARY_PATH:$PYTHON_LIB"
-  - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PYTHON_LIB:$HOME/rust/lib"
   - rustc -V
   - pip install .
+
 script:
-  - cargo test
   - python ./tests/test_py_to_rs.py
   - python ./tests/test_rs_to_py.py
+  - cargo clippy --manifest-path ./src/librustypy/Cargo.toml
+  - cargo test --manifest-path ./src/librustypy/Cargo.toml

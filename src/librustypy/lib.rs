@@ -182,8 +182,8 @@ fn type_repr(ty: &syn::Type, r: Option<&str>) -> Result<String, ()> {
         syn::Type::Path(path) => {
             let syn::TypePath { path, .. } = path;
             if let Some(ty) = path.segments.last() {
-                if r.is_some() {
-                    Ok(format!("type({} {})", r.unwrap(), ty.ident))
+                if let Some(r) = r {
+                    Ok(format!("type({} {})", r, ty.ident))
                 } else {
                     Ok(format!("type({})", ty.ident))
                 }

@@ -11,25 +11,23 @@ lib_test = None
 
 
 def setUpModule():
-    import logging
     # from rustypy.rswrapper.ffi_defs import _load_rust_lib
     # _load_rust_lib(recmpl=True)  # uncomment to recompile rust lib
-    _py_test_dir = os.path.abspath(os.path.dirname(__file__))
-    _rs_lib_dir = os.path.join(os.path.dirname(
-        _py_test_dir), 'src', 'rslib', 'src')
+    py_test_dir = os.path.abspath(os.path.dirname(__file__))
+    _rs_lib_dir = os.path.join(os.path.dirname(py_test_dir), 'src', 'librustypy')
     try:
         os.remove(os.path.join(_rs_lib_dir, 'librustypy.so'))
     except:
-        logging.info("Library wasn't compiled")
+        print("Library wasn't compiled")
     # load sample lib
     ext = {'darwin': '.dylib', 'win32': '.dll'}.get(sys.platform, '.so')
     pre = {'win32': ''}.get(sys.platform, 'lib')
     global lib_test_entry
     global lib_test
-    lib_test_entry = os.path.join(_py_test_dir, 'rs_test_lib')
+    lib_test_entry = os.path.join(py_test_dir, 'rs_test_lib')
     lib_test = os.path.join(lib_test_entry, 'target', 'debug',
-                            '{}test_lib{}'.format(pre, ext))
-    subprocess.run(['cargo', 'build'], cwd=lib_test_entry).check_returncode()
+                            '{}test_lib_rs{}'.format(pre, ext))
+    subprocess.run(['cargo', 'build'], cwd=str(lib_test_entry)).check_returncode()
 
 
 class GenerateRustToPythonBinds(unittest.TestCase):
