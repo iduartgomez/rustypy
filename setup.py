@@ -21,7 +21,8 @@ def get_rustypy_version():
     sys.path.append(os.path.join(path, 'src'))
     # mod = importlib.import_module('rustypy')
 
-    return ""
+    #FIXME: get library version dinamically
+    return "0.1.16"
 
 
 rustypy_version = get_rustypy_version()
@@ -69,7 +70,8 @@ def build_extension():
         from setuptools_rust import RustExtension, Binding
     except ImportError:
         import subprocess
-        errno = subprocess.call([sys.executable, "-m", "pip", "install", "setuptools-rust"])
+        errno = subprocess.call(
+            [sys.executable, "-m", "pip", "install", "setuptools-rust"])
         if errno:
             print("Please install setuptools-rust package")
             raise SystemExit(errno)
@@ -77,7 +79,8 @@ def build_extension():
             from setuptools_rust import RustExtension, Binding
 
     import pathlib
-    lib_path = pathlib.Path(os.path.abspath(__file__)).parent.joinpath('src', 'librustypy', 'Cargo.toml')
+    lib_path = pathlib.Path(os.path.abspath(__file__)).parent.joinpath(
+        'src', 'librustypy', 'Cargo.toml')
     return [RustExtension("librustypy", path=str(lib_path), binding=Binding.NoBinding)]
 
 

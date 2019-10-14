@@ -7,30 +7,27 @@ use std::convert::AsRef;
 use std::hash::Hash;
 
 #[doc(hidden)]
-#[macro_export]
-macro_rules! _rustypy_abort_xtract_fail {
-    ( $msg:expr ) => {{
-        let msg = $msg;
-        _rustypy_abort_xtract_fail!(var msg);
-    }};
-    ( var $msg:ident ) => {{
-        use std::process;
-        use std::io::{Write, stderr, stdout};
+#[inline(never)]
+#[cold]
+pub fn abort_and_exit(msg: &str) -> ! {
+    use std::io::{stderr, stdout, Write};
+    use std::process;
 
-        fn write<T: Write, M: ::std::fmt::Display>(mut handle: T, msg: &M) {
-            write!(&mut handle, "\nrustypy: failed abrupty!").unwrap();
-            write!(&mut handle,
-                "rustypy: aborted process, tried to extract one type, but found an other \
-                 instead:\n {}\n", msg).unwrap();
-            handle.flush().unwrap();
-        }
+    fn write<T: Write>(mut handle: T, msg: &str) {
+        write!(&mut handle, "\nrustypy: failed abrupty!").unwrap();
+        write!(
+            &mut handle,
+            "rustypy: aborted process, tried to extract one type, but found an other \
+             instead:\n {}\n",
+            msg
+        )
+        .unwrap();
+        handle.flush().unwrap();
+    }
 
-        let err = stderr();
-        write(err, &$msg);
-        let out = stdout();
-        write(out, &$msg);
-        process::exit(1);
-    }}
+    write(stderr(), msg);
+    write(stdout(), msg);
+    process::exit(1);
 }
 
 pub mod pybool;
@@ -92,7 +89,7 @@ macro_rules! pyarg_conversions {
                     $variant(ref v) => v,
                     _ => {
                         let msg = format!("expected a {} while destructuring PyArg enum", $repr);
-                        _rustypy_abort_xtract_fail!(var msg);
+                        abort_and_exit(msg.as_str());
                     }
                 }
             }
@@ -110,7 +107,7 @@ macro_rules! pyarg_conversions {
                     $variant(v) => v,
                     _ => {
                         let msg = format!("expected a {} while destructuring PyArg enum", $repr);
-                        _rustypy_abort_xtract_fail!(var msg);
+                        abort_and_exit(msg.as_str());
                     }
                 }
             }
@@ -123,7 +120,7 @@ macro_rules! pyarg_conversions {
                     $variant(v) => unsafe { &*v },
                     _ => {
                         let msg = format!("expected a {} while destructuring PyArg enum", $repr);
-                        _rustypy_abort_xtract_fail!(var msg);
+                        abort_and_exit(msg.as_str());
                     }
                 }
             }
@@ -141,12 +138,12 @@ macro_rules! pyarg_conversions {
                     $variant(v) => unsafe { *(Box::from_raw(v)) },
                     _ => {
                         let msg = format!("expected a {} while destructuring PyArg enum", $repr);
-                        _rustypy_abort_xtract_fail!(var msg);
+                        abort_and_exit(msg.as_str());
                     }
                 }
             }
         }
-    }
+    };
 }
 
 pyarg_conversions!(i8; PyArg::I8; "i8");
@@ -171,7 +168,7 @@ where
     fn as_ref(&self) -> &PyDict<K> {
         match *self {
             PyArg::PyDict(dict) => unsafe { &*(dict as *mut PyDict<K>) as &PyDict<K> },
-            _ => _rustypy_abort_xtract_fail!("expected a PyDict while destructuring PyArg enum"),
+            _ => abort_and_exit("expected a PyDict while destructuring PyArg enum"),
         }
     }
 }
@@ -237,7 +234,7 @@ impl From<PyArg> for String {
     fn from(a: PyArg) -> String {
         match a {
             PyArg::PyString(v) => v.to_string(),
-            _ => _rustypy_abort_xtract_fail!("expected a PyString while destructuring PyArg enum"),
+            _ => abort_and_exit("expected a PyString while destructuring PyArg enum"),
         }
     }
 }
@@ -249,7 +246,7 @@ where
     fn from(a: PyArg) -> PyDict<K> {
         match a {
             PyArg::PyDict(v) => unsafe { *(Box::from_raw(v as *mut PyDict<K>)) },
-            _ => _rustypy_abort_xtract_fail!("expected a PyDict while destructuring PyArg enum"),
+            _ => abort_and_exit("expected a PyDict while destructuring PyArg enum"),
         }
     }
 }
@@ -327,9 +324,9 @@ pub unsafe extern "C" fn pyarg_extract_owned_int(e: *mut PyArg) -> i64 {
         PyArg::U32(val) => i64::from(val),
         PyArg::U16(val) => i64::from(val),
         PyArg::U8(val) => i64::from(val),
-        _ => _rustypy_abort_xtract_fail!(
+        _ => abort_and_exit(
             "failed while trying to extract an integer type of i64 or \
-             less"
+             less",
         ),
     }
 }
@@ -340,7 +337,7 @@ pub unsafe extern "C" fn pyarg_extract_owned_ulonglong(e: *mut PyArg) -> u64 {
     let e = *(Box::from_raw(e));
     match e {
         PyArg::U64(val) => val,
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract an u64"),
+        _ => abort_and_exit("failed while trying to extract an u64"),
     }
 }
 
@@ -350,7 +347,7 @@ pub unsafe extern "C" fn pyarg_extract_owned_float(e: *mut PyArg) -> f32 {
     let e = *(Box::from_raw(e));
     match e {
         PyArg::F32(val) => val,
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract an f32"),
+        _ => abort_and_exit("failed while trying to extract an f32"),
     }
 }
 
@@ -360,7 +357,7 @@ pub unsafe extern "C" fn pyarg_extract_owned_double(e: *mut PyArg) -> f64 {
     let e = *(Box::from_raw(e));
     match e {
         PyArg::F64(val) => val,
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract an f64"),
+        _ => abort_and_exit("failed while trying to extract an f64"),
     }
 }
 
@@ -370,7 +367,7 @@ pub unsafe extern "C" fn pyarg_extract_owned_bool(e: *mut PyArg) -> *mut PyBool 
     let e = *(Box::from_raw(e));
     match e {
         PyArg::PyBool(val) => val.into_raw(),
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyBool"),
+        _ => abort_and_exit("failed while trying to extract a PyBool"),
     }
 }
 
@@ -380,7 +377,7 @@ pub unsafe extern "C" fn pyarg_extract_owned_str(e: *mut PyArg) -> *mut PyString
     let e = *(Box::from_raw(e));
     match e {
         PyArg::PyString(val) => val.into_raw(),
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyString"),
+        _ => abort_and_exit("failed while trying to extract a PyString"),
     }
 }
 
@@ -390,7 +387,7 @@ pub unsafe extern "C" fn pyarg_extract_owned_tuple(e: *mut PyArg) -> *mut PyTupl
     let e = *(Box::from_raw(e));
     match e {
         PyArg::PyTuple(val) => val,
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyTuple"),
+        _ => abort_and_exit("failed while trying to extract a PyTuple"),
     }
 }
 
@@ -400,7 +397,7 @@ pub unsafe extern "C" fn pyarg_extract_owned_list(e: *mut PyArg) -> *mut PyList 
     let e = *(Box::from_raw(e));
     match e {
         PyArg::PyList(val) => val,
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyList"),
+        _ => abort_and_exit("failed while trying to extract a PyList"),
     }
 }
 
@@ -410,6 +407,6 @@ pub unsafe extern "C" fn pyarg_extract_owned_dict(e: *mut PyArg) -> *mut size_t 
     let e = *(Box::from_raw(e));
     match e {
         PyArg::PyDict(val) => val,
-        _ => _rustypy_abort_xtract_fail!("failed while trying to extract a PyDict"),
+        _ => abort_and_exit("failed while trying to extract a PyDict"),
     }
 }

@@ -440,9 +440,7 @@ class RustFuncGen(object):
         self.dump_to_rust()
 
     Func = namedtuple('Func',
-                      ['name', 'parameters', 'rsreturn', 'pyargs']
-                      )
-    #Klass = namedtuple('Klass', ['name'])
+                      ['name', 'parameters', 'rsreturn', 'pyargs'])
 
     def parse_functions(self):
         def inspect_parameters():
@@ -548,7 +546,7 @@ class RustFuncGen(object):
                     if pytypes:
                         param = "PyBool"
                     else:
-                        param = "bool"                
+                        param = "bool"
                 elif issubclass(t, Tuple):
                     if pytypes:
                         curr.append('PyTuple')
@@ -582,7 +580,7 @@ class RustFuncGen(object):
                     for type_ in t.__args__:
                         inner_types(type_, add)
                     param = True
-                elif t.__class__ is typing.GenericMeta:
+                elif t.__class__ is typing._GenericAlias:
                     param = "PyObject"
                 elif issubclass(t, FunctionType):
                     param = False
@@ -621,6 +619,7 @@ class RustFuncGen(object):
 
     _file_header_funcs = """
     #![allow(
+        dead_code,
         non_camel_case_types,
         non_snake_case,
         non_upper_case_globals,

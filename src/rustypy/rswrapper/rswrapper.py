@@ -52,13 +52,13 @@ class TupleMeta(type):
                 tuple_cls.__params.append(Double)
             elif arg_t is Float:
                 tuple_cls.__params.append(Float)
+            elif arg_t.__class__ is typing._GenericAlias:
+                tuple_cls.__params.append(arg_t)
             elif issubclass(arg_t, Tuple):
                 tuple_cls.__params.append(arg_t)
             elif issubclass(arg_t, list):
                 tuple_cls.__params.append(arg_t)
             elif issubclass(arg_t, dict):
-                tuple_cls.__params.append(arg_t)
-            elif arg_t.__class__ is typing.GenericMeta:
                 tuple_cls.__params.append(arg_t)
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \

@@ -44,7 +44,7 @@
 //! Is recommended to use the [unpack_pylist!](../../macro.unpack_pylist!.html) macro in order
 //! to convert a PyList to a Rust native type. Check the macro documentation for more info.
 
-use pytypes::PyArg;
+use super::PyArg;
 
 use std::iter::{FromIterator, IntoIterator};
 use std::marker::PhantomData;

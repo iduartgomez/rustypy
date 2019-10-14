@@ -25,8 +25,8 @@ pub mod primitives {
     }
 
     #[no_mangle]
-    pub extern "C" fn python_bind_str(pystr: *mut PyString) -> *mut PyString {
-        let mut string = unsafe { PyString::from_ptr_to_string(pystr) };
+    pub unsafe extern "C" fn python_bind_str(pystr: *mut PyString) -> *mut PyString {
+        let mut string = PyString::from_ptr_to_string(pystr);
         assert_eq!(string, "From Python.");
         string.push_str(" Added in Rust.");
 
@@ -34,8 +34,8 @@ pub mod primitives {
     }
 
     #[no_mangle]
-    pub extern "C" fn python_bind_bool(ptr: *mut PyBool) -> *mut PyBool {
-        let bool_t = unsafe { PyBool::from_ptr_into_bool(ptr) };
+    pub unsafe extern "C" fn python_bind_bool(ptr: *mut PyBool) -> *mut PyBool {
+        let bool_t = PyBool::from_ptr_into_bool(ptr);
         assert!(bool_t);
         PyBool::from(false).into_raw()
     }
@@ -47,34 +47,36 @@ pub extern "C" fn python_bind_int_tuple(e1: i32, e2: i32) -> *mut PyTuple {
 }
 
 #[no_mangle]
-pub extern "C" fn python_bind_str_tuple(e1: *mut PyString) -> *mut PyTuple {
-    let s = PyString::from(unsafe { PyString::from_ptr_to_string(e1) });
+pub unsafe extern "C" fn python_bind_str_tuple(e1: *mut PyString) -> *mut PyTuple {
+    let s = PyString::from(PyString::from_ptr_to_string(e1));
 
     pytuple!(
         PyArg::PyString(s),
         PyArg::PyString(PyString::from("from Rust"))
-    ).into_raw()
+    )
+    .into_raw()
 }
 
 #[no_mangle]
-pub extern "C" fn python_bind_tuple_mixed(
+pub unsafe extern "C" fn python_bind_tuple_mixed(
     e1: i32,
     e2: *mut PyBool,
     e3: f32,
     e4: *mut PyString,
 ) -> *mut PyTuple {
-    assert_eq!(unsafe { PyBool::from_ptr(e2) }, true);
-    let s = PyString::from(unsafe { PyString::from_ptr_to_string(e4) });
+    assert_eq!(PyBool::from_ptr(e2), true);
+    let s = PyString::from(PyString::from_ptr_to_string(e4));
     pytuple!(
         PyArg::I32(e1),
         PyArg::PyBool(PyBool::from(false)),
         PyArg::F32(e3),
         PyArg::PyString(s)
-    ).into_raw()
+    )
+    .into_raw()
 }
 
 #[no_mangle]
-pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
+pub unsafe extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
     let converted = unpack_pylist!(list; PyList{PyString => String});
     assert_eq!(converted.len(), 3);
     for (i, e) in (&converted).iter().enumerate() {
@@ -92,8 +94,8 @@ pub extern "C" fn python_bind_list1(list: *mut PyList) -> *mut PyList {
 }
 
 #[no_mangle]
-pub extern "C" fn other_prefix_dict(dict: *mut usize) -> *mut usize {
-    let dict = unsafe { PyDict::<u64>::from_ptr(dict) };
+pub unsafe extern "C" fn other_prefix_dict(dict: *mut usize) -> *mut usize {
+    let dict = PyDict::<u64>::from_ptr(dict);
     assert_eq!(dict.get(&0_u64), Some(&PyString::from("From")));
     assert_eq!(dict.get(&1_u64), Some(&PyString::from("Python")));
     let mut hm = HashMap::new();

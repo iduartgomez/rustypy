@@ -55,7 +55,7 @@
 //! Is recommended to use the [unpack_pydict!](../../macro.unpack_pydict!.html) macro in order
 //! to convert a PyDict to a Rust native type. Check the macro documentation for more info.
 
-use super::{PyArg, PyBool, PyList, PyString, PyTuple};
+use super::{abort_and_exit, PyArg, PyBool, PyList, PyString, PyTuple};
 use libc::size_t;
 
 use std::collections::hash_map::Drain;
@@ -304,9 +304,9 @@ pub unsafe extern "C" fn pydict_insert(
         ($p:ident; $v:tt) => {{
             match *(Box::from_raw($p as *mut PyArg)) {
                 PyArg::$v(val) => val,
-                _ => _rustypy_abort_xtract_fail!(
+                _ => abort_and_exit(
                     "expected different key type \
-                     for PyDict while inserting a (key, val) pair"
+                     for PyDict while inserting a (key, val) pair",
                 ),
             }
         }};
@@ -752,8 +752,8 @@ pub enum PyDictK {
 }
 
 pub(crate) mod key_bound {
-    use pytypes::pybool::PyBool;
-    use pytypes::pystring::PyString;
+    use crate::pytypes::pybool::PyBool;
+    use crate::pytypes::pystring::PyString;
 
     pub trait PyDictKey {}
     impl PyDictKey for i64 {}
@@ -782,6 +782,6 @@ pub extern "C" fn pydict_get_key_type(k: u32) -> *mut PyDictK {
         8 => Box::into_raw(Box::new(PyDictK::U64)),
         11 => Box::into_raw(Box::new(PyDictK::PyBool)),
         12 => Box::into_raw(Box::new(PyDictK::PyString)),
-        _ => _rustypy_abort_xtract_fail!("type not supported as PyDict key type"),
+        _ => abort_and_exit("type not supported as PyDict key type"),
     }
 }
