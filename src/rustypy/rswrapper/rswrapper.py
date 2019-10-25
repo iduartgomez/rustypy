@@ -9,7 +9,7 @@ from collections import namedtuple
 from .ffi_defs import *
 from .ffi_defs import get_rs_lib
 from .pytypes import MissingTypeHint, PyBool, PyDict, PyList, PyString, PyTuple
-from ..type_checkers import type_checkers
+from ..type_checkers import type_checkers, is_map_like, is_seq_like
 
 c_backend = get_rs_lib()
 
@@ -38,7 +38,11 @@ class TupleMeta(type):
         tuple_cls.__params = []
 
         @type_checkers
-        def check_type(arg_t, other_type, generic):
+        def check_type(arg_t, **checkers):
+            is_map_like = checkers["map_like"]
+            is_seq_like = checkers["seq_like"]
+            is_generic = checkers["generic"]
+
             type_annotation = None
             if arg_t is str:
                 type_annotation = str
@@ -52,13 +56,13 @@ class TupleMeta(type):
                 type_annotation = Double
             elif arg_t is Float:
                 type_annotation = Float
-            elif generic(arg_t):
+            elif is_generic(arg_t):
                 type_annotation = arg_t
             elif issubclass(arg_t, Tuple):
                 type_annotation = arg_t
-            elif issubclass(arg_t, list):
+            elif is_seq_like(arg_t):
                 type_annotation = arg_t
-            elif issubclass(arg_t, dict):
+            elif is_map_like(arg_t):
                 type_annotation = arg_t
             else:
                 raise TypeError("rustypy: subtype `{t}` of Tuple type is \
@@ -91,7 +95,7 @@ class TupleMeta(type):
                          for i, e in enumerate(self.__params)])
         return "rustypy.Tuple[{}]".format(inner)
 
-    def _element_type(self, pos):
+    def element_type(self, pos):
         return self.__params[pos]
 
     def __subclasscheck__(self, cls):
@@ -205,7 +209,7 @@ def _get_ptr_to_C_obj(obj, sig=None):
         if not sig:
             raise MissingTypeHint(
                 "rustypy: dict type arguments require a type hint")
-        if not issubclass(sig, dict):
+        if not is_map_like(sig):
             raise TypeError(
                 "rustypy: the type hint must be of typing.Dict type")
         return PyDict.from_dict(obj, sig)
@@ -371,8 +375,7 @@ class RustBinds(object):
         def __init__(self, name, argtypes, lib):
             self._rs_fn = getattr(lib, name)
             self._fn_name = name
-            self.__type_hints = {'real_return': argtypes.pop()}
-            self.__type_hints['real_argtypes'] = argtypes
+            self.__type_hints = {'real_return': argtypes.pop(), 'real_argtypes': argtypes}
 
         def __call__(self, *args, **kwargs):
             if kwargs:
@@ -460,7 +463,7 @@ class RustBinds(object):
         @restype.setter
         def restype(self, annotation):
             self.__type_hints['return'] = annotation
-            if issubclass(annotation, dict):
+            if is_map_like(annotation):
                 real_t = self.__type_hints['real_return']
                 self.__type_hints['real_return'] = RustType(
                     equiv=dict, ref=real_t.ref, mutref=real_t.mutref, raw=real_t.raw)
@@ -484,17 +487,15 @@ class RustBinds(object):
             types = self.__type_hints.setdefault(
                 'argtypes', [None] * len(self.argtypes))
             real_t = self.argtypes[position]
-            if real_t.equiv is list \
-                    and not issubclass(hint, typing.List):
+            if real_t.equiv is list and not is_seq_like(hint):
                 raise TypeError("rustypy: type hint for argument {n} of function {fn} \
                 must be of typing.List type")
-            elif real_t.equiv is OpaquePtr:
-                if issubclass(hint, dict):
-                    self.__type_hints['real_argtypes'][position] = RustType(
-                        equiv=dict, ref=real_t.ref, mutref=real_t.mutref, raw=real_t.raw)
-                    r_args = [x for x in self.__type_hints['real_argtypes']]
-                    r_args.append(self.real_restype)
-                    RustBinds.decl_C_args(self._rs_fn, r_args)
+            elif real_t.equiv is OpaquePtr and is_map_like(hint):
+                self.__type_hints['real_argtypes'][position] = RustType(
+                    equiv=dict, ref=real_t.ref, mutref=real_t.mutref, raw=real_t.raw)
+                r_args = [x for x in self.__type_hints['real_argtypes']]
+                r_args.append(self.real_restype)
+                RustBinds.decl_C_args(self._rs_fn, r_args)
             types[position] = hint
 
         def get_argtype(self, position):

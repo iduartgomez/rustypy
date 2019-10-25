@@ -147,7 +147,7 @@ def config_ctypes():
     c_backend.pydict_insert.argtypes = (POINTER(PyDict_RS), POINTER(
         KeyType_RS), POINTER(PyArg_RS), POINTER(PyArg_RS))
     c_backend.pydict_insert.restype = c_void_p
-    #c_backend.pydict_get_mut_element.restype = c_void_p
+    # c_backend.pydict_get_mut_element.restype = c_void_p
     c_backend.pydict_get_drain.argtypes = (
         POINTER(PyDict_RS), POINTER(KeyType_RS))
     c_backend.pydict_get_drain.restype = POINTER(DrainPyDict_RS)
@@ -219,6 +219,7 @@ def _load_rust_lib(recmpl=False):
     lib = get_from_site()
     if lib:
         load_compiled_lib(lib)
+        return
 
     lib_file = "{}rustypy{}".format(pre, ext)
     root = pathlib.Path(str(importlib.import_module('librustypy').__file__)).parent

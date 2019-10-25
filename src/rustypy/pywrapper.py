@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """Generates code for calling Python from Rust code."""
 
-import collections.abc as abc
 import inspect
 import os
 import random
 import sys
-from collections import namedtuple
+from collections import abc, namedtuple
 from importlib import import_module, invalidate_caches
 from io import StringIO
 from string import Template, ascii_letters
@@ -523,76 +522,77 @@ class RustFuncGen(object):
 
     def parse_parameter(self, p, pytypes=False):
         @type_checkers
-        def check_type(arg_t, curr, other_type, generic):
+        def check_type(arg_t, curr, **checkers):
+            is_map_like = checkers["map_like"]
+            is_seq_like = checkers["seq_like"]
+            is_generic = checkers["generic"]
+
             add = []
             param = False
-            if inspect.isclass(arg_t):
-                if arg_t is int:
-                    if pytypes:
-                        param = "PyLong"
-                    else:
-                        param = "c_long"
-                elif arg_t is float or arg_t is Double or arg_t is Float:
-                    if pytypes:
-                        param = "PyFloat"
-                    else:
-                        param = "c_double"
-                elif arg_t is str:
-                    if pytypes:
-                        param = "PyString"
-                    else:
-                        param = "String"
-                elif arg_t is bool:
-                    if pytypes:
-                        param = "PyBool"
-                    else:
-                        param = "bool"
-                elif issubclass(arg_t, Tuple):
-                    if pytypes:
-                        curr.append('PyTuple')
-                    else:
-                        curr.append('tuple')
-                    for type_ in arg_t:
-                        check_type(type_, add)
-                    param = True
-                elif issubclass(arg_t, (list, abc.MutableSequence)):
-                    if pytypes:
-                        curr.append("PyList")
-                    else:
-                        curr.append("Vec")
-                    for type_ in arg_t.__args__:
-                        check_type(type_, add)
-                    param = True
-                elif issubclass(arg_t, (dict, abc.MutableMapping)):
-                    if pytypes:
-                        curr.append("PyDict")
-                    else:
-                        curr.append("HashMap")
-                    for type_ in arg_t.__args__:
-                        check_type(type_, add)
-                    param = True
-                elif issubclass(arg_t, (set, abc.MutableSet)):
-                    raise NotImplementedError("rustypy: support for sets not added yet")
-                    # if pytypes:
-                    #     curr.append("PySet")
-                    # else:
-                    #     curr.append("Set")
-                    # for type_ in t.__args__:
-                    #     inner_types(type_, add)
-                    # param = True
-                elif issubclass(arg_t, FunctionType):
-                    param = False
+
+            if arg_t is int:
+                if pytypes:
+                    param = "PyLong"
+                else:
+                    param = "c_long"
+            elif arg_t is float or arg_t is Double or arg_t is Float:
+                if pytypes:
+                    param = "PyFloat"
+                else:
+                    param = "c_double"
+            elif arg_t is str:
+                if pytypes:
+                    param = "PyString"
+                else:
+                    param = "String"
+            elif arg_t is bool:
+                if pytypes:
+                    param = "PyBool"
+                else:
+                    param = "bool"
+            elif is_seq_like(arg_t):
+                if pytypes:
+                    curr.append("PyList")
+                else:
+                    curr.append("Vec")
+                for type_ in arg_t.__args__:
+                    check_type(type_, add)
+                param = True
+            elif is_map_like(arg_t):
+                if pytypes:
+                    curr.append("PyDict")
+                else:
+                    curr.append("HashMap")
+                for type_ in arg_t.__args__:
+                    check_type(type_, add)
+                param = True
+            elif is_generic(arg_t):
+                param = "PyObject"
+            elif issubclass(arg_t, Tuple):
+                if pytypes:
+                    curr.append('PyTuple')
+                else:
+                    curr.append('tuple')
+                for type_ in arg_t:
+                    check_type(type_, add)
+                param = True
+            elif issubclass(arg_t.__class__, (set, abc.MutableSet)):
+                raise NotImplementedError("rustypy: support for sets not added yet")
+                # if pytypes:
+                #     curr.append("PySet")
+                # else:
+                #     curr.append("Set")
+                # for type_ in t.__args__:
+                #     inner_types(type_, add)
+                # param = True
+            elif issubclass(arg_t.__class__, FunctionType):
+                param = False
 
             if not param and arg_t is None:
                 if pytypes:
                     param = 'PyNone'
                 else:
                     param = 'PyObject::None'
-
-            if not param:
-                param = other_type(arg_t)
-            if not param and generic(arg_t):
-                param = "PyObject"
 
             # check if is a valid type or raise exception
             if not isinstance(param, bool):
