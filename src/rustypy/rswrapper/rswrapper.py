@@ -384,12 +384,12 @@ class RustBinds(object):
             else:
                 return_ref = False
                 get_contents = False
-            n_args = len(self.argtypes)
-            g_args = len(args)
-            if g_args != n_args:
+            num_args = len(self.argtypes)
+            given_args = len(args)
+            if given_args != num_args:
                 raise TypeError("rustypy: {}() takes exactly {} "
                                 "arguments ({} given)".format(
-                    self._fn_name, n_args, g_args))
+                    self._fn_name, num_args, given_args))
             prep_args = []
             for x, a in enumerate(args):
                 p = self.argtypes[x]

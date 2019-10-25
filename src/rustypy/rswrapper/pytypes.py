@@ -3,6 +3,7 @@
 import abc
 from collections import deque
 from enum import Enum, unique
+from collections import abc as abc_coll
 
 from rustypy.type_checkers import prev_to_37
 from .ffi_defs import *
@@ -68,8 +69,10 @@ class PythonObjectMeta(type):
             kind = PyEquivType.Float
         elif issubclass(arg_t, Tuple):
             kind = PyEquivType.Tuple
-        else:
-            kind = None
+        elif hasattr(arg_t, "__origin__") and issubclass(arg_t.__origin__, (list, abc_coll.MutableSequence)):
+            kind = PyEquivType.List
+        elif hasattr(arg_t, "__origin__") and issubclass(arg_t.__origin__, (list, abc_coll.MutableMapping)):
+            kind = PyEquivType.Dict
         return kind
 
     def __new__(mcs, cls_name, parents, attributes):
@@ -174,8 +177,8 @@ def _to_pydict(signature):
     return dec
 
 
-def _extract_value(pyarg, arg_t, depth=0):
-    arg_t = PythonObject.type_checking(arg_t)
+def _extract_value(pyarg, sig, depth=0):
+    arg_t = PythonObject.type_checking(sig)
     if arg_t == PyEquivType.String:
         content = c_backend.pyarg_extract_owned_str(pyarg)
         pytype = c_backend.pystring_get_str(content).decode("utf-8")
@@ -192,15 +195,15 @@ def _extract_value(pyarg, arg_t, depth=0):
         pytype = c_backend.pyarg_extract_owned_float(pyarg)
     elif arg_t == PyEquivType.Tuple:
         ptr = c_backend.pyarg_extract_owned_tuple(pyarg)
-        t = PyTuple(ptr, arg_t)
+        t = PyTuple(ptr, sig)
         pytype = t.to_tuple(depth=depth + 1)
     elif arg_t == PyEquivType.List:
         ptr = c_backend.pyarg_extract_owned_list(pyarg)
-        ls = PyList(ptr, arg_t)
+        ls = PyList(ptr, sig)
         pytype = ls.to_list(depth=depth + 1)
     elif arg_t == PyEquivType.Dict:
         ptr = c_backend.pyarg_extract_owned_dict(pyarg)
-        d = PyDict(ptr, arg_t)
+        d = PyDict(ptr, sig)
         pytype = d.to_dict(depth=depth + 1)
     else:
         raise TypeError("rustypy: tried to extract invalid type: {}".format(arg_t))
@@ -290,9 +293,6 @@ class PyTuple(PythonObject):
 
 class PyList(PythonObject):
 
-    def __new__(cls, *args, **kwargs):
-        pass
-
     def __init__(self, ptr, signature, call_fn=None):
         super().__init__(ptr)
         self._ptr = ptr
@@ -339,7 +339,7 @@ class PyList(PythonObject):
                 content = c_backend.pyarg_extract_owned_double(pyarg)
                 pylist.appendleft(content)
                 last -= 1
-        elif arg_t is Float:
+        elif arg_t == PyEquivType.Float:
             for e in range(0, self._len):
                 pyarg = c_backend.pylist_get_element(self._ptr, last)
                 content = c_backend.pyarg_extract_owned_float(pyarg)
@@ -384,7 +384,7 @@ class PyList(PythonObject):
             fn = c_backend.pyarg_from_int
         elif arg_t == PyEquivType.Double:
             fn = c_backend.pyarg_from_double
-        elif arg_t is Float:
+        elif arg_t == PyEquivType.Float:
             fn = c_backend.pyarg_from_float
         elif arg_t == PyEquivType.Tuple:
             fn = _to_pytuple(sig)
@@ -510,7 +510,7 @@ class PyDict(PythonObject):
             fnv = c_backend.pyarg_from_int
         elif arg_t == PyEquivType.Double:
             fnv = c_backend.pyarg_from_double
-        elif arg_t is Float:
+        elif arg_t == PyEquivType.Float:
             fnv = c_backend.pyarg_from_float
         elif arg_t == PyEquivType.Tuple:
             fnv = _to_pytuple(sig)
