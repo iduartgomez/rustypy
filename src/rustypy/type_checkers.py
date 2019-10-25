@@ -6,10 +6,14 @@ from collections import abc
 prev_to_37 = sys.version_info[0:2] <= (3, 6)
 if prev_to_37:
     def is_map_like(arg_t):
+        if hasattr(arg_t, "__origin__"):
+            return issubclass(arg_t.__origin__, (dict, abc.MutableMapping))
         return issubclass(arg_t.__class__, (dict, abc.MutableMapping))
 
 
     def is_seq_like(arg_t):
+        if hasattr(arg_t, "__origin__"):
+            return issubclass(arg_t.__origin__, (dict, abc.MutableSequence))
         return issubclass(arg_t.__class__, (list, abc.MutableSequence))
 
 

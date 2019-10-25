@@ -36,7 +36,7 @@ class PythonObjectMeta(type):
     @staticmethod
     def type_checking__python35_36(arg_t):
         kind = None
-        if arg_t == PyEquivType.String:
+        if arg_t is str:
             kind = PyEquivType.String
         elif arg_t is bool:
             kind = PyEquivType.Bool
