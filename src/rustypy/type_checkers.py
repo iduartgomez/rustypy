@@ -13,7 +13,7 @@ if prev_to_37:
 
     def is_seq_like(arg_t):
         if hasattr(arg_t, "__origin__"):
-            return issubclass(arg_t.__origin__, (dict, abc.MutableSequence))
+            return issubclass(arg_t.__origin__, (list, abc.MutableSequence))
         return issubclass(arg_t.__class__, (list, abc.MutableSequence))
 
 
