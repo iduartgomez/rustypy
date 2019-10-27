@@ -21,7 +21,7 @@ def get_rustypy_version():
     sys.path.append(os.path.join(path, 'src'))
     # mod = importlib.import_module('rustypy')
 
-    #FIXME: get library version dinamically
+    # FIXME: get library version dinamically
     return "0.1.16"
 
 
