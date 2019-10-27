@@ -31,8 +31,11 @@ mod inner_types {
     ///
     #[macro_export]
     macro_rules! unpack_pytuple {
+        // FIXME: produces clippy warning on macro expansion due to usage `cnt`
         ($t:ident; ($($p:tt,)+) ) => {{
             use rustypy::{PyArg, PyTuple};
+            use rustypy::pytypes::abort_and_exit;
+
             let mut cnt = 0;
             let mut pytuple = unsafe { PyTuple::from_ptr($t) };
             ($(
@@ -51,7 +54,7 @@ mod inner_types {
                         unpack_pytuple!(val; cnt; elem: $p)
                     ,)*)
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a PyTuple inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a PyTuple inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: {PyDict{$u:tt}}) => {{
@@ -62,7 +65,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     unpack_pydict!(val; PyDict{$u})
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a PyDict inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a PyDict inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: {PyList{$($u:tt)*}}) => {{
@@ -73,7 +76,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     unpack_pylist!(val; PyList{$($u)*})
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a PyList inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a PyList inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: PyBool) => {{
@@ -84,7 +87,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val.to_bool()
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a PyBool inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a PyBool inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: PyString) => {{
@@ -95,7 +98,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val.to_string()
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a PyString inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a PyString inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: I64) => {{
@@ -106,7 +109,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a i64 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a i64 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: I32) => {{
@@ -117,7 +120,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val.clone()
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a i32 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a i32 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: I16) => {{
@@ -128,7 +131,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a i16 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a i16 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: I8) => {{
@@ -139,7 +142,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a i8 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a i8 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: U32) => {{
@@ -150,7 +153,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a u32 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a u32 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: U16) => {{
@@ -161,7 +164,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a u16 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a u16 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: U8) => {{
@@ -172,7 +175,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a u8 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a u8 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: F32) => {{
@@ -183,7 +186,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a f32 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a f32 inside a PyTuple"),
             }
         }};
         ($t:ident; $i:ident; elem: F64) => {{
@@ -194,7 +197,7 @@ mod inner_types {
                     if $i == 0 {}; // stub to remove warning...
                     val
                 },
-                _ => _rustypy_abort_xtract_fail!("failed while extracting a f64 inside a PyTuple"),
+                _ => abort_and_exit("failed while extracting a f64 inside a PyTuple"),
             }
         }};
     }
@@ -261,8 +264,10 @@ mod inner_types {
     #[macro_export]
     macro_rules! unpack_pylist {
         ( $pylist:ident; PyList { $o:tt { $($t:tt)* } } ) => {{
-            use std::collections::VecDeque;
             use rustypy::{PyList, PyArg};
+            use rustypy::pytypes::abort_and_exit;
+            use std::collections::VecDeque;
+
             let mut unboxed = unsafe { PyList::from_ptr($pylist) };
             let mut list = VecDeque::with_capacity(unboxed.len());
             for _ in 0..unboxed.len() {
@@ -271,24 +276,26 @@ mod inner_types {
                         let inner = unpack_pylist!(val; $o { $($t)* });
                         list.push_front(inner);
                     },
-                    Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
+                    Some(_) => abort_and_exit("failed while converting pylist to vec"),
                     None => {}
                 }
             };
             Vec::from(list)
         }};
-        ( $pytuple:ident; PyTuple { $t:tt } ) => {{;
+        ( $pytuple:ident; PyTuple { $t:tt } ) => {{
             unpack_pytuple!($pytuple; $t)
         }};
         ( $pylist:ident; PyList{$t:tt => $type_:ty} ) => {{
             use rustypy::{PyList, PyArg};
-            let mut unboxed = unsafe { PyList::from_ptr($pylist) };
+            use rustypy::pytypes::abort_and_exit;
             use std::collections::VecDeque;
+
+            let mut unboxed = unsafe { PyList::from_ptr($pylist) };
             let mut list = VecDeque::with_capacity(unboxed.len());
             for _ in 0..unboxed.len() {
                 match unboxed.pop() {
                     Some(PyArg::$t(val)) => { list.push_front(<$type_>::from(val)); },
-                    Some(_) => _rustypy_abort_xtract_fail!("failed while converting pylist to vec"),
+                    Some(_) => abort_and_exit("failed while converting pylist to vec"),
                     None => {}
                 }
             };
@@ -356,8 +363,10 @@ mod inner_types {
     macro_rules! unpack_pydict {
         ( $pydict:ident; PyDict{($kt:ty, $o:tt { $($t:tt)* })} ) => {{
             use rustypy::{PyArg, PyDict};
-            let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt>)) };
+            use rustypy::pytypes::abort_and_exit;
             use std::collections::HashMap;
+
+            let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt>)) };
             let mut dict = HashMap::new();
             for (k, v) in unboxed.drain() {
                 match v {
@@ -365,7 +374,7 @@ mod inner_types {
                         let inner = unpack_pydict!(val; $o { $($t)* });
                         dict.insert(k, inner);
                     }
-                    _ => _rustypy_abort_xtract_fail!("failed while converting PyDict to HashMap")
+                    _ => abort_and_exit("failed while converting PyDict to HashMap")
                 }
             }
             dict
@@ -378,13 +387,15 @@ mod inner_types {
         }};
         ( $pydict:ident; PyDict{($kt:ty, $t:tt => $type_:ty)} ) => {{
             use rustypy::{PyArg, PyDict};
-            let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt>)) };
+            use rustypy::pytypes::abort_and_exit;
             use std::collections::HashMap;
+
+            let mut unboxed = unsafe { *(Box::from_raw($pydict as *mut PyDict<$kt>)) };
             let mut dict = HashMap::new();
             for (k, v) in unboxed.drain() {
                 match v {
                     PyArg::$t(val) => { dict.insert(k, <$type_>::from(val)); },
-                    _ => _rustypy_abort_xtract_fail!("failed while converting PyDict to HashMap"),
+                    _ => abort_and_exit("failed while converting PyDict to HashMap"),
                 }
             }
             dict
@@ -494,4 +505,40 @@ macro_rules! unpack_pytype {
     ($pydict:ident; PyDict{($kt:ty, $t:tt => $type_:ty)}) => {
         unpack_pydict!($pydict; PyDict{($kt, $t => $type_)})
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate as rustypy;
+    use rustypy::*;
+
+    #[test]
+    fn pytuple_macro() {
+        let pytuple = pytuple!(
+            PyArg::PyBool(PyBool::from(false)),
+            PyArg::PyString(PyString::from("test")),
+            PyArg::I64(55i64)
+        )
+        .into_raw();
+        let unpacked = unpack_pytype!(pytuple; (PyBool, PyString, I64,));
+        assert_eq!((false, String::from("test"), 55i64), unpacked);
+    }
+
+    #[test]
+    fn unpack_pylist_macro() {
+        use std::iter::FromIterator;
+        let nested = PyList::from_iter(vec![
+            pytuple!(
+                PyArg::PyList(PyList::from_iter(vec![1i32, 2, 3]).into_raw()),
+                PyArg::F32(0.1)
+            ),
+            pytuple!(
+                PyArg::PyList(PyList::from_iter(vec![3i32, 2, 1]).into_raw()),
+                PyArg::F32(0.2)
+            ),
+        ])
+        .into_raw();
+        let unpacked = unpack_pytype!(nested; PyList{PyTuple{({PyList{I32 => i32}}, F32,)}});
+        assert_eq!(vec![(vec![1, 2, 3], 0.1), (vec![3, 2, 1], 0.2)], unpacked);
+    }
 }

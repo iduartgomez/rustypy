@@ -33,7 +33,7 @@ use std::iter::IntoIterator;
 use std::mem;
 use std::ops::Deref;
 
-use pytypes::PyArg;
+use crate::pytypes::PyArg;
 
 /// An analog of a Python tuple, will accept an undefined number of other
 /// [supported types](../../../rustypy/pytypes/enum.PyArg.html).
@@ -194,9 +194,8 @@ macro_rules! pytuple {
             tuple.push(tuple_e);
             cnt += 1;
         )*;
-        if cnt == 0 {}; // stub to remove warning...
-        let t_len = tuple.len() - 1;
-        for i in 1..(t_len + 1) {
+        let t_len = cnt - 1;
+        for i in 1..cnt {
             let idx = t_len - i;
             let last = tuple.pop().unwrap();
             let prev = tuple.get_mut(idx).unwrap();

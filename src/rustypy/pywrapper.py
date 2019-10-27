@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """Generates code for calling Python from Rust code."""
 
-import collections.abc as abc
 import inspect
 import os
 import random
 import sys
-import typing
-from collections import namedtuple
+from collections import abc, namedtuple
 from importlib import import_module, invalidate_caches
 from io import StringIO
 from string import Template, ascii_letters
@@ -16,10 +14,11 @@ from types import FunctionType
 
 from .rswrapper.rswrapper import Double, Float, Tuple
 from .scripts import get_version
+from .type_checkers import type_checkers
 
 rustypy_ver = get_version()
 
-tab = "    "  # for formatting output
+TAB = "    "  # for formatting output
 CONTAINERS = (
     "PyList", "PyDict", "PySet", "PyTuple", "Vec", "HashMap", "Set", "tuple",
 )
@@ -67,8 +66,8 @@ $extract_values
                     if x + 1 != len(obj.parameters):
                         sig += ",\n"
                         pyarg_constructor += "\n"
-                    params.append(indent(sig, tab * 3))
-                    pyconstructors.append(indent(pyarg_constructor, tab * 3))
+                    params.append(indent(sig, TAB * 3))
+                    pyconstructors.append(indent(pyarg_constructor, TAB * 3))
                 signature, return_val = self.unwrap_types(
                     obj.rsreturn, "", "",
                     extractors=extractors,
@@ -141,22 +140,22 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                         parent=parent,
                         position=i,
                         type_=type_,)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                 elif in_tuple and type_[0] == 'tuple':
                     xtc = self._extract_tuple.format(
                         var_name=var_name,
                         parent=parent,
                         position=i,)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                 elif in_list and not isinstance(type_, tuple):
                     xtc = self._collect_from_list.format(
                         var_name=in_list,
                         type_=type_,)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                 elif in_list and type_[0] == 'tuple':
                     xtc = "let {var_name} = e.unwrap();\n".format(
                         var_name=var_name)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                 elif in_dict and not isinstance(type_, tuple):
                     if i == 0:
                         xtc = "let dict_key = " + \
@@ -166,14 +165,14 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                         xtc = "let dict_value = " + \
                               "value.extract::<{value_type}>(*(self.py)).unwrap();\n"
                         xtc = xtc.format(value_type=type_)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                 elif in_dict and type_[0] == 'tuple':
                     if i == 0:
                         xtc = "let {var_name} = key;\n"
                     elif i == 1:
                         xtc = "let {var_name} = value;\n"
                     xtc = xtc.format(var_name=var_name)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                 elif not isinstance(type_, tuple):
                     if type_ == 'PyObject::None':
                         chk_type = 'PyObject'
@@ -183,13 +182,13 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                         var_name=var_name,
                         parent=parent,
                         type_=chk_type,)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                 elif type_[0] == 'tuple':
                     xtc = self._extract_tuple.format(
                         var_name=var_name,
                         parent=parent,
                         position=i,)
-                    extractors.append(indent(xtc, tab * 2 + tab * depth))
+                    extractors.append(indent(xtc, TAB * 2 + TAB * depth))
             else:
                 var_name = parent
 
@@ -214,7 +213,7 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                                 subtypes=subreturnvalues,
                                 parent=in_list,)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
                         if in_dict:
                             if i == 0:
                                 xtc = "let dict_key = ({subtypes});\n" \
@@ -223,7 +222,7 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                                 xtc = "let dict_value = ({subtypes});\n" \
                                     .format(subtypes=subreturnvalues)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
                 elif type_[0] == 'Vec':
                     if extractors is not None:
                         name = rnd_var_name(self, arg_names)
@@ -234,7 +233,7 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                                 position=i,
                                 var_name=tpl_xtc)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
                             ls_parent = tpl_xtc
                         elif in_dict:
                             if i == 0:
@@ -248,7 +247,7 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                         xtc = self._iter_list.format(
                             parent=ls_parent,
                             var_name=name)
-                        extractors.append(indent(xtc, tab * 2 + tab * depth))
+                        extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                         new_vec = name
                     else:
                         new_vec = True
@@ -268,14 +267,14 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                         subreturnval += var_name
                         # close iteration
                         extractors.append(
-                            indent("};\n", tab * 2 + tab * depth))
+                            indent("};\n", TAB * 2 + TAB * depth))
                         if in_dict:
                             if i == 0:
                                 xtc = "let dict_key = {};\n".format(var_name)
                             elif i == 1:
                                 xtc = "let dict_value = {};\n".format(var_name)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
                         elif in_list:
                             raise NotImplementedError
                 elif type_[0] == 'HashMap':
@@ -288,7 +287,7 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                                                         pos=i,
                                                         name=tpl_xtc)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
                             dic_parent = tpl_xtc
                         elif in_dict:
                             if i == 0:
@@ -300,14 +299,14 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                             xtc = "let {name} = e.unwrap();\n".format(
                                 name=ls_xtc)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
                             dic_parent = ls_xtc
                         else:
                             dic_parent = parent
                         xtc = self._iter_dict.format(
                             parent=dic_parent,
                             var_name=name,)
-                        extractors.append(indent(xtc, tab * 2 + tab * depth))
+                        extractors.append(indent(xtc, TAB * 2 + TAB * depth))
                         new_hm = name
                     else:
                         new_hm = True
@@ -328,21 +327,21 @@ for (key, value) in {var_name}_d.items(*(self.py)) {{
                         # close iteration
                         xtc = "{var_name}.insert(dict_key, dict_value);\n"\
                             .format(var_name=var_name)
-                        extractors.append(indent(xtc, tab * 3 + tab * depth))
+                        extractors.append(indent(xtc, TAB * 3 + TAB * depth))
                         extractors.append(
-                            indent("};\n", tab * 2 + tab * depth))
+                            indent("};\n", TAB * 2 + TAB * depth))
                         if in_dict:
                             if i == 0:
                                 xtc = "let dict_key = {};\n".format(var_name)
                             elif i == 1:
                                 xtc = "let dict_value = {};\n".format(var_name)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
                         elif in_list:
                             xtc = "{parent}.push({var_name});\n".format(
                                 parent=in_list, var_name=var_name)
                             extractors.append(
-                                indent(xtc, tab * 2 + tab * depth))
+                                indent(xtc, TAB * 2 + TAB * depth))
             elif len(iterable) < 2:
                 if in_list or in_dict:
                     subtype += type_
@@ -440,9 +439,7 @@ class RustFuncGen(object):
         self.dump_to_rust()
 
     Func = namedtuple('Func',
-                      ['name', 'parameters', 'rsreturn', 'pyargs']
-                      )
-    #Klass = namedtuple('Klass', ['name'])
+                      ['name', 'parameters', 'rsreturn', 'pyargs'])
 
     def parse_functions(self):
         def inspect_parameters():
@@ -459,8 +456,7 @@ class RustFuncGen(object):
             if self.__no_funcs:
                 del m_dict[imp_statement]
                 return
-            # introspect parameters for functions and assert they have
-            # proper types
+            # introspect parameters for functions and assert they have proper types
             for func in functions:
                 func = module[func]
                 if func.__name__ == 'rust_bind':
@@ -525,72 +521,79 @@ class RustFuncGen(object):
             sys.path.pop()
 
     def parse_parameter(self, p, pytypes=False):
-        def inner_types(t, curr):
+        @type_checkers
+        def check_type(arg_t, curr, **checkers):
+            is_map_like = checkers["map_like"]
+            is_seq_like = checkers["seq_like"]
+            is_generic = checkers["generic"]
+
             add = []
             param = False
-            if inspect.isclass(t):
-                if t is int:
-                    if pytypes:
-                        param = "PyLong"
-                    else:
-                        param = "c_long"
-                elif t is float or t is Double or t is Float:
-                    if pytypes:
-                        param = "PyFloat"
-                    else:
-                        param = "c_double"
-                elif t is str:
-                    if pytypes:
-                        param = "PyString"
-                    else:
-                        param = "String"
-                elif t is bool:
-                    if pytypes:
-                        param = "PyBool"
-                    else:
-                        param = "bool"                
-                elif issubclass(t, Tuple):
-                    if pytypes:
-                        curr.append('PyTuple')
-                    else:
-                        curr.append('tuple')
-                    for type_ in t:
-                        inner_types(type_, add)
-                    param = True
-                elif issubclass(t, (list, abc.MutableSequence)):
-                    if pytypes:
-                        curr.append("PyList")
-                    else:
-                        curr.append("Vec")
-                    for type_ in t.__args__:
-                        inner_types(type_, add)
-                    param = True
-                elif issubclass(t, (dict, abc.MutableMapping)):
-                    if pytypes:
-                        curr.append("PyDict")
-                    else:
-                        curr.append("HashMap")
-                    for type_ in t.__args__:
-                        inner_types(type_, add)
-                    param = True
-                elif issubclass(t, (set, abc.MutableSet)):
-                    raise NotImplementedError("rustypy: support for sets not added yet")
-                    if pytypes:
-                        curr.append("PySet")
-                    else:
-                        curr.append("Set")
-                    for type_ in t.__args__:
-                        inner_types(type_, add)
-                    param = True
-                elif t.__class__ is typing.GenericMeta:
-                    param = "PyObject"
-                elif issubclass(t, FunctionType):
-                    param = False
-            elif t is None:
+
+            if arg_t is int:
+                if pytypes:
+                    param = "PyLong"
+                else:
+                    param = "c_long"
+            elif arg_t is float or arg_t is Double or arg_t is Float:
+                if pytypes:
+                    param = "PyFloat"
+                else:
+                    param = "c_double"
+            elif arg_t is str:
+                if pytypes:
+                    param = "PyString"
+                else:
+                    param = "String"
+            elif arg_t is bool:
+                if pytypes:
+                    param = "PyBool"
+                else:
+                    param = "bool"
+            elif is_seq_like(arg_t):
+                if pytypes:
+                    curr.append("PyList")
+                else:
+                    curr.append("Vec")
+                for type_ in arg_t.__args__:
+                    check_type(type_, add)
+                param = True
+            elif is_map_like(arg_t):
+                if pytypes:
+                    curr.append("PyDict")
+                else:
+                    curr.append("HashMap")
+                for type_ in arg_t.__args__:
+                    check_type(type_, add)
+                param = True
+            elif is_generic(arg_t):
+                param = "PyObject"
+            elif issubclass(arg_t, Tuple):
+                if pytypes:
+                    curr.append('PyTuple')
+                else:
+                    curr.append('tuple')
+                for type_ in arg_t:
+                    check_type(type_, add)
+                param = True
+            elif issubclass(arg_t.__class__, (set, abc.MutableSet)):
+                raise NotImplementedError("rustypy: support for sets not added yet")
+                # if pytypes:
+                #     curr.append("PySet")
+                # else:
+                #     curr.append("Set")
+                # for type_ in t.__args__:
+                #     inner_types(type_, add)
+                # param = True
+            elif issubclass(arg_t.__class__, FunctionType):
+                param = False
+
+            if not param and arg_t is None:
                 if pytypes:
                     param = 'PyNone'
                 else:
                     param = 'PyObject::None'
+
             # check if is a valid type or raise exception
             if not isinstance(param, bool):
                 curr.append(param)
@@ -604,7 +607,7 @@ class RustFuncGen(object):
         except AttributeError:
             type_ = p
         param = []
-        inner_types(type_, param)
+        check_type(type_, param)
         return param
 
     _file_header_info = """
@@ -621,6 +624,7 @@ class RustFuncGen(object):
 
     _file_header_funcs = """
     #![allow(
+        dead_code,
         non_camel_case_types,
         non_snake_case,
         non_upper_case_globals,
@@ -742,8 +746,8 @@ $build
                     f = self.add_folder(next_f)
                     f.walk(path[1:], mod)
 
-        _field = tab * 2 + "pub {n}: {rn}<'a>,\n"
-        _build = tab * 4 + '{n}: {rn}::new(&py).unwrap(),\n'
+        _field = TAB * 2 + "pub {n}: {rn}<'a>,\n"
+        _build = TAB * 4 + '{n}: {rn}::new(&py).unwrap(),\n'
 
         def write_structs(self, f, struct_names={}):
             if self.ismodule:

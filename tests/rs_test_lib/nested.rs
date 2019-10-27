@@ -1,8 +1,8 @@
-use std::iter::FromIterator;
 use rustypy::{PyArg, PyBool, PyList, PyTuple};
+use std::iter::FromIterator;
 
 #[no_mangle]
-pub extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
+pub unsafe extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
     let converted = unpack_pylist!(list; PyList{PyTuple{(I64, (F32, I64,),)}});
     assert_eq!(
         vec![(50i64, (1.0f32, 30i64)), (25i64, (0.5f32, 40i64))],
@@ -17,7 +17,7 @@ pub extern "C" fn python_bind_list2(list: *mut PyList) -> *mut PyList {
 }
 
 #[no_mangle]
-pub extern "C" fn python_bind_nested1_t_n_ls(list: *mut PyList) -> *mut PyList {
+pub unsafe extern "C" fn python_bind_nested1_t_n_ls(list: *mut PyList) -> *mut PyList {
     let converted = unpack_pylist!(list; PyList{PyList{PyTuple{(I64, (F32, I64,),)}}});
     assert_eq!(
         vec![
@@ -42,7 +42,7 @@ pub extern "C" fn python_bind_nested1_t_n_ls(list: *mut PyList) -> *mut PyList {
 }
 
 #[no_mangle]
-pub extern "C" fn python_bind_nested2_t_n_ls(list: *mut PyList) -> *mut PyList {
+pub unsafe extern "C" fn python_bind_nested2_t_n_ls(list: *mut PyList) -> *mut PyList {
     let mut unpacked = unpack_pylist!(list; PyList{PyTuple{({PyList{I64 => i64}}, F32,)}});
     assert_eq!(vec![(vec![1, 2, 3], 0.1), (vec![3, 2, 1], 0.2)], unpacked);
     unpacked.swap(0, 1);
