@@ -8,17 +8,12 @@ from setuptools import find_packages, setup
 if sys.version_info[0:2] < (3, 5):
     raise RuntimeError("Python version >= 3.5 required.")
 
-path = None
+path = os.path.abspath(os.path.dirname(__file__))
 
 
 def get_rustypy_version():
-    import importlib
-
-    global path
-    path = os.path.abspath(os.path.dirname(__file__))
-    # print(os.listdir(path))
-
-    sys.path.append(os.path.join(path, 'src'))
+    # import importlib
+    # sys.path.append(os.path.join(path, 'src'))
     # mod = importlib.import_module('rustypy')
 
     # FIXME: get library version dinamically
@@ -32,12 +27,15 @@ def generate_description():
     # get long description
     f = os.path.join(path, 'README.md')
     try:
-        from pypandoc import convert
-        long_description = '\n' + convert(f, 'rst')
+        import pypandoc
+        if pypandoc.__version__ == "1.4":
+            long_description = '\n' + pypandoc.convert_file(f, 'rst')
+        else:
+            raise ImportError
     except ImportError:
         import logging
         logging.warning(
-            "warning: pypandoc module not found, could not convert " +
+            "warning: pypandoc not found or incompatible, could not convert " +
             "Markdown to RST")
         long_description = '\n' + open(f, 'r').read()
     return long_description
@@ -109,7 +107,10 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'librustypy': ['Cargo.toml', '**/*.rs', '*.rs']},
-    setup_requires=['setuptools_rust', 'wheel'],
+    setup_requires=[
+        'setuptools_rust',
+        'wheel'
+    ],
     # install_requires=['cffi'],
     entry_points={
         'console_scripts': [
