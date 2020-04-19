@@ -82,7 +82,7 @@ fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyStri
         ))
         .into_raw());
     }
-    eprintln!("{}", src);
+    // eprintln!("{}", src);
     match syn::parse_file(&src) {
         Ok(krate) => {
             syn::visit::visit_file(krate_data, &krate);
