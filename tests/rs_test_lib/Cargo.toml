@@ -5,7 +5,7 @@ authors = ["IDG <iduartgomez@gmail.com>"]
 
 [dependencies]
 libc = "~0.2"
-rustypy = { path = "../../src/librustypy" }
+rustypy = "0.1.17"
 
 [lib]
 name = "test_lib_rs"

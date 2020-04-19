@@ -3,11 +3,15 @@ name = "rustypy"
 version = "0.1.17"
 authors = ["IDG <iduartgomez@gmail.com>"]
 edition = "2018"
+license = "BSD-3-Clause"
+description = "Python from/to Rust bindings"
+documentation = "https://github.com/iduartgomez/rustypy/wiki"
+repository = "https://github.com/iduartgomez/rustypy"
 
 [dependencies]
 cpython = { version="~0.3.0", features=["python3-sys"] }
 libc = "~0.2.62"
-syn = { version="1.0.17", features=["full", "visit"] }
+syn = { version="~1.0.17", features=["full", "visit"] }
 walkdir = "1"
 
 [lib]
