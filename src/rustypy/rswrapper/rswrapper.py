@@ -176,9 +176,12 @@ def _get_signature_types(params):
             elif equiv == 'None':
                 return RustType(equiv=None, ref=False, mutref=False, raw=False)
 
+    def non_empty(param):
+        return param != "()"
+
     params = [x for x in params.split(';') if x != '']
     param_types = []
-    for p in params:
+    for p in filter(non_empty, params):
         param_types.append(re.search(FIND_TYPE, p).group(1))
         param_types[-1] = inner_types(param_types[-1])
     return param_types

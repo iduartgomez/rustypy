@@ -119,6 +119,7 @@ impl KrateData {
                 args,
                 output,
             } = v;
+            let original_name = fndef.clone();
             if !args.is_empty() {
                 fndef.push_str("::");
                 args.iter().fold(&mut fndef, |acc, arg| {
@@ -126,10 +127,18 @@ impl KrateData {
                         acc.push_str(&repr);
                         acc.push(';');
                     } else {
+                        eprintln!(
+                            "could not generate bindings for fn `{}`; unacceptable parameters
+                        ",
+                            original_name
+                        );
                         add = false;
                     }
                     acc
                 });
+            } else {
+                // function w/o arguments
+                fndef.push_str("::();");
             }
             if add {
                 match output {

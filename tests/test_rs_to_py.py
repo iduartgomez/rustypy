@@ -44,6 +44,10 @@ class GenerateRustToPythonBinds(unittest.TestCase):
         return_val = self.bindings.python_bind_int(1)
         self.assertIsInstance(return_val, int)
         self.assertEqual(return_val, 2)
+        # no param fn call
+        return_val = self.bindings.python_bind_int_generator()
+        self.assertIsInstance(return_val, int)
+        self.assertEqual(return_val, 1)
         # ref int
         _, refs = self.bindings.python_bind_ref_int(
             1, return_ref=True, get_contents=True)

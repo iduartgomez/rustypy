@@ -15,6 +15,11 @@ pub mod primitives {
     use super::*;
 
     #[no_mangle]
+    pub extern "C" fn python_bind_int_generator() -> u32 {
+        1
+    }
+
+    #[no_mangle]
     pub extern "C" fn python_bind_int(num: u32) -> u32 {
         num + 1
     }
