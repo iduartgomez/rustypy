@@ -335,11 +335,15 @@ class RustBinds(object):
     """Main binding generator class."""
 
     def __init__(self, entry_point, compiled_lib, prefixes=None):
+        if prefixes is None:
+            prefixes = ["python_bind_"]
         self._FFI = ctypes.cdll.LoadLibrary(compiled_lib)
         if isinstance(prefixes, str):
             p = [prefixes]
         elif isinstance(prefixes, list):
             p = prefixes
+            if len(p) == 0:
+                raise ValueError("rustypy: optional prefixes list cannot be empty")
         else:
             p = ["python_bind_"]
         p = PyList.from_list(p, typing.List[str])

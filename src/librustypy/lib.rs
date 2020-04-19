@@ -82,7 +82,6 @@ fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyStri
         ))
         .into_raw());
     }
-    // eprintln!("{}", src);
     match syn::parse_file(&src) {
         Ok(krate) => {
             syn::visit::visit_file(krate_data, &krate);
@@ -289,9 +288,16 @@ mod parsing_tests {
         let path = std::env::home_dir()
             .unwrap()
             .join("workspace/sources/rustypy_debug/rust_code/src/lib.rs");
+        // let path_ori: std::path::PathBuf = std::env::current_dir().unwrap();
+        // let path: std::path::PathBuf = path_ori
+        //     .parent()
+        //     .unwrap()
+        //     .parent()
+        //     .unwrap()
+        //     .join("tests/rs_test_lib/lib.rs");
         // the entry point to the library:
         let entry_point = PyString::from(path.to_str().unwrap().to_string()).into_raw();
-        let mut krate_data = KrateData::new(vec![]);
+        let mut krate_data = KrateData::new(vec!["python_bind_".to_string()]);
         unsafe {
             let response = parse_src(entry_point, &mut krate_data);
             let response: String = PyString::from_ptr_to_string(response);
