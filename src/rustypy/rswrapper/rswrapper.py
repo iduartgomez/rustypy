@@ -298,10 +298,10 @@ def bind_rs_crate_funcs(mod, lib, prefixes=None):
     if not c_backend:
         get_rs_lib()
     if not os.path.exists(mod):
-        raise OSError('rustypy: `{}` path does not exist')
+        raise OSError('rustypy: `{}` path does not exist'.format(mod))
     elif not os.path.exists(lib):
         raise OSError(
-            'rustypy: `{}` compiled library file does not exist')
+            'rustypy: `{}` compiled library file does not exist'.format(lib))
     entry_point = get_crate_entry(mod)
     return RustBinds(entry_point, lib, prefixes=prefixes)
 

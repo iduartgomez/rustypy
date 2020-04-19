@@ -36,11 +36,24 @@ pub struct PyString {
 
 impl PyString {
     /// Get a PyString from a previously boxed raw pointer.
+    ///
+    /// # Safety
+    /// Ensure that the passed ptr is valid
     pub unsafe fn from_ptr(ptr: *mut PyString) -> PyString {
+        if ptr.is_null() {
+            panic!("trying to deref a null ptr!");
+        }
         *Box::from_raw(ptr)
     }
+
     /// Constructs an owned String from a raw pointer.
+    ///
+    /// # Safety
+    /// Ensure that the passed ptr is valid
     pub unsafe fn from_ptr_to_string(ptr: *mut PyString) -> String {
+        if ptr.is_null() {
+            panic!("trying to deref a null ptr!");
+        }
         let pystr = *(Box::from_raw(ptr));
         String::from(pystr._inner.to_str().unwrap())
     }
@@ -49,6 +62,7 @@ impl PyString {
     pub fn into_raw(self) -> *mut PyString {
         Box::into_raw(Box::new(self))
     }
+
     /// Return a PyString from a raw char pointer.
     pub unsafe fn from_raw(ptr: *const c_char) -> PyString {
         PyString {

@@ -82,10 +82,14 @@ fn parse_file(krate_data: &mut KrateData, path: &Path) -> Result<(), *mut PyStri
         ))
         .into_raw());
     }
+    eprintln!("{}", src);
     match syn::parse_file(&src) {
         Ok(krate) => {
             syn::visit::visit_file(krate_data, &krate);
             krate_data.collect_values();
+            if krate_data.collected.is_empty() {
+                return Err(PyString::from("zero function calls parsed".to_string()).into_raw());
+            }
         }
         Err(err) => return Err(PyString::from(format!("{}", err)).into_raw()),
     };
@@ -272,5 +276,26 @@ pub extern "C" fn krate_data_iter(krate: &KrateData, idx: size_t) -> *mut PyStri
     match krate.iter_krate(idx as usize) {
         Some(val) => PyString::from(val).into_raw(),
         None => PyString::from("NO_IDX_ERROR").into_raw(),
+    }
+}
+
+#[cfg(test)]
+mod parsing_tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn parse_lib() {
+        let path = std::env::home_dir()
+            .unwrap()
+            .join("workspace/sources/rustypy_debug/rust_code/src/lib.rs");
+        // the entry point to the library:
+        let entry_point = PyString::from(path.to_str().unwrap().to_string()).into_raw();
+        let mut krate_data = KrateData::new(vec![]);
+        unsafe {
+            let response = parse_src(entry_point, &mut krate_data);
+            let response: String = PyString::from_ptr_to_string(response);
+            assert!(!response.is_empty());
+        }
     }
 }

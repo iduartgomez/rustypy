@@ -17,7 +17,7 @@ def get_rustypy_version():
     # mod = importlib.import_module('rustypy')
 
     # FIXME: get library version dinamically
-    return "0.1.16"
+    return "0.1.17"
 
 
 rustypy_version = get_rustypy_version()
