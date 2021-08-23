@@ -1,3 +1,6 @@
+# Archived
+I recommend using PyO3 as it's a better maintained and feature complete project.
+
 # RustyPy [![Build Status](https://travis-ci.org/iduartgomez/rustypy.svg?branch=master)](https://travis-ci.org/iduartgomez/rustypy)
 RustyPy is a code generator for generating binding functions between Rust and
 Python files. In addition it provides a series of types for interfacing from
